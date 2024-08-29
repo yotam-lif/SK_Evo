@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 
 # Parameters
 N = 1000  # Number of spins
-k = 100  # Number of random flips after reaching extremum
+k = 200  # Desired number of spins with positive energy effect
+bins = 50  # Number of bins for histograms
 
 # Initialize J matrix with entries drawn from a normal distribution
 J = np.random.normal(0, 1, (N, N))
@@ -17,60 +18,52 @@ def calculate_local_fields(J, S):
     return np.dot(J, S)
 
 
-# Function to find local extremum more efficiently
-def reach_local_extremum(S, J):
-    extremum_reached = False
-    flipped_spins = []
-
-    while not extremum_reached:
-        extremum_reached = True
+# Function to flip spins until only k spins remain with a positive energy effect
+def flip_until_rank_k(S, J, k):
+    remaining_spins = N  # Start with all spins considered
+    while remaining_spins > k:
         local_fields = calculate_local_fields(J, S)
+        energy_change_distribution = -2 * S * local_fields
+        positive_effect_indices = np.where(energy_change_distribution > 0)[0]
 
-        for i in range(N):
-            if S[i] * local_fields[i] < 0:  # If S_i has opposite sign to h_i
-                S[i] *= -1  # Flip the spin
-                flipped_spins.append(i)
-                extremum_reached = False
-                break
+        # If more than k spins have a positive energy effect, flip one randomly
+        if len(positive_effect_indices) > k:
+            flip_index = np.random.choice(positive_effect_indices)
+            S[flip_index] *= -1  # Flip the spin
+            remaining_spins -= 1
+        else:
+            break
 
-    return S, flipped_spins
+    return S, positive_effect_indices
 
 
-# Step 1: Reach a local extremum
-S, flipped_spins = reach_local_extremum(S, J)
+# Step 1: Flip spins until only k remain with a positive energy effect
+S, positive_effect_indices = flip_until_rank_k(S, J, k)
 
-# Step 2: Perform k random flips to escape the extremum
-for _ in range(k):
-    i = np.random.randint(0, N)
-    S[i] *= -1  # Randomly flip a spin
-
-# Step 3: Iteratively flip spins that were flipped to escape the extremum
-local_fields_list = []
-energy_changes = []
-
-for i in flipped_spins:
-    local_fields = calculate_local_fields(J, S)
-    S_new = S.copy()
-    S_new[i] *= -1  # Flip the spin
-    energy_change = abs(np.dot(local_fields, S_new) - np.dot(local_fields, S))
-    energy_changes.append(energy_change)
-
-energy_changes = np.array(energy_changes)
-probabilities = energy_changes / np.sum(energy_changes)  # Normalize energy changes
-
-# Perform k iterations and save histogram every 10 iterations
+# Step 2: Perform k iterations and plot the distribution of local fields
 for iteration in range(k):
     local_fields = calculate_local_fields(J, S)
-    local_fields_list.append(local_fields)
+    energy_change_distribution = -2 * S * local_fields
 
-    for i, prob in zip(flipped_spins, probabilities):
-        if np.random.rand() < prob:  # Flip the spin with the corresponding probability
-            S[i] *= -1
+    if iteration % 20 == 0 or iteration == k - 1:
+        plt.figure(figsize=(12, 5))
 
-    if iteration % 20 == 0:
-        plt.hist(local_fields, bins=30, density=True, alpha=0.75)
+        # Plot distribution of local fields h_i
+        plt.subplot(1, 2, 1)
+        plt.hist(local_fields, bins=bins, density=True, alpha=0.75)
         plt.xlabel(r'$h_i$')
         plt.ylabel('Probability Density')
         plt.title(f'Distribution of Local Fields $h_i$ at Iteration {iteration}')
-        plt.savefig(f'local_fields_iteration_{iteration}.png')
+
+        # Plot distribution of energy-change -2*S_i*h_i
+        plt.subplot(1, 2, 2)
+        plt.hist(energy_change_distribution, bins=bins, density=True, alpha=0.75)
+        plt.xlabel(r'Energy Change $-2S_ih_i$')
+        plt.ylabel('Probability Density')
+        plt.title(f'Energy Change Distribution at Iteration {iteration}')
+
+        plt.savefig(f'local_fields_energy_change_iteration_{iteration}.png')
         plt.close()
+
+# Output the indices of the spins with positive energy effect
+print("Indices of spins with positive energy effect after reaching rank k:", positive_effect_indices)
