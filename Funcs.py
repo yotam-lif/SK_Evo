@@ -37,8 +37,14 @@ def sswm_prob(kis):
     numpy.ndarray
         The probability of flipping a spin.
     """
-    ps = np.where(kis < 0, -1 * kis, 0)
-    return ps / np.sum(ps)
+    ps = np.where(kis < 0, np.abs(kis), 0)
+    total = ps.sum()
+    if total > 0:
+        return ps / total
+    else:
+        # Return uniform probabilities if no spins qualify
+        return np.ones_like(ps) / len(ps)
+
 
 def glauber_prob(kis, beta=10):
     """
@@ -108,12 +114,32 @@ def relax_SK(alpha, Jij, prob_func, random_state=None):
     rank = calc_rank(alpha, Jij, his)
 
     while rank > 0:
-        kis = -2 * alpha * his
+        kis = alpha * his
         ps = prob_func(kis)
         flip_idx = rng.choice(len(alpha), p=ps)
         alpha[flip_idx] *= -1
         his = alpha @ Jij
         rank = calc_rank(alpha, Jij, his)
-        print(f'Rank: {rank}')
+        # print(f'Rank: {rank}')
 
     return alpha
+
+def calc_DFE(alpha, Jij):
+    """
+    Calculate the distribution of local field energies.
+
+    Parameters
+    ----------
+    alpha : numpy.ndarray
+        The spin configuration.
+    Jij : numpy.ndarray
+        The coupling matrix.
+
+    Returns
+    -------
+    numpy.ndarray
+        The distribution of fitness effects.
+    """
+    his = alpha @ Jij
+    kis = alpha * his
+    return -2 * kis
