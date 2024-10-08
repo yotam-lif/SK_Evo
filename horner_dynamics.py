@@ -5,6 +5,7 @@ from tqdm import tqdm
 # Define the temperature
 T = 0.1  # Low temperature
 beta = 1 / T
+r_form = False
 
 # Define the Glauber dynamics rate function
 def glauber_rate(k: np.ndarray) -> np.ndarray:
@@ -12,7 +13,7 @@ def glauber_rate(k: np.ndarray) -> np.ndarray:
 
 def sswm_rate(k: np.ndarray) -> np.ndarray:
     k_mod = np.where(k < 0, np.abs(k), 0)
-    return k_mod / np.where(k_mod.sum() != 0, k_mod.sum(), 1)
+    return k_mod / np.sum(k_mod)
 
 # Define the rate function for Glauber dynamics
 def r(k: np.ndarray, glauber=True) -> np.ndarray:
@@ -57,13 +58,13 @@ def compute_dP_dt(P_plus, P_minus, k_grid):
     d2P_minus = np.gradient(grad_P_minus, k_grid)
 
     # Compute dP_plus_dt and dP_minus_dt
-    dP_plus_dt = (r(-k_grid, glauber=True) * P_minus
-                 - r(k_grid, glauber=True) * P_plus
+    dP_plus_dt = (r(-k_grid, glauber=r_form) * P_minus
+                 - r(k_grid, glauber=r_form) * P_plus
                  - v * grad_P_plus
                  - D_minus * d2P_plus)
 
-    dP_minus_dt = (r(-k_grid, glauber=True) * P_plus
-                  - r(k_grid, glauber=True) * P_minus
+    dP_minus_dt = (r(-k_grid, glauber=r_form) * P_plus
+                  - r(k_grid, glauber=r_form) * P_minus
                   - v * grad_P_minus
                   - D_plus * d2P_minus)
 
@@ -118,9 +119,9 @@ def solve_coupled_pde_RK4(k_grid, t_grid):
 def main():
     # Define k and t grids
     k_border = 5.0
-    k_grid = np.linspace(-k_border, k_border, 2000)  # Define k grid
-    t_final = 20.0
-    num_steps = 20000
+    k_grid = np.linspace(-k_border, k_border, 1000)  # Define k grid
+    t_final = 50.0
+    num_steps = 30000
     t_grid = np.linspace(0.0, t_final, num_steps)  # Define t grid
 
     # Solve the coupled PDE using RK4

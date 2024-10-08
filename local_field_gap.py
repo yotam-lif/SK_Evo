@@ -4,127 +4,272 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
+# ==========================
+# Parameters and Setup
+# ==========================
+
 # Parameters
-N = 3 * (10 ** 3)  # Number of spins
-k = 0  # Desired number of spins with negative local fields
-bins = 150  # Number of bins for histograms
+N = 2 * (10 ** 3)  # Number of spins
+rho = 1  # Fraction of non-zero J elements
+beta = 0.1  # Parameter for sig_J_sq
+k_final = 0  # Desired number of spins with negative local fields
+bins = 75  # Number of bins for histograms
 output_dir = 'figures'  # Directory to save figures
 T = 0.003  # Temperature
+
+# Define the ranks to analyze
+k_values = list(range(0, 1001, 100))
 
 # Create directory if it does not exist
 os.makedirs(output_dir, exist_ok=True)
 
-# Initialize J matrix with entries drawn from a normal distribution
+# ==========================
+# Initialize J Matrix (Sparse)
+# ==========================
+
 rng = np.random.default_rng()
 
-# Modification: Sample only the upper triangle of J, make it symmetric, and set diagonal to zero
-# Step 1: Initialize an empty (N, N) matrix
+sig_h_sq = 1 - beta
+sig_J_sq = beta / (N * rho)
+
+# Initialize an empty (N, N) matrix
 J = np.zeros((N, N))
 
-# Step 2: Get the indices of the upper triangle of the matrix, excluding the diagonal
+# Get the indices of the upper triangle of the matrix, excluding the diagonal
 upper_tri_indices = np.triu_indices(N, k=1)  # k=1 excludes the diagonal
 
-# Step 3: Sample random values for the upper triangle
-J[upper_tri_indices] = rng.normal(loc=0.0, scale=1/N, size=len(upper_tri_indices[0]))
+# Determine the number of non-zero elements based on rho
+num_possible = len(upper_tri_indices[0])
+num_nonzero = int(rho * num_possible)
 
-# Step 4: Make the matrix symmetric
+# Randomly choose indices to be non-zero
+selected_indices = rng.choice(num_possible, size=num_nonzero, replace=False)
+selected_upper = (upper_tri_indices[0][selected_indices], upper_tri_indices[1][selected_indices])
+
+# Assign Gaussian values to the selected upper triangle indices
+J[selected_upper] = rng.normal(loc=0.0, scale=np.sqrt(sig_J_sq), size=num_nonzero)
+
+# Make the matrix symmetric
 J = J + J.T
 
-# Step 5: Set diagonal elements to zero
+# Set diagonal elements to zero
 np.fill_diagonal(J, 0)
 
+# ==========================
+# Initialize External Fields and Spins
+# ==========================
+
+# Initialize external fields h with Gaussian distribution
+h = rng.normal(loc=0.0, scale=np.sqrt(sig_h_sq), size=N)
+
 # Initialize spins randomly as +1 or -1
-alpha_0 = np.random.choice([-1, 1], size=N)
+alpha_initial = rng.choice([-1, 1], size=N)
+
+
+# ==========================
+# Define Helper Functions
+# ==========================
 
 def local_fields(alpha):
-    # Calculate local fields
-    return alpha * np.dot(J, alpha)
+    """
+    Calculate local fields for each spin.
 
-# Modified flip function
+    Parameters:
+        alpha (np.ndarray): Array of spin values (+1 or -1).
+
+    Returns:
+        np.ndarray: Local field values for each spin.
+    """
+    return alpha * (h + np.dot(J, alpha))
+
+
 def flip_sswm(alpha):
+    """
+    Perform a single spin flip using the Sequential Single Spin Flip Monte Carlo (SSWM) method.
+
+    Parameters:
+        alpha (np.ndarray): Current spin configuration.
+
+    Returns:
+        tuple: Updated spin configuration and a boolean indicating if a flip was performed.
+    """
     # Calculate local fields
     local_flds = local_fields(alpha)
+
     # Find indices with negative local fields
     negative_indices = np.where(local_flds < 0)[0]
+
     if len(negative_indices) == 0:
-        return alpha  # No negative local fields, cannot flip
-    # Calculate probabilities proportional to minus the local field size
+        return alpha, False  # No flip performed
+
+    # Calculate probabilities proportional to the magnitude of the negative local fields
     probs = -local_flds[negative_indices]
+
     # Normalize the probabilities
     probs /= np.sum(probs)
+
     # Randomly choose one of the spins with negative local field to flip
-    flip_index = np.random.choice(negative_indices, p=probs)
-    alpha[flip_index] *= -1  # Flip the spin
-    return alpha
+    flip_index = rng.choice(negative_indices, p=probs)
 
-def flip_glauber(alpha, beta):
-    # Calculate local fields
-    k_i = local_fields(alpha)
-    # Calculate probabilities for flipping
-    probs = (1 - np.tanh(k_i * beta)) / 2
-    # choose to flip spins based on probs
-    probs /= np.sum(probs)
-    flip_indices = np.random.choice(np.arange(N), p=probs)
-    alpha[flip_indices] *= -1
-    return alpha
+    # Flip the selected spin
+    alpha[flip_index] *= -1
 
-# Function to count number of negative local fields
+    return alpha, True
+
+
 def count_negative_local_fields(alpha):
+    """
+    Count the number of spins with negative local fields.
+
+    Parameters:
+        alpha (np.ndarray): Current spin configuration.
+
+    Returns:
+        int: Number of spins with negative local fields.
+    """
     return np.sum(local_fields(alpha) < 0)
 
-def flip_until_rank_k(alpha, k, T):
+
+def flip_until_rank_k(alpha, k):
+    """
+    Flip spins until only k spins have negative local fields.
+
+    Parameters:
+        alpha (np.ndarray): Initial spin configuration.
+        k (int): Desired number of spins with negative local fields.
+
+    Returns:
+        tuple: Updated spin configuration and the number of flips performed.
+    """
     count = 0
     alpha_local = alpha.copy()
     negative_count = count_negative_local_fields(alpha_local)
+
     while negative_count > k:
-        # alpha_local = flip_glauber(alpha_local, 1/T)
-        alpha_local = flip_sswm(alpha_local)
+        alpha_local, flipped = flip_sswm(alpha_local)
+        if not flipped:
+            break  # No more flips possible
         count += 1
-        print(f'Flip {count}, Negative Count: {negative_count}')
+        if count % 1000 == 0:
+            print(f'Flip {count}, Negative Count: {negative_count}')
         negative_count = count_negative_local_fields(alpha_local)
-    return alpha_local
 
-# Step 1: Flip spins until only k remain with negative local fields
-S = flip_until_rank_k(alpha_0, k, T)
+    return alpha_local, count
 
-# Step 2: Calculate local fields
-lfs = local_fields(S)
 
-# Step 4: Fit the histogram data to the given functions
-# Define the functions to fit
-def func1(x, sig_sq, b):
-    return (x / sig_sq) * np.exp(-(x**2) / (2 * sig_sq)) + b
+# ==========================
+# Define Fitting Function
+# ==========================
 
+def func1(x, a, b):
+    """
+    Define the fitting function: a * x * exp(-a * x^2 / 2) + b
+
+    Parameters:
+        x (np.ndarray): Independent variable.
+        a (float): Parameter a.
+        b (float): Parameter b.
+
+    Returns:
+        np.ndarray: Function values.
+    """
+    return a * x * np.exp(-a * x ** 2 / 2) + b
+
+
+# ==========================
+# Process Multiple Ranks and Plot
+# ==========================
+
+# Dictionary to store results for each rank
+results = {}
+
+for k in k_values:
+    print(f'\nProcessing rank k={k}...')
+
+    # Initialize spins randomly for each rank
+    alpha = rng.choice([-1, 1], size=N)
+
+    # Flip until desired rank
+    S, num_flips = flip_until_rank_k(alpha, k)
+    print(f'Completed flipping: {num_flips} flips to reach k={k}')
+
+    # Calculate local fields
+    lfs = local_fields(S)
+
+    # Store results
+    results[k] = {
+        'spins': S,
+        'local_fields': lfs,
+        'num_flips': num_flips
+    }
+
+    # Plot histogram for the current rank
+    plt.figure(figsize=(10, 6))
+    sns.histplot(lfs, bins=bins, kde=False, stat='density', label=f'k={k}', color='blue', alpha=0.6)
+    plt.xlabel('Local Field Value')
+    plt.ylabel('Density')
+    plt.title(f'Histogram of Local Fields for k={k}; N={N}')
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, f'local_fields_k_{k}.png'))
+    plt.close()  # Close the figure to save memory
+
+print('\nAll ranks processed and histograms saved.')
+
+# ==========================
+# Fit Only for Final Rank (k=0)
+# ==========================
+
+k = k_final
+print(f'\nPerforming curve fitting for final rank k={k}...')
+
+# Retrieve local fields for k=0
+lfs_final = results[k]['local_fields']
 
 # Prepare data for fitting
-hist, bin_edges = np.histogram(lfs, bins=bins, density=True)
+hist, bin_edges = np.histogram(lfs_final, bins=bins, density=True)
 bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
 
-# Remove zero or negative bin centers (since the functions are defined for x > 0)
+# Remove zero or negative bin centers (if necessary)
 positive_indices = bin_centers > 0
 xdata = bin_centers[positive_indices]
 ydata = hist[positive_indices]
 
-# Fit to func1
-params1, _ = curve_fit(func1, xdata, ydata, p0=(N, 1/N), bounds=((0, 0), (np.inf ,1)))
-# Fit to func2
-# Step 5: Plot the histogram and the fitted functions
+# Initial parameter guesses: a=1, b=1e-3
+initial_guess = [1.0, 1e-3]
+
+# Perform curve fitting
+try:
+    params, covariance = curve_fit(func1, xdata, ydata, p0=initial_guess, bounds=(0, np.inf))
+    a_fit, b_fit = params
+    print(f'Fitted parameters: a = {a_fit:.4f}, b = {b_fit:.4e}')
+except RuntimeError as e:
+    print(f'Curve fitting failed: {e}')
+    params = [np.nan, np.nan]
+
+# Plot histogram with fitted function
 plt.figure(figsize=(10, 6))
+sns.histplot(lfs_final, bins=bins, kde=False, stat='density', label='Data', color='gray', alpha=0.5)
 
-# Plot histogram
-sns.histplot(lfs, bins=bins, kde=False, stat='density', label='Data', color='gray', alpha=0.5)
+if not np.isnan(params).any():
+    # Generate x values for the fitted function
+    x_fit = np.linspace(min(xdata), max(xdata), 500)
+    y_fit = func1(x_fit, *params)
 
-# Plot fitted functions
-x_fit = np.linspace(min(xdata), max(xdata), 200)
-y_fit1 = func1(x_fit, *params1)
-
-# Use LaTeX in legend labels
-plt.plot(x_fit, y_fit1, label=rf'Fit 1: $a x e^{{- a x^2 / 2}} + b$' + '\n' + rf'$a={params1[0]:.2e}, b={params1[1]:.2e}$', color='blue')
+    # Plot the fitted function
+    plt.plot(x_fit, y_fit, label=rf'Fit: $a x e^{{- a x^2 / 2}} + b$' + f'\n$a={a_fit:.2f}, b={b_fit:.2e}$',
+             color='red')
+else:
+    print('Skipping fitted function plot due to fitting failure.')
 
 plt.xlabel('Local Field Value')
 plt.ylabel('Density')
-plt.title(f'Histogram of Local Fields with Fitted Functions; N={N}')
+plt.title(f'Histogram of Local Fields with Fitted Function for k={k}; N={N}, rho={rho}, beta={beta}')
 plt.legend()
 plt.grid(True)
-plt.savefig(os.path.join(output_dir, 'local_fields_fit.png'))
+plt.tight_layout()
+plt.savefig(os.path.join(output_dir, 'local_fields_fit_final_rank.png'))
 plt.show()
+
+print('\nCurve fitting completed and plot saved.')
