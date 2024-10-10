@@ -272,7 +272,8 @@ def compute_fitness_delta_mutant(alpha, his, Jijs, k):
 
 def relax_SK(alpha, his, Jijs, ranks, sswm=True):
     """
-    Relax the Sherrington-Kirkpatrick model with given parameters, saving alpha at specified ranks.
+    Relax the Sherrington-Kirkpatrick model with given parameters, saving alpha at specified ranks,
+    and recording the cumulative number of flips (mutations) up to each saved rank.
 
     Parameters
     ----------
@@ -289,22 +290,30 @@ def relax_SK(alpha, his, Jijs, ranks, sswm=True):
 
     Returns
     -------
-    (numpy.ndarray, list of numpy.ndarray or None)
+    (numpy.ndarray, list of numpy.ndarray or None, list of int)
         alpha: The final spin configuration.
         time_stamps: The list of alpha configurations saved at the specified ranks.
                      If a desired rank is not reached, `None` is saved for that rank.
+        flips: List of cumulative number of flips up to each saved alpha configuration.
     """
     # Ensure ranks are sorted in descending order
     ranks = sorted(ranks, reverse=True)
     time_stamps = [None] * len(ranks)  # Initialize with None
+    flips = [None] * len(ranks)  # Initialize flips list corresponding to each saved configuration
     current_index = 0
     rank = calc_rank(alpha, his, Jijs)
+    total_flips = 0  # Initialize cumulative flip counter
 
     while rank > 0 and current_index < len(ranks):
-        # Check if the current rank matches the desired rank
+        # Check if the current rank matches or falls below the desired rank
         if rank <= ranks[current_index]:
             time_stamps[current_index] = alpha.copy()
+            flips[current_index] = total_flips
             current_index += 1
+
+            # If we've reached all desired ranks, break the loop
+            if current_index >= len(ranks):
+                break
 
         # Choose which flip method to use
         if sswm:
@@ -315,12 +324,16 @@ def relax_SK(alpha, his, Jijs, ranks, sswm=True):
 
         # Flip the selected spin
         alpha[flip_idx] *= -1
+        total_flips += 1  # Increment the total flips counter
 
         # Recalculate the rank after the flip
         rank = calc_rank(alpha, his, Jijs)
-        print(f'Rank: {rank}')
+        # Uncomment the following line if you want to see the rank progression
+        # print(f'Rank: {rank}')
 
-    # Save the final configuration if the last rank is not reached
-    time_stamps[current_index] = alpha.copy()
+    # Save the final configuration and flips if the last rank was not reached
+    if current_index < len(ranks):
+        time_stamps[current_index] = alpha.copy()
+        flips[current_index] = total_flips
 
-    return alpha, time_stamps
+    return alpha, time_stamps, flips
