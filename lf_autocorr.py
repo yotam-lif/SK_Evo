@@ -3,7 +3,6 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.stats import pearsonr, spearmanr  # For calculating correlation coefficients
-from scipy.optimize import curve_fit
 import pandas as pd  # For saving correlation data
 
 # Import the Funcs module
@@ -17,8 +16,8 @@ def main():
 
     # Parameters
     N = 2000  # Number of spins
-    beta = 1  # Epistasis strength
-    rho = 1  # Fraction of non-zero coupling elements
+    beta = 0.25  # Epistasis strength
+    rho = 0.05  # Fraction of non-zero coupling elements
     random_state = 42  # Seed for reproducibility
 
     # Initialize spin configuration
@@ -30,31 +29,23 @@ def main():
     # Initialize coupling matrix with sparsity
     J = Fs.init_J(N, beta=beta, rho=rho, random_state=random_state)
 
-    # Define desired ranks (example: [0, 100, 200, ..., 1000])
-    ranks = list(range(0, 1100, 100))  # [0, 100, 200, ..., 1000]
-    ranks = sorted(ranks, reverse=True)  # Sort in descending order
+    # Define desired ranks using linear spacing
+    num_points = 150  # Adjust this number as needed
+    max_rank = 1000
+    min_rank = 0
+
+    # Generate linearly spaced ranks descendingly from max_rank to min_rank
+    ranks = np.linspace(max_rank, min_rank, num=num_points).astype(int)
+
+    # Remove any duplicates and ensure descending order
+    ranks = np.unique(ranks)[::-1]
+
+    print(f"\nInitial Rank: {max_rank}")
+    print(f"Ranks to Save (Descending Order): {ranks}\n")
 
     # Relax the system using sswm_flip (sswm=True)
     # Now returns flips (number of mutations up to each rank)
     final_alpha, saved_alphas, flips = Fs.relax_SK(alpha_initial.copy(), h, J, ranks, sswm=True)
-
-    # Calculate initial kis values
-    ki_initial = Fs.calc_kis(alpha_initial, h, J)
-
-    # Calculate initial basic local fields
-    basic_local_fields_initial = Fs.calc_basic_lfs(alpha_initial, h, J)
-
-    # Calculate absolute basic local fields
-    abs_basic_local_fields_initial = np.abs(basic_local_fields_initial)
-
-    # Debugging: Check which alphas were saved
-    print("\n--- Saved Alphas Check ---")
-    for rank, alpha in zip(ranks, saved_alphas):
-        if alpha is not None:
-            print(f"Rank {rank}: Alpha saved.")
-        else:
-            print(f"Rank {rank}: Alpha NOT saved.")
-    print("--------------------------\n")
 
     # -------------------------------
     # 2. Setup Output Directories
@@ -70,9 +61,9 @@ def main():
     # Define subdirectories for each correlation type and plots
     subdirs = {
         'kis_correlation': 'kis_correlation',
+        'fitness_effects_correlation': 'fitness_effects_correlation',
         'local_fields_correlation': 'local_fields_correlation',
         'absolute_local_fields_correlation': 'absolute_local_fields_correlation',
-        'variance_plots': 'variance_plots',
         'correlation_summary_plots': 'correlation_summary_plots'
     }
 
@@ -86,27 +77,45 @@ def main():
     # -------------------------------
 
     correlation_kis = []
+    correlation_fitness_effects = []
     correlation_local_fields = []
     correlation_absolute_local_fields = []
 
-    # For variance calculations
-    variance_delta_y_kis = []
-    variance_delta_y_lf = []
-    variance_delta_y_abs_lf = []
     mutation_counts = flips  # This serves as our "time" variable
 
     # -------------------------------
-    # 4. Iterate Over Ranks and Generate Plots
+    # 4. Set Initial Values from Max Rank
+    # -------------------------------
+
+    # Assuming the first saved_alpha corresponds to max_rank
+    if saved_alphas and saved_alphas[0] is not None:
+        alpha_initial_correlation = saved_alphas[0]
+        kis_initial = Fs.calc_kis(alpha_initial_correlation, h, J)
+        fitness_effects_initial = -2 * kis_initial
+        basic_local_fields_initial = Fs.calc_basic_lfs(alpha_initial_correlation, h, J)
+        abs_basic_local_fields_initial = np.abs(basic_local_fields_initial)
+
+        print("\n--- Correlation Initial Values ---")
+        print("Initial Correlation Spin Configuration set from max_rank.")
+        print("-----------------------------------\n")
+    else:
+        raise ValueError("No valid alpha configuration found at max_rank for correlation analyses.")
+
+    # -------------------------------
+    # 5. Iterate Over Ranks and Generate Correlation Plots
     # -------------------------------
 
     for idx, (rank, alpha) in enumerate(zip(ranks, saved_alphas)):
         if alpha is not None:
             # -------------------------------
-            # 4.1 Calculate Current Values
+            # 5.1 Calculate Current Values
             # -------------------------------
 
             # Calculate current kis values
-            ki_current = Fs.calc_kis(alpha, h, J)
+            kis_current = Fs.calc_kis(alpha, h, J)
+
+            # Calculate current fitness effects
+            fitness_effects_current = -2 * kis_current
 
             # Calculate current basic local fields
             basic_local_fields_current = Fs.calc_basic_lfs(alpha, h, J)
@@ -115,33 +124,14 @@ def main():
             abs_basic_local_fields_current = np.abs(basic_local_fields_current)
 
             # -------------------------------
-            # 4.2 Compute Displacements and Variances
-            # -------------------------------
-
-            # For kis
-            delta_y_kis = ki_current - ki_initial
-            var_delta_y_kis = np.var(delta_y_kis)
-            variance_delta_y_kis.append(var_delta_y_kis)
-
-            # For basic local fields
-            delta_y_lf = basic_local_fields_current - basic_local_fields_initial
-            var_delta_y_lf = np.var(delta_y_lf)
-            variance_delta_y_lf.append(var_delta_y_lf)
-
-            # For absolute basic local fields
-            delta_y_abs_lf = abs_basic_local_fields_current - abs_basic_local_fields_initial
-            var_delta_y_abs_lf = np.var(delta_y_abs_lf)
-            variance_delta_y_abs_lf.append(var_delta_y_abs_lf)
-
-            # -------------------------------
-            # 4.3 kis Correlation
+            # 5.2 kis Correlation
             # -------------------------------
 
             # Compute Pearson correlation coefficient for kis
-            pearson_r_kis, p_value_kis = pearsonr(ki_initial, ki_current)
+            pearson_r_kis, p_value_kis = pearsonr(kis_initial, kis_current)
 
             # Compute Spearman correlation coefficient for kis
-            spearman_r_kis, p_value_spearman_kis = spearmanr(ki_initial, ki_current)
+            spearman_r_kis, p_value_spearman_kis = spearmanr(kis_initial, kis_current)
 
             # Append kis correlation data
             correlation_kis.append({
@@ -154,11 +144,11 @@ def main():
 
             # Set up the kis correlation plot
             plt.figure(figsize=(8, 6))
-            sns.scatterplot(x=ki_initial, y=ki_current, alpha=0.5, edgecolor=None, s=20)
+            sns.scatterplot(x=kis_initial, y=kis_current, alpha=0.5, edgecolor=None, s=20)
 
             # Plot reference lines
-            max_val_kis = max(np.max(ki_initial), np.max(ki_current))
-            min_val_kis = min(np.min(ki_initial), np.min(ki_current))
+            max_val_kis = max(np.max(kis_initial), np.max(kis_current))
+            min_val_kis = min(np.min(kis_initial), np.min(kis_current))
             plt.plot([min_val_kis, max_val_kis], [min_val_kis, max_val_kis],
                      color='red', linestyle='--', label='y = x')
             plt.plot([min_val_kis, max_val_kis], [-min_val_kis, -max_val_kis],
@@ -187,7 +177,60 @@ def main():
             print(f"kis Correlation scatter plot for rank {rank} saved as {plot_filename_kis}")
 
             # -------------------------------
-            # 4.4 Basic Local Fields Correlation
+            # 5.3 Fitness Effects Correlation
+            # -------------------------------
+
+            # Compute Pearson correlation coefficient for fitness effects
+            pearson_r_fitness, p_value_fitness = pearsonr(fitness_effects_initial, fitness_effects_current)
+
+            # Compute Spearman correlation coefficient for fitness effects
+            spearman_r_fitness, p_value_spearman_fitness = spearmanr(fitness_effects_initial, fitness_effects_current)
+
+            # Append fitness effects correlation data
+            correlation_fitness_effects.append({
+                'rank': rank,
+                'pearson_r_fitness_effects': pearson_r_fitness,
+                'p_value_fitness_effects': p_value_fitness,
+                'spearman_r_fitness_effects': spearman_r_fitness,
+                'p_value_spearman_fitness_effects': p_value_spearman_fitness
+            })
+
+            # Set up the fitness effects correlation plot
+            plt.figure(figsize=(8, 6))
+            sns.scatterplot(x=fitness_effects_initial, y=fitness_effects_current, alpha=0.5, edgecolor=None, s=20)
+
+            # Plot reference lines
+            max_val_fitness = max(np.max(fitness_effects_initial), np.max(fitness_effects_current))
+            min_val_fitness = min(np.min(fitness_effects_initial), np.min(fitness_effects_current))
+            plt.plot([min_val_fitness, max_val_fitness], [min_val_fitness, max_val_fitness],
+                     color='red', linestyle='--', label='y = x')
+            plt.plot([min_val_fitness, max_val_fitness], [-min_val_fitness, -max_val_fitness],
+                     color='green', linestyle='--', label='y = -x')
+
+            # Annotate with Pearson and Spearman correlations
+            plt.text(0.05, 0.95,
+                     f'Pearson r = {pearson_r_fitness:.4f}\nSpearman rho = {spearman_r_fitness:.4f}',
+                     transform=plt.gca().transAxes,
+                     fontsize=12,
+                     verticalalignment='top',
+                     bbox=dict(boxstyle='round', facecolor='white', alpha=0.5))
+
+            # Title and labels
+            plt.title(f'Fitness Effects Correlation at Rank {rank}; N={N}, β={beta}, ρ={rho}')
+            plt.xlabel('Initial Fitness Effects')
+            plt.ylabel(f'Fitness Effects at Rank {rank}')
+            plt.legend()
+            plt.tight_layout()
+
+            # Save the fitness effects correlation plot
+            plot_filename_fitness = f'correlation_fitness_effects_rank_{rank}.png'
+            plt.savefig(os.path.join(main_output_dir, subdirs['fitness_effects_correlation'], plot_filename_fitness))
+            plt.close()
+
+            print(f"Fitness Effects Correlation scatter plot for rank {rank} saved as {plot_filename_fitness}")
+
+            # -------------------------------
+            # 5.4 Basic Local Fields Correlation
             # -------------------------------
 
             # Compute Pearson correlation coefficient for basic local fields
@@ -239,7 +282,7 @@ def main():
             print(f"Basic Local Fields Correlation scatter plot for rank {rank} saved as {plot_filename_lf}")
 
             # -------------------------------
-            # 4.5 Absolute Basic Local Fields Correlation
+            # 5.5 Absolute Basic Local Fields Correlation
             # -------------------------------
 
             # Compute Pearson correlation coefficient for absolute basic local fields
@@ -294,18 +337,22 @@ def main():
             print(f"Absolute Basic Local Fields Correlation scatter plot for rank {rank} saved as {plot_filename_abs_lf}")
 
     # -------------------------------
-    # 5. Save All Correlation Data to CSV
+    # 6. Save All Correlation Data to CSV
     # -------------------------------
 
     # After processing all ranks
-    if correlation_kis and correlation_local_fields and correlation_absolute_local_fields:
+    if correlation_kis and correlation_fitness_effects and correlation_local_fields and correlation_absolute_local_fields:
         # Merge all correlation data based on ranks
         df_kis = pd.DataFrame(correlation_kis).set_index('rank')
+        df_fitness = pd.DataFrame(correlation_fitness_effects).set_index('rank')
         df_lf = pd.DataFrame(correlation_local_fields).set_index('rank')
         df_abs_lf = pd.DataFrame(correlation_absolute_local_fields).set_index('rank')
 
         # Combine all DataFrames
-        df_all = df_kis.join(df_lf).join(df_abs_lf)
+        df_all = df_kis.join(df_fitness).join(df_lf).join(df_abs_lf)
+
+        # Sort the DataFrame by rank in descending order
+        df_all = df_all.sort_index(ascending=False)
 
         # Define the CSV filename
         correlation_filename = 'correlation_coefficients.csv'
@@ -316,125 +363,8 @@ def main():
     else:
         print("\nNo correlation data to save.")
 
-    print(f"\nAll correlation scatter plots have been saved in the '{main_output_dir}' directory.")
-
     # -------------------------------
-    # 6. Plot Variance vs. Time and Perform Linear Fitting
-    # -------------------------------
-
-    # Convert lists to numpy arrays
-    mutation_counts = np.array(mutation_counts)
-    variance_delta_y_kis = np.array(variance_delta_y_kis)
-    variance_delta_y_lf = np.array(variance_delta_y_lf)
-    variance_delta_y_abs_lf = np.array(variance_delta_y_abs_lf)
-
-    # Function to perform linear fitting and calculate chi-squared
-    def linear_fit_and_chi_squared(x, y):
-        # Define linear function
-        def linear_func(x, m):
-            return m * x
-
-        # Perform linear fit
-        popt, pcov = curve_fit(linear_func, x, y)
-        m = popt[0]
-
-        # Calculate fitted values
-        y_fit = linear_func(x, m)
-
-        # Calculate chi-squared
-        chi_squared = np.sum(((y - y_fit) ** 2) / y_fit)
-
-        return m, chi_squared, y_fit
-
-    # Perform linear fitting for variance of Δy for kis
-    m_kis, chi_squared_kis, y_fit_kis = linear_fit_and_chi_squared(mutation_counts, variance_delta_y_kis)
-
-    # Perform linear fitting for variance of Δy for basic local fields
-    m_lf, chi_squared_lf, y_fit_lf = linear_fit_and_chi_squared(mutation_counts, variance_delta_y_lf)
-
-    # Perform linear fitting for variance of Δy for absolute basic local fields
-    m_abs_lf, chi_squared_abs_lf, y_fit_abs_lf = linear_fit_and_chi_squared(mutation_counts, variance_delta_y_abs_lf)
-
-    # Plot variance of Δy vs. mutations for kis
-    plt.figure(figsize=(8, 6))
-    plt.scatter(mutation_counts, variance_delta_y_kis, label='Variance of Δy (kis)', color='blue')
-    label = f'm = {m_kis:.4e}, χ² = {chi_squared_kis:.4f}'
-    plt.plot(mutation_counts, y_fit_kis, label=label, color='red')
-    plt.title('Variance of Δy (kis) vs. Number of Mutations')
-    plt.xlabel('Number of Mutations')
-    plt.ylabel('Variance of Δy')
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    variance_kis_plot = 'variance_delta_y_kis_vs_mutations.png'
-    plt.savefig(os.path.join(main_output_dir, subdirs['variance_plots'], variance_kis_plot))
-    plt.close()
-
-    # Print the fit parameters
-    print(f'Variance of Δy (kis) fit: m = {m_kis:.4e}')
-    print(f'Chi-squared for Δy (kis) fit: {chi_squared_kis:.4f}')
-
-    # Plot variance of Δy vs. mutations for basic local fields
-    plt.figure(figsize=(8, 6))
-    plt.scatter(mutation_counts, variance_delta_y_lf, label='Variance of Δy (Basic LF)', color='green')
-    label = f'm = {m_lf:.4e}, χ² = {chi_squared_lf:.4f}'
-    plt.plot(mutation_counts, y_fit_lf, label=label, color='red')
-    plt.title('Variance of Δy (Basic Local Fields) vs. Number of Mutations')
-    plt.xlabel('Number of Mutations')
-    plt.ylabel('Variance of Δy')
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    variance_lf_plot = 'variance_delta_y_lf_vs_mutations.png'
-    plt.savefig(os.path.join(main_output_dir, subdirs['variance_plots'], variance_lf_plot))
-    plt.close()
-
-    # Print the fit parameters
-    print(f'Variance of Δy (Basic LF) fit: m = {m_lf:.4e}')
-    print(f'Chi-squared for Δy (Basic LF) fit: {chi_squared_lf:.4f}')
-
-    # Plot variance of Δy vs. mutations for absolute basic local fields
-    plt.figure(figsize=(8, 6))
-    plt.scatter(mutation_counts, variance_delta_y_abs_lf, label='Variance of Δy (Abs Basic LF)', color='purple')
-    label = f'm = {m_abs_lf:.4e}, χ² = {chi_squared_abs_lf:.4f}'
-    plt.plot(mutation_counts, y_fit_abs_lf, label=label, color='red')
-    plt.title('Variance of Δy (Absolute Basic Local Fields) vs. Number of Mutations')
-    plt.xlabel('Number of Mutations')
-    plt.ylabel('Variance of Δy')
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    variance_abs_lf_plot = 'variance_delta_y_abs_lf_vs_mutations.png'
-    plt.savefig(os.path.join(main_output_dir, subdirs['variance_plots'], variance_abs_lf_plot))
-    plt.close()
-
-    # Print the fit parameters
-    print(f'Variance of Δy (Abs Basic LF) fit: m = {m_abs_lf:.4e}')
-    print(f'Chi-squared for Δy (Abs Basic LF) fit: {chi_squared_abs_lf:.4f}')
-
-    # -------------------------------
-    # 7. Generate Summary Plots for Variance vs. Time
-    # -------------------------------
-
-    # Plot all variances on a single plot
-    plt.figure(figsize=(10, 6))
-    plt.plot(mutation_counts, variance_delta_y_kis, marker='o', label='kis')
-    plt.plot(mutation_counts, variance_delta_y_lf, marker='s', label='Basic Local Fields')
-    plt.plot(mutation_counts, variance_delta_y_abs_lf / (1 - 2/np.pi), marker='^', label='Absolute Basic Local Fields')
-    plt.title('Variance of Δy vs. Number of Mutations')
-    plt.xlabel('Number of Mutations')
-    plt.ylabel('Variance of Δy')
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    variance_summary_plot = 'variance_delta_y_vs_mutations_summary.png'
-    plt.savefig(os.path.join(main_output_dir, subdirs['variance_plots'], variance_summary_plot))
-    plt.close()
-
-    print(f"Variance vs. Number of Mutations summary plot saved as {variance_summary_plot}")
-
-    # -------------------------------
-    # 8. Generate Summary Plots for Correlations vs. Rank
+    # 7. Generate Summary Plots for Correlations vs. Rank
     # -------------------------------
 
     # Function to plot summary correlations
@@ -452,6 +382,7 @@ def main():
         if correlation_type == 'pearson':
             cols = {
                 'kis': 'pearson_r_kis',
+                'fitness_effects': 'pearson_r_fitness_effects',
                 'basic_local_fields': 'pearson_r_local_fields',
                 'absolute_basic_local_fields': 'pearson_r_abs_local_fields'
             }
@@ -459,6 +390,7 @@ def main():
         elif correlation_type == 'spearman':
             cols = {
                 'kis': 'spearman_r_kis',
+                'fitness_effects': 'spearman_r_fitness_effects',
                 'basic_local_fields': 'spearman_r_local_fields',
                 'absolute_basic_local_fields': 'spearman_r_abs_local_fields'
             }
@@ -467,18 +399,17 @@ def main():
             raise ValueError("correlation_type must be either 'pearson' or 'spearman'.")
 
         # Plot each correlation type
+        # also reverse the x-axis to show the highest rank first
         for label, col in cols.items():
             plt.plot(df_all.index, df_all[col], marker='o', label=label.replace('_', ' ').title())
 
+        plt.gca().invert_xaxis()
         # Set title and labels
         plt.title(f'{ylabel} Correlations vs. Rank')
         plt.xlabel('Rank')
         plt.ylabel(ylabel)
         plt.legend()
         plt.grid(True)
-
-        # Ensure the x-axis goes from largest to smallest rank
-        plt.gca().invert_xaxis()
 
         # Save the summary plot
         summary_plot_filename = f'{correlation_type}_correlations_vs_rank.png'
@@ -492,6 +423,9 @@ def main():
     correlation_csv_path = os.path.join(main_output_dir, 'correlation_coefficients.csv')
     if os.path.exists(correlation_csv_path):
         df_all = pd.read_csv(correlation_csv_path, index_col='rank')
+
+        # Sort the DataFrame by rank in descending order to ensure correct plotting
+        df_all = df_all.sort_index(ascending=False)
 
         # Plot Pearson correlations vs. rank
         plot_summary_correlations(df_all, correlation_type='pearson')

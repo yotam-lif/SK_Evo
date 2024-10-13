@@ -237,6 +237,26 @@ def glauber_flip(alpha, hi, Jij, beta=10):
     indices = range(len(alpha))
     return np.random.choice(indices, p=ps)
 
+def calc_F_off(alpha_init, his, Jijs):
+    """
+    Calculate the fitness offset for the given configuration.
+
+    Parameters
+    ----------
+    alpha_init : numpy.ndarray
+        The initial spin configuration.
+    his : numpy.ndarray
+        The local fitness fields.
+    Jijs : numpy.ndarray
+        The coupling matrix.
+
+    Returns
+    -------
+    float
+        The fitness offset.
+    """
+    return compute_fit_slow(alpha_init, his, Jijs) - 1
+
 def compute_fit_slow(alpha, his, Jijs, F_off=0.0):
     """
     Compute the fitness of the genome configuration alpha using full slow computation.
@@ -337,3 +357,61 @@ def relax_SK(alpha, his, Jijs, ranks, sswm=True):
         flips[current_index] = total_flips
 
     return alpha, time_stamps, flips
+
+def backward_propagate(dfe_evo: np. ndarray, dfe_anc: np. ndarray, beneficial=True):
+    """
+    Backward propagate the DFE from the initial day(anc) to the target day(evo),
+    based on whether beneficial or deleterious mutations are selected.
+
+    Parameters
+    ----------
+    dfe_evo : np. ndarray
+        The DFE at the target day.
+    dfe_anc : np. ndarray
+        The DFE at the initial day.
+    beneficial : bool, optional
+        Whether to consider beneficial mutations. The default is True.
+
+    Returns
+    -------
+    np. ndarray
+        The propagated DFE.
+
+    """
+    bdfe_t = [(i, dfe_evo[i]) for i in range(len(dfe_evo)) if (dfe_evo[i] >= 0 if beneficial else dfe_evo[i] <= 0)]
+
+    bdfe_t_inds = [x[0] for x in bdfe_t]
+    bdfe_t_fits = [x[1] for x in bdfe_t]
+
+    propagated_bdfe_t = [dfe_anc[i] for i in bdfe_t_inds]
+
+    return bdfe_t_fits, propagated_bdfe_t
+
+
+def forward_propagate(dfe_evo: np. ndarray, dfe_anc: np. ndarray, beneficial=True):
+    """
+    Forward propagate the DFE from the initial day(anc) to the target day(evo),
+    based on whether beneficial or deleterious mutations are selected.
+
+    Parameters
+    ----------
+    dfe_evo : np. ndarray
+        The DFE at the target day.
+    dfe_anc : np. ndarray
+        The DFE at the initial day.
+    beneficial : bool, optional
+        Whether to consider beneficial mutations. The default is True.
+
+    Returns
+    -------
+    np. ndarray
+        The propagated DFE.
+    """
+    bdfe_0 = [(i, dfe_anc[i]) for i in range(len(dfe_anc)) if (dfe_anc[i] >= 0 if beneficial else dfe_anc[i] <= 0)]
+
+    bdfe_0_inds = [x[0] for x in bdfe_0]
+    bdfe_0_fits = [x[1] for x in bdfe_0]
+
+    propagated_bdfe_0 = [dfe_evo[i] for i in bdfe_0_inds]
+
+    return bdfe_0_fits, propagated_bdfe_0

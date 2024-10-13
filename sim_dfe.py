@@ -1,6 +1,5 @@
 import os
 import numpy as np
-import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit  # Import curve_fit
 
@@ -28,9 +27,10 @@ def main():
     # -------------------------------
 
     # Parameters
-    N = 2000  # Number of spins
-    beta = 0.75  # Epistasis strength
-    rho = 0.1  # Fraction of non-zero coupling elements
+    N = 3000  # Number of spins
+    beta = 0.25  # Epistasis strength
+    rho = 0.05  # Fraction of non-zero coupling elements
+    bins = 60
 
     # Initialize spin configuration
     alpha_initial = Fs.init_alpha(N)
@@ -46,7 +46,7 @@ def main():
     ranks = sorted(ranks, reverse=True)  # [1000, 900, ..., 0]
 
     # Relax the system using sswm_flip (sswm=True)
-    final_alpha, saved_alphas = Fs.relax_SK(alpha_initial.copy(), h, J, ranks, sswm=True)
+    final_alpha, saved_alphas, flips = Fs.relax_SK(alpha_initial.copy(), h, J, ranks, sswm=True)
 
     # Debugging: Check which alphas were saved
     print("\n--- Saved Alphas Check ---")
@@ -71,7 +71,6 @@ def main():
             plt.figure(figsize=(8, 6))
 
             # Compute histogram data
-            bins = 50
             hist, bin_edges = np.histogram(DFE, bins=bins, density=True)
             bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
 
