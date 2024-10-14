@@ -8,36 +8,38 @@ from scipy.optimize import curve_fit
 import Funcs as Fs
 
 
-def exponential_distribution(x, lam):
+def linear_func(x, m, a):
     """
-    Exponential distribution function: f(x) = lam * exp(-lam * x)
+    Linear function for fitting: f(x) = m * x + a
 
     Parameters:
     - x (float or array-like): Independent variable.
-    - lam (float): Rate parameter of the exponential distribution.
+    - m (float): Slope of the line.
+    - a (float): Intercept of the line.
 
     Returns:
     - float or array-like: Computed function values.
     """
-    return lam * np.exp(-lam * x)
+    return m * x + a
 
 
-def calculate_chi_squared(observed_density, expected_density, bin_width):
+def calculate_chi_squared_log(observed_density, expected_log_density, bin_width):
     """
-    Calculate the chi-squared statistic for the observed and expected distributions.
+    Calculate the chi-squared statistic for the observed and expected log distributions.
 
     Parameters:
     - observed_density (array-like): Observed density values from the histogram.
-    - expected_density (array-like): Expected density values from the model.
+    - expected_log_density (array-like): Expected log density values from the model.
     - bin_width (float): Width of the histogram bins.
 
     Returns:
     - float: Chi-squared value.
     """
-    # To avoid division by zero, add a small epsilon to expected
+    # To avoid division by zero, add a small epsilon to observed_density
     epsilon = 1e-10
-    expected_density = np.where(expected_density == 0, epsilon, expected_density)
-    chi_sq = np.sum(((observed_density - expected_density) ** 2) / expected_density) * bin_width
+    observed_density = np.where(observed_density == 0, epsilon, observed_density)
+    log_observed = np.log(observed_density)
+    chi_sq = np.sum(((log_observed - expected_log_density) ** 2) / expected_log_density) * bin_width
     return chi_sq
 
 
@@ -48,9 +50,9 @@ def main():
 
     # Parameters
     N = 3000          # Number of spins
-    beta = 0.25       # Epistasis strength (inverse temperature)
-    rho = 0.05        # Fraction of non-zero coupling elements
-    bins = 60         # Number of bins for histograms
+    beta = 1.0       # Epistasis strength (inverse temperature)
+    rho = 1.0        # Fraction of non-zero coupling elements
+    bins = 40         # Number of bins for histograms
 
     # Initialize spin configuration
     alpha_initial = Fs.init_alpha(N)
@@ -106,42 +108,46 @@ def main():
             plt.hist(BDFE, bins=bins, color='lightgreen', edgecolor='black',
                      density=True, alpha=0.6, label='BDFE Histogram')
 
-            # Fit 1: Exponential distribution with free lambda
-            initial_guess = [1.0]
+            # Set the y-axis to logarithmic scale
+            plt.yscale('log')
+
+            # Fit: Linear fit to log(density)
+            # To avoid taking log of zero, ensure hist > 0
+            valid = hist > 0
+            bin_centers_valid = bin_centers[valid]
+            log_hist = np.log(hist[valid])
+
+            initial_guess = [ -1.0, np.log(np.max(hist)) ]  # Initial guesses for m and a
             try:
-                popt1, pcov1 = curve_fit(exponential_distribution, bin_centers, hist, p0=initial_guess, bounds=(0, np.inf))
-                lam_fit = popt1[0]
-                lam_fit_error = np.sqrt(np.diag(pcov1))[0]
+                popt2, pcov2 = curve_fit(linear_func, bin_centers_valid, log_hist, p0=initial_guess)
+                m_fit, a_fit = popt2
+                m_fit_error, a_fit_error = np.sqrt(np.diag(pcov2))
 
-                # Generate fitted y data
+                # Generate fitted y data in log-space
                 x_fit = np.linspace(0, BDFE.max(), 1000)
-                y_fit = exponential_distribution(x_fit, lam_fit)
+                y_fit_log = linear_func(x_fit, m_fit, a_fit)
+                y_fit = np.exp(y_fit_log)
 
-                # Plot the fitted exponential
-                plt.plot(x_fit, y_fit, color='red', linestyle='--',
-                         label=f'Fitted Exponential ($\\lambda$ = {lam_fit:.4f})')
+                # Plot the fitted linear function on log scale
+                plt.plot(x_fit, y_fit, color='purple', linestyle='--',
+                         label=f'Fitted Linear (log scale)\n$y = {m_fit:.4f}x + {a_fit:.4f}$')
 
                 # Calculate expected densities for chi-squared
-                expected_density_fit = exponential_distribution(bin_centers, lam_fit)
-                chi_sq = calculate_chi_squared(hist, expected_density_fit, bin_width)
+                expected_log_density = linear_func(bin_centers_valid, m_fit, a_fit)
+                chi_sq = calculate_chi_squared_log(hist[valid], expected_log_density, bin_width)
 
             except RuntimeError as e:
-                print(f"Curve fitting failed for rank {rank} (Fit 1): {e}")
-                lam_fit = np.nan
-                chi_sq = np.nan
-
-            # Plot the theoretical exponential with lambda = 1 / fitness
-            if not np.isnan(lam_fitness):
-                y_fit_fitness = exponential_distribution(x_fit, lam_fitness)
-                plt.plot(x_fit, y_fit_fitness, color='blue', linestyle=':',
-                         label=f'Theoretical Exponential ($\\lambda$ = N/Fitness = {lam_fitness:.4f})')
+                print(f"Curve fitting failed for rank {rank} (Linear Fit): {e}")
+                m_fit, a_fit, chi_sq = np.nan, np.nan, np.nan
 
             # Annotate the plot with fit parameters and chi-squared values
             annotation_text = ""
-            if not np.isnan(lam_fit):
-                annotation_text += f"Fitted $\\lambda$ = {lam_fit:.4f} ± {lam_fit_error:.4f}\n$\\chi^2$ = {chi_sq:.2f}"
+            if not np.isnan(m_fit):
+                annotation_text += f"Fitted $m$ = {m_fit:.4f} ± {m_fit_error:.4f}\n"
+                annotation_text += f"Fitted $a$ = {a_fit:.4f} ± {a_fit_error:.4f}\n"
+                annotation_text += f"$\\chi^2$ = {chi_sq:.2f}"
             else:
-                annotation_text += "Fitted $\\lambda$: Failed"
+                annotation_text += "Fitted linear function: Failed"
 
             if not np.isnan(lam_fitness):
                 annotation_text += f"\nFitness = {fitness:.4f}\nTheoretical $\\lambda$ = 1/Fitness = {lam_fitness:.4f}"
@@ -156,7 +162,7 @@ def main():
             # Title and labels with parameters
             plt.title(f'BDFE Histogram at Rank {rank}; N={N}, $\\beta$={beta}, $\\rho$={rho}', fontsize=14)
             plt.xlabel('Beneficial Fitness Effect', fontsize=12)
-            plt.ylabel('Density', fontsize=12)
+            plt.ylabel('Density (log scale)', fontsize=12)  # Updated ylabel
 
             # Legend
             plt.legend()
