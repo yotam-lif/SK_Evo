@@ -27,6 +27,7 @@ def main():
     # Initialize coupling matrix with sparsity
     J = Fs.init_J(N, beta=beta, rho=rho, random_state=random_state)
 
+
     # Define desired ranks using linear spacing
     num_points = 150  # Adjust this number as needed
     max_rank = Fs.calc_rank(alpha_initial, h, J)
