@@ -60,7 +60,7 @@ def init_J(N, random_state=None, beta=1.0, rho=1.0):
     if not (0 < rho <= 1):
         raise ValueError("rho must be between 0 (exclusive) and 1 (inclusive).")
     rng = np.random.default_rng(random_state)
-    sig_J = np.sqrt(beta / (N * rho) / 2)  # Adjusted standard deviation for sparsity
+    sig_J = np.sqrt(beta / (N * rho))  # Adjusted standard deviation for sparsity
     # Initialize an empty upper triangular matrix (excluding diagonal)
     J_upper = np.zeros((N, N))
     # Total number of upper triangular elements excluding diagonal
