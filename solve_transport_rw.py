@@ -4,12 +4,13 @@ from scipy.integrate import solve_ivp
 from scipy.optimize import curve_fit
 
 # Parameters
-D = 0.1          # Diffusion coefficient
+D = 0.2          # Diffusion coefficient
+v = -2.0
 s_max = 20.0     # Maximum s value
 s_min = -s_max   # Minimum s value
 N_s = 200        # Number of spatial grid points
 t_min = 0.0      # Start time
-t_max = 50.0     # End time
+t_max = 100.0     # End time
 
 # Spatial grid
 s = np.linspace(s_min, s_max, N_s)
@@ -33,11 +34,27 @@ def nlt_term(s: np.ndarray, p: np.ndarray) -> np.ndarray:
     influx = -s * theta(-s) * np.flip(p)
     return influx - outflux
 
+# Function to compute the advection term using the upwind scheme
+def advection_term(v, p, ds):
+    dpdx = np.zeros_like(p)
+    if v > 0:
+        # Backward difference for v > 0
+        dpdx[1:] = (p[1:] - p[:-1]) / ds
+        dpdx[0] = 0.0  # Boundary condition at s_min
+    elif v < 0:
+        # Forward difference for v < 0
+        dpdx[:-1] = (p[1:] - p[:-1]) / ds
+        dpdx[-1] = 0.0  # Boundary condition at s_max
+    # If v == 0, dpdx remains zero
+    return -v * dpdx
+
 # Function to compute the RHS of the ODE system
 def rhs(t, p):
     # Second derivative approximation using finite differences
     dpdt = np.zeros_like(p)
     dpdt[1:-1] = D * (p[2:] - 2 * p[1:-1] + p[:-2]) / ds ** 2
+    # Add drift term
+    # dpdt += advection_term(v, p, ds)
     # Add transport term
     dpdt += nlt_term(s, p)
     # Apply boundary conditions (Dirichlet: p = 0 at boundaries)
