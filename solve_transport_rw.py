@@ -9,7 +9,7 @@ s_max = 20.0     # Maximum s value
 s_min = -s_max   # Minimum s value
 N_s = 200        # Number of spatial grid points
 t_min = 0.0      # Start time
-t_max = 50.0     # End time
+t_max = 100.0     # End time
 
 # Spatial grid
 s = np.linspace(s_min, s_max, N_s)
@@ -35,13 +35,32 @@ def nlt_term(s: np.ndarray, p: np.ndarray) -> np.ndarray:
     influx = -s * theta(-s) * np.flip(p)
     return influx - outflux
 
+# Function to compute the advection term using the upwind scheme
+def advection_term(v, p, ds):
+    dpdx = np.zeros_like(p)
+    if v > 0:
+        # Backward difference for v > 0
+        dpdx[1:] = (p[1:] - p[:-1]) / ds
+        dpdx[0] = 0.0  # Boundary condition at s_min
+    elif v < 0:
+        # Forward difference for v < 0
+        dpdx[:-1] = (p[1:] - p[:-1]) / ds
+        dpdx[-1] = 0.0  # Boundary condition at s_max
+    # If v == 0, dpdx remains zero
+    return -v * dpdx
+
+# Function to compute the RHS of the ODE system
 def rhs(t, p):
     """Compute the RHS of the ODE system."""
     dpdt = np.zeros_like(p)
     dpdt[1:-1] = D * (p[2:] - 2 * p[1:-1] + p[:-2]) / ds ** 2
-    dpdt += nlt_term(s, p)  # Add transport term
-    dpdt[0] = 0.0  # Boundary condition at s_min
-    dpdt[-1] = 0.0  # Boundary condition at s_max
+    # Add drift term
+    # dpdt += advection_term(v, p, ds)
+    # Add transport term
+    dpdt += nlt_term(s, p)
+    # Apply boundary conditions (Dirichlet: p = 0 at boundaries)
+    dpdt[0] = 0.0
+    dpdt[-1] = 0.0
     return dpdt
 
 # Time points where the solution is computed
@@ -97,23 +116,22 @@ plt.grid(True)
 # Fit ΔMSD to f(t) = m * t^a
 # -----------------------------
 def msd_fit_func(t, m, a):
-    """Fitting function for MSD change."""
     return m * t**a
 
-# Exclude t=0 to avoid log(0) issues
+# Exclude t=0 to avoid issues with log(0)
 t_fit = t_eval[1:]
 MSD_fit = MSD_change[1:]
 
-# Perform curve fitting
-params_msd, params_covariance_msd = curve_fit(msd_fit_func, t_fit, MSD_fit, p0=[1.0, 1.0])
+# Perform the curve fitting
+params, params_covariance = curve_fit(msd_fit_func, t_fit, MSD_fit, p0=[1.0, 1.0])
 
 # Extract fitted parameters
-m_fit_msd, a_fit_msd = params_msd
-print(f"Fitted MSD parameters: m = {m_fit_msd:.4f}, a = {a_fit_msd:.4f}")
+m_fit, a_fit = params
+print(f"Fitted parameters: m = {m_fit:.4f}, a = {a_fit:.4f}")
 
 # Plot the fitted function
 t_fit_line = np.linspace(t_min, t_max, 1000)
-MSD_fit_line = msd_fit_func(t_fit_line, m_fit_msd, a_fit_msd)
-plt.plot(t_fit_line, MSD_fit_line, '-', label=f'Fit: ΔMSD = {m_fit_msd:.3f} * t^{a_fit_msd:.3f}')
+MSD_fit_line = msd_fit_func(t_fit_line, m_fit, a_fit)
+plt.plot(t_fit_line, MSD_fit_line, '-', label=f'Fit: ΔMSD = {m_fit:.3f} * t^{a_fit:.3f}')
 plt.legend()
 plt.show()
