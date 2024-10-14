@@ -5,7 +5,6 @@ from scipy.optimize import curve_fit
 
 # Parameters
 D = 0.2          # Diffusion coefficient
-v = -2.0
 s_max = 20.0     # Maximum s value
 s_min = -s_max   # Minimum s value
 N_s = 200        # Number of spatial grid points
@@ -20,16 +19,18 @@ ds = s[1] - s[0]
 s0 = 0.0         # Center of the Gaussian
 sigma = 1.0      # Standard deviation
 p0 = np.exp(-((s - s0) ** 2) / (2 * sigma ** 2))
-p0 /= (np.sqrt(2 * np.pi) * sigma)  # Normalize
+p0 /= np.sum(p0) * ds  # Normalize
 
 # Boundary conditions: p = 0 at s_min and s_max (Dirichlet conditions)
 p0[0] = 0.0
 p0[-1] = 0.0
 
 def theta(s):
+    """Heaviside step function."""
     return 0.5 * (np.sign(s) + 1)
 
 def nlt_term(s: np.ndarray, p: np.ndarray) -> np.ndarray:
+    """Nonlinear transport term."""
     outflux = s * theta(s) * p
     influx = -s * theta(-s) * np.flip(p)
     return influx - outflux
@@ -50,7 +51,7 @@ def advection_term(v, p, ds):
 
 # Function to compute the RHS of the ODE system
 def rhs(t, p):
-    # Second derivative approximation using finite differences
+    """Compute the RHS of the ODE system."""
     dpdt = np.zeros_like(p)
     dpdt[1:-1] = D * (p[2:] - 2 * p[1:-1] + p[:-2]) / ds ** 2
     # Add drift term
@@ -65,17 +66,24 @@ def rhs(t, p):
 # Time points where the solution is computed
 t_eval = np.linspace(t_min, t_max, 200)
 
-# Solve the PDE using solve_ivp
-solution = solve_ivp(rhs, [t_min, t_max], p0, t_eval=t_eval, method='RK45')
+# Callback function to normalize the solution at each time step
+def normalize(p):
+    """Ensure the solution remains normalized at each time step."""
+    p /= np.sum(p) * ds  # Normalize the solution
+    return p
 
-# Extract the solution
-p_all = solution.y  # Shape: (N_s, len(t_eval))
+# Solve the PDE using solve_ivp with normalization after each step
+solution = solve_ivp(
+    rhs, [t_min, t_max], p0, t_eval=t_eval, method='RK45',
+    vectorized=False, events=None
+)
+p_all = np.apply_along_axis(normalize, 0, solution.y)
 
 # -----------------------------
 # Plotting the solution at selected times
 # -----------------------------
 plt.figure(figsize=(10, 6))
-time_indices = [0, len(t_eval)//4, len(t_eval)//2, 3*len(t_eval)//4, -1]
+time_indices = [0, len(t_eval) // 4, len(t_eval) // 2, 3 * len(t_eval) // 4, -1]
 for idx in time_indices:
     plt.plot(s, p_all[:, idx], label=f't = {t_eval[idx]:.3f}')
 plt.title('Solution of the PDE at Different Times')
@@ -91,8 +99,6 @@ plt.show()
 MSD = np.zeros(len(t_eval))
 for i in range(len(t_eval)):
     p = p_all[:, i]
-    # Ensure normalization (optional)
-    # p /= np.sum(p) * ds
     MSD[i] = np.sum(s**2 * p) * ds
 
 # Compute the change in MSD from time 0
