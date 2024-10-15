@@ -49,7 +49,7 @@ def main():
     # -------------------------------
 
     # Parameters
-    N = 5000          # Number of spins
+    N = 3000          # Number of spins
     beta = 1.0       # Epistasis strength (inverse temperature)
     rho = 1.0        # Fraction of non-zero coupling elements
     bins = 40         # Number of bins for histograms

@@ -142,9 +142,10 @@ def calc_DFE(alpha, h, J):
     Returns
     -------
     numpy.ndarray
-        The distribution of fitness effects.
+        The normalized distribution of fitness effects.
     """
     return -2 * calc_kis(alpha, h, J)
+
 
 def calc_BDFE(alpha, h, J):
     """

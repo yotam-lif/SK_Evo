@@ -30,7 +30,7 @@ def main():
     J = Fs.init_J(N, beta=beta, rho=rho, random_state=random_state)
 
     # Define desired ranks using linear spacing
-    num_points = 20  # Adjust this number as needed
+    num_points = 30  # Adjust this number as needed
     max_rank = int(N/2)
     min_rank = 0
 
