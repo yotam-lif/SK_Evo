@@ -49,7 +49,7 @@ def main():
     # -------------------------------
 
     # Parameters
-    N = 3000          # Number of spins
+    N = 5000          # Number of spins
     beta = 1.0       # Epistasis strength (inverse temperature)
     rho = 1.0        # Fraction of non-zero coupling elements
     bins = 40         # Number of bins for histograms
@@ -65,6 +65,8 @@ def main():
 
     # Define desired ranks (sorted in descending order)
     ranks = [0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+    ranks = np.array(ranks)
+    ranks *= 2
     ranks = sorted(ranks, reverse=True)  # [1000, 900, ..., 0]
 
     # Relax the system using sswm_flip (sswm=True)

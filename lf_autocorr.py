@@ -15,9 +15,9 @@ def main():
     # -------------------------------
 
     # Parameters
-    N = 2000  # Number of spins
-    beta = 0.25  # Epistasis strength
-    rho = 0.05  # Fraction of non-zero coupling elements
+    N = 1000  # Number of spins
+    beta = 1.0  # Epistasis strength
+    rho = 1.0  # Fraction of non-zero coupling elements
     random_state = 42  # Seed for reproducibility
 
     # Initialize spin configuration
@@ -30,8 +30,8 @@ def main():
     J = Fs.init_J(N, beta=beta, rho=rho, random_state=random_state)
 
     # Define desired ranks using linear spacing
-    num_points = 150  # Adjust this number as needed
-    max_rank = 1000
+    num_points = 20  # Adjust this number as needed
+    max_rank = int(N/2)
     min_rank = 0
 
     # Generate linearly spaced ranks descendingly from max_rank to min_rank
