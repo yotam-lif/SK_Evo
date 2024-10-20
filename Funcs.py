@@ -291,10 +291,10 @@ def compute_fitness_delta_mutant(alpha, his, Jijs, k):
     return -2 * alpha[k] * (his[k] + Jijs[k] @ alpha)
 
 
-def relax_SK(alpha, his, Jijs, ranks, sswm=True):
+def relax_SK(alpha, his, Jijs, ranks=None, flips=None, sswm=True):
     """
-    Relax the Sherrington-Kirkpatrick model with given parameters, saving alpha at specified ranks,
-    and recording the cumulative number of flips (mutations) up to each saved rank.
+    Relax the Sherrington-Kirkpatrick model with given parameters, saving alpha at specified ranks or flips,
+    and recording the cumulative number of flips (mutations) up to each saved rank or flip.
 
     Parameters
     ----------
@@ -304,60 +304,72 @@ def relax_SK(alpha, his, Jijs, ranks, sswm=True):
         The local fitness fields.
     Jijs : numpy.ndarray
         The coupling matrix.
-    ranks : list or array-like
+    ranks : list or array-like, optional
         The ranks at which to save the current alpha configuration.
+    flips : list or array-like, optional
+        The flip numbers at which to save the current alpha configuration.
     sswm : bool, optional
         Whether to use sswm_flip or glauber_flip for flipping spins.
 
     Returns
     -------
-    (numpy.ndarray, list of numpy.ndarray or None, list of int)
+    (numpy.ndarray, list of numpy.ndarray or None, list of int, list of int)
         alpha: The final spin configuration.
-        time_stamps: The list of alpha configurations saved at the specified ranks.
-                     If a desired rank is not reached, `None` is saved for that rank.
-        flips: List of cumulative number of flips up to each saved alpha configuration.
+        time_stamps: The list of alpha configurations saved at the specified ranks or flips.
+                     If a desired rank or flip is not reached, `None` is saved for that rank or flip.
+        saved_flips: List of cumulative number of flips up to each saved alpha configuration.
+        saved_ranks: List of ranks corresponding to each saved alpha configuration.
     """
-    # Ensure ranks are sorted in descending order
-    ranks = sorted(ranks, reverse=True)
-    time_stamps = [None] * len(ranks)  # Initialize with None
-    flips = [None] * len(ranks)  # Initialize flips list corresponding to each saved configuration
-    current_index = 0
+    if ranks is not None:
+        ranks = sorted(ranks, reverse=True)
+    if flips is not None:
+        flips = sorted(flips)
+
+    time_stamps = []
+    saved_flips = []
+    saved_ranks = []
+    current_rank_index = 0
+    current_flip_index = 0
     rank = calc_rank(alpha, his, Jijs)
-    total_flips = 0  # Initialize cumulative flip counter
+    total_flips = 0
 
-    while rank > 0 and current_index < len(ranks):
-        # Check if the current rank matches or falls below the desired rank
-        if rank <= ranks[current_index]:
-            time_stamps[current_index] = alpha.copy()
-            flips[current_index] = total_flips
-            current_index += 1
+    # Corrected while condition with proper parentheses
+    while rank > 0 and ((ranks is not None and current_rank_index < len(ranks)) or
+                        (flips is not None and current_flip_index < len(flips))):
+        if ranks is not None and rank <= ranks[current_rank_index]:
+            time_stamps.append(alpha.copy())
+            saved_flips.append(total_flips)
+            saved_ranks.append(rank)
+            current_rank_index += 1
+            if current_rank_index >= len(ranks):
+                ranks = None  # Stop checking ranks if all are processed
 
-            # If we've reached all desired ranks, break the loop
-            if current_index >= len(ranks):
-                break
+        if flips is not None and total_flips >= flips[current_flip_index]:
+            time_stamps.append(alpha.copy())
+            saved_flips.append(total_flips)
+            saved_ranks.append(rank)
+            current_flip_index += 1
+            if current_flip_index >= len(flips):
+                flips = None  # Stop checking flips if all are processed
 
-        # Choose which flip method to use
+        if ranks is None and flips is None:
+            break
+
         if sswm:
             flip_idx = sswm_flip(alpha, his, Jijs)
         else:
-            # Since glauber_flip returns a single index, adjust accordingly
-            flip_idx = glauber_flip(alpha, his, Jijs, beta=10)  # You can parameterize beta if needed
+            flip_idx = glauber_flip(alpha, his, Jijs, beta=10)
 
-        # Flip the selected spin
         alpha[flip_idx] *= -1
-        total_flips += 1  # Increment the total flips counter
-
-        # Recalculate the rank after the flip
+        total_flips += 1
         rank = calc_rank(alpha, his, Jijs)
-        # Uncomment the following line if you want to see the rank progression
-        # print(f'Rank: {rank}')
 
-    # Save the final configuration and flips if the last rank was not reached
-    if current_index < len(ranks):
-        time_stamps[current_index] = alpha.copy()
-        flips[current_index] = total_flips
+    if rank == 0:
+        time_stamps.append(alpha.copy())
+        saved_flips.append(total_flips)
+        saved_ranks.append(rank)
 
-    return alpha, time_stamps, flips
+    return alpha, time_stamps, saved_flips, saved_ranks
 
 def backward_propagate(dfe_evo: np. ndarray, dfe_anc: np. ndarray, beneficial=True):
     """

@@ -11,12 +11,13 @@ from Funcs import (
     compute_fit_slow,
     calc_rank,
     calc_F_off,
+    calc_basic_lfs
 )
 
 
 def main():
     # Parameters
-    N = 3000  # Number of spins
+    N = 1000  # Number of spins
     random_state = 42  # Seed for reproducibility
     beta = 1.0  # Inverse temperature
     rho = 1.0  # Sparsity of the coupling matrix
@@ -30,7 +31,6 @@ def main():
     # Uncomment the following line if F_off calculation is needed
     # F_off = calc_F_off(alpha, h, J)
     F_off = 0
-    sig_J = np.sqrt(beta / (N * rho))
     print(f'F_off = {F_off:.2f}')
 
     # Define ranks at which to save the configurations

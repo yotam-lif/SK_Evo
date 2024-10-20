@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
 from Funcs import (
     init_alpha,
     init_h,
@@ -12,6 +13,8 @@ from Funcs import (
     calc_basic_lfs  # Newly imported function
 )
 
+def fit_function(t, m, a, b):
+    return m * t**a + b
 
 def main():
     # Parameters
@@ -19,6 +22,8 @@ def main():
     random_state = 42  # Seed for reproducibility
     beta = 1.0  # Inverse temperature
     rho = 1.0  # Sparsity of the coupling matrix
+    # Define the number of lowest ranks to plot
+    n = 2  # Example value, adjust as needed
 
     # Initialize the model
     alpha = init_alpha(N)
@@ -31,7 +36,6 @@ def main():
     F_off = calc_F_off(alpha, h, J)
 
     # Define ranks at which to save the configurations
-    # Here, we choose to save at 30 equally spaced ranks from initial rank to 0
     initial_rank = calc_rank(alpha, h, J)
     num_saves = 30
     if initial_rank < num_saves:
@@ -39,11 +43,9 @@ def main():
     else:
         step = initial_rank // num_saves
         ranks_to_save = list(range(initial_rank, -1, -step))
-        # Ensure that 0 is included
         if 0 not in ranks_to_save:
             ranks_to_save.append(0)
 
-    # Remove duplicates and sort in descending order
     ranks_to_save = sorted(list(set(ranks_to_save)), reverse=True)
 
     print(f"Initial Rank: {initial_rank}")
@@ -64,77 +66,54 @@ def main():
     flip_counts = []
     fitnesses = []
 
+    # Subset of ranks to plot local field distributions
+    ranks_to_plot = ranks_to_save[-n:]  # Get the n lowest ranks
+
     # Iterate over saved alphas and compute metrics
     for idx, saved_alpha in enumerate(saved_alphas):
         if saved_alpha is not None:
-            # Calculate local fields
             lf_dist = calc_basic_lfs(saved_alpha, h, J)
-
-            # Compute average of absolute local fields
             average_abs_lf = np.mean(np.abs(lf_dist))
             mean_abs_lfs.append(average_abs_lf)
-
-            # Compute variance of local fields
             var_lfs = np.var(lf_dist)
             var_lfs_list.append(var_lfs)
-
-            # Record the number of flips at this rank
             flip_counts.append(saved_flips[idx])
-
-            # Compute fitness for the saved configuration
             fitness = compute_fit_slow(saved_alpha, h, J)
             fitnesses.append(fitness)
+
+            if ranks_to_save[idx] in ranks_to_plot:
+                plt.figure()
+                plt.hist(lf_dist, bins=50, alpha=0.75, color='blue', edgecolor='black')
+                plt.title(f'Local Field Distribution at Rank {ranks_to_save[idx]}')
+                plt.xlabel('Local Field')
+                plt.ylabel('Frequency')
+                plt.grid(True)
+                plt.show()
         else:
-            # If no configuration was saved at this rank, skip
             print(f"No configuration saved at rank index {idx}.")
 
-    # Convert lists to numpy arrays for easier handling
     mean_abs_lfs = np.array(mean_abs_lfs)
     var_lfs_list = np.array(var_lfs_list)
     flip_counts = np.array(flip_counts)
     fitnesses = np.array(fitnesses)
 
-    # Plotting Mean and Variance vs Number of Flips
+    # Fit and plot Mean of |Local Fields| vs Fitness
+    popt_mean, _ = curve_fit(fit_function, fitnesses, mean_abs_lfs, p0=[0, 2, 1])
     plt.figure(figsize=(12, 5))
-
-    # Mean of |Local Fields| vs Number of Flips
-    plt.subplot(1, 2, 1)
-    plt.plot(flip_counts, mean_abs_lfs, marker='o', linestyle='-',
-             color='b', label='Mean |Local Fields|')
-    plt.xlabel('Number of Flips')
-    plt.ylabel('Mean |Local Fields|')
-    plt.title('Mean |Local Fields| vs Number of Flips')
-    plt.legend()
-    plt.grid(True)
-
-    # Variance of Local Fields vs Number of Flips
-    plt.subplot(1, 2, 2)
-    plt.plot(flip_counts, var_lfs_list, marker='s', linestyle='--',
-             color='r', label='Variance of Local Fields')
-    plt.xlabel('Number of Flips')
-    plt.ylabel('Variance of Local Fields')
-    plt.title('Variance of Local Fields vs Number of Flips')
-    plt.legend()
-    plt.grid(True)
-
-    plt.tight_layout()
-    plt.show()
-
-    # Plotting Mean and Variance vs Fitness
-    plt.figure(figsize=(12, 5))
-
-    # Mean of |Local Fields| vs Fitness
     plt.subplot(1, 2, 1)
     plt.scatter(fitnesses, mean_abs_lfs, color='g', label='Mean |Local Fields|')
+    plt.plot(fitnesses, fit_function(fitnesses, *popt_mean), color='r', label=f'Fit: m={popt_mean[0]:.4f}, a={popt_mean[1]:.2f}, b={popt_mean[2]:.2f}')
     plt.xlabel('Fitness')
     plt.ylabel('Mean |Local Fields|')
     plt.title('Mean |Local Fields| vs Fitness')
     plt.legend()
     plt.grid(True)
 
-    # Variance of Local Fields vs Fitness
+    # Fit and plot Variance of Local Fields vs Fitness
+    popt_var, _ = curve_fit(fit_function, fitnesses, var_lfs_list, p0=[0, 2, 1])
     plt.subplot(1, 2, 2)
     plt.scatter(fitnesses, var_lfs_list, color='m', label='Variance of Local Fields')
+    plt.plot(fitnesses, fit_function(fitnesses, *popt_var), color='r', label=f'Fit: m={popt_var[0]:.4f}, a={popt_var[1]:.2f}, b={popt_var[2]:.2f}')
     plt.xlabel('Fitness')
     plt.ylabel('Variance of Local Fields')
     plt.title('Variance of Local Fields vs Fitness')
@@ -143,7 +122,6 @@ def main():
 
     plt.tight_layout()
     plt.show()
-
 
 if __name__ == "__main__":
     main()
