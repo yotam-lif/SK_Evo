@@ -120,7 +120,7 @@ def main():
     k_border = 4.0
     k_grid = np.linspace(-k_border, k_border, 700)  # Define k grid
     t_final = 50.0
-    num_steps = 100000
+    num_steps = 120000
     # Numerical stability requires dt <= dx^2/2D
     t_grid = np.linspace(0.0, t_final, num_steps)  # Define t grid
 

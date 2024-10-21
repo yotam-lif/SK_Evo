@@ -102,7 +102,7 @@ Stuff to do
 \begin_layout Enumerate
 Understand the evolution of fitness as function of flips.
  Try for different N.
- See if this is like in ML where it is linear with same slope at begining and then levels out like 
+ See if this is like in ML where it is linear with same slope at beginning and then levels out like 
 \begin_inset Formula $a-bte^{-ct}$
 \end_inset
 
@@ -152,35 +152,26 @@ Derivation for exponential BDFE distribution - Horner?
  Or other..?
 \end_layout
 
-\begin_layout Enumerate
-Remember in Horners derivation + sswm rates,
- the 
-\begin_inset Formula $D(t)$
-\end_inset
-
- is exactly minus the mean of the DFE,
- which is 
-\begin_inset Formula $2F(t)/N$
-\end_inset
-
-.
- In Horners explanation for exponential,
- the exponent should be 
-\begin_inset Formula $e^{-k/\sqrt{D(t)}}=e^{-k\sqrt{N/2F(t)}}$
-\end_inset
-
-.
- Check out if this checks out with the sim.
+\begin_layout Section*
+The Big Stuff
 \end_layout
 
 \begin_layout Enumerate
-Horners explanation for exponential involves unclear step - maybe true only for Glauber.
- See if expoinential is better fit for Glauber,
- try to understand unclear step.
+Explain scrambling
 \end_layout
 
 \begin_layout Enumerate
-Try fitting stuff to Baym data
+Try fitting scrambling to Baym Data
+\end_layout
+
+\begin_layout Enumerate
+Try fitting shape of DFE to Baym data,
+ including non-existent zero gap.
+ Don't forget errors
+\end_layout
+
+\begin_layout Enumerate
+Explain exponential BDFE?
 \end_layout
 
 \end_body
