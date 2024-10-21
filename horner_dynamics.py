@@ -58,17 +58,16 @@ def compute_dP_dt(P_plus, P_minus, k_grid):
     d2P_minus = np.gradient(grad_P_minus, k_grid)
 
     # Compute dP_plus_dt and dP_minus_dt
-    dP_plus_dt = (r(-k_grid, glauber=r_form) * P_minus
-                 - r(k_grid, glauber=r_form) * P_plus
-                 - v * grad_P_plus
-                 - D_minus * d2P_plus)
+    dP_plus_dt = - v * grad_P_plus - D_minus * d2P_plus
 
-    dP_minus_dt = (r(-k_grid, glauber=r_form) * P_plus
-                  - r(k_grid, glauber=r_form) * P_minus
-                  - v * grad_P_minus
-                  - D_plus * d2P_minus)
+    dP_minus_dt = - v * grad_P_minus - D_plus * d2P_minus
+
+    # Compute Non-linear transport(flip) term
+    dP_plus_dt += r(-k_grid, glauber=r_form) * P_minus - r(k_grid, glauber=r_form) * P_plus
+    dP_minus_dt += r(-k_grid, glauber=r_form) * P_plus - r(k_grid, glauber=r_form) * P_minus
 
     return dP_plus_dt, dP_minus_dt
+
 
 # Implement the RK4 integration method
 def solve_coupled_pde_RK4(k_grid, t_grid):
@@ -118,10 +117,11 @@ def solve_coupled_pde_RK4(k_grid, t_grid):
 # Define the main function
 def main():
     # Define k and t grids
-    k_border = 5.0
-    k_grid = np.linspace(-k_border, k_border, 1000)  # Define k grid
+    k_border = 4.0
+    k_grid = np.linspace(-k_border, k_border, 700)  # Define k grid
     t_final = 50.0
-    num_steps = 30000
+    num_steps = 100000
+    # Numerical stability requires dt <= dx^2/2D
     t_grid = np.linspace(0.0, t_final, num_steps)  # Define t grid
 
     # Solve the coupled PDE using RK4

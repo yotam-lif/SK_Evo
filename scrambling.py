@@ -34,7 +34,7 @@ def plot_dfe_comparison(ax: plt.Axes, dfe_current, dfe_propagated, bins, title):
 
 
 def main():
-    N = 3000  # Number of spins
+    N = 1000  # Number of spins
     beta = 0.25  # Epistasis strength
     rho = 0.05  # Fraction of non-zero coupling elements
     bins = 60
@@ -56,7 +56,7 @@ def main():
     ranks = sorted(ranks, reverse=True)  # [500, 444, ..., 0]
 
     # Relax the system using sswm_flip (sswm=True)
-    final_alpha, saved_alphas, flips = Fs.relax_SK(alpha_initial.copy(), h, J, ranks, sswm=True)
+    final_alpha, saved_alphas, flips, saved_ranks = Fs.relax_SK(alpha_initial.copy(), h, J, ranks, sswm=True)
 
     # Create main output directory for plots
     base_dir = os.path.dirname(os.path.abspath(__file__))

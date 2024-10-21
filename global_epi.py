@@ -17,7 +17,7 @@ from Funcs import (
 
 def main():
     # Parameters
-    N = 1000  # Number of spins
+    N = 2000  # Number of spins
     random_state = 42  # Seed for reproducibility
     beta = 1.0  # Inverse temperature
     rho = 1.0  # Sparsity of the coupling matrix
@@ -53,7 +53,7 @@ def main():
     print(f"Ranks to Save: {ranks_to_save}")
 
     # Perform relaxation
-    final_alpha, saved_alphas, saved_flips = relax_SK(
+    final_alpha, saved_alphas, saved_flips, saved_ranks = relax_SK(
         alpha=alpha.copy(),
         his=h,
         Jijs=J,

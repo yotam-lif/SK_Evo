@@ -1,16 +1,16 @@
-#LyX 2.3 created this file. For more info see http://www.lyx.org/
-\lyxformat 544
+#LyX 2.4 created this file. For more info see https://www.lyx.org/
+\lyxformat 620
 \begin_document
 \begin_header
 \save_transient_properties true
 \origin unavailable
 \textclass article
 \use_default_options true
-\maintain_unincluded_children false
+\maintain_unincluded_children no
 \language english
 \language_package default
-\inputencoding auto
-\fontencoding global
+\inputencoding auto-legacy
+\fontencoding auto
 \font_roman "default" "default"
 \font_sans "default" "default"
 \font_typewriter "default" "default"
@@ -18,7 +18,9 @@
 \font_default_family default
 \use_non_tex_fonts false
 \font_sc false
-\font_osf false
+\font_roman_osf false
+\font_sans_osf false
+\font_typewriter_osf false
 \font_sf_scale 100 100
 \font_tt_scale 100 100
 \use_microtype false
@@ -61,7 +63,9 @@
 \suppress_date false
 \justification true
 \use_refstyle 1
+\use_formatted_ref 0
 \use_minted 0
+\use_lineno 0
 \index Index
 \shortcut idx
 \color #008000
@@ -77,11 +81,16 @@
 \papercolumns 1
 \papersides 1
 \paperpagestyle default
+\tablestyle default
 \tracking_changes false
 \output_changes false
+\change_bars false
+\postpone_fragile_content false
 \html_math_output 0
 \html_css_as_file 0
 \html_be_strict false
+\docbook_table_output 0
+\docbook_mathml_prefix 1
 \end_header
 
 \begin_body
@@ -93,8 +102,7 @@ Stuff to do
 \begin_layout Enumerate
 Understand the evolution of fitness as function of flips.
  Try for different N.
- See if this is like in ML where it is linear with same slope at begining
- and then levels out like 
+ See if this is like in ML where it is linear with same slope at begining and then levels out like 
 \begin_inset Formula $a-bte^{-ct}$
 \end_inset
 
@@ -108,8 +116,8 @@ Understand diffusion in the model.
 \begin_inset Formula $D(t)$
 \end_inset
 
- like in Horner's derivation? What test do we have - for instance MSD being
- 
+ like in Horner's derivation?
+ What test do we have - for instance MSD being 
 \begin_inset Formula $2Dt$
 \end_inset
 
@@ -117,18 +125,18 @@ Understand diffusion in the model.
 \end_layout
 
 \begin_layout Enumerate
-Create equation for distribution of LFs, not 
+Create equation for distribution of LFs,
+ not 
 \begin_inset Formula $k_{i}$
 \end_inset
 
-s, in Horner fashion - maybe solvable analytically because it won't have
- the flip terms.
+s,
+ in Horner fashion - maybe solvable analytically because it won't have the flip terms.
  Perhaps easier to understand.
 \end_layout
 
 \begin_layout Enumerate
-Using understanding of diffusion try to make sense of the rank global epistasis
- derivation.
+Using understanding of diffusion try to make sense of the rank global epistasis derivation.
 \end_layout
 
 \begin_layout Enumerate
@@ -140,20 +148,24 @@ Try to do derivation of BDFE and why it's mean goes like
 \end_layout
 
 \begin_layout Enumerate
-Derivation for exponential BDFE distribution - Horner? Or other..?
+Derivation for exponential BDFE distribution - Horner?
+ Or other..?
 \end_layout
 
 \begin_layout Enumerate
-Remember in Horners derivation + sswm rates, the 
+Remember in Horners derivation + sswm rates,
+ the 
 \begin_inset Formula $D(t)$
 \end_inset
 
- is exactly minus the mean of the DFE, which is 
+ is exactly minus the mean of the DFE,
+ which is 
 \begin_inset Formula $2F(t)/N$
 \end_inset
 
 .
- In Horners explanation for exponential, the exponent should be 
+ In Horners explanation for exponential,
+ the exponent should be 
 \begin_inset Formula $e^{-k/\sqrt{D(t)}}=e^{-k\sqrt{N/2F(t)}}$
 \end_inset
 
@@ -162,10 +174,13 @@ Remember in Horners derivation + sswm rates, the
 \end_layout
 
 \begin_layout Enumerate
-Horners explanation for exponential involves unclear step - maybe true only
- for Glauber.
- See if expoinential is better fit for Glauber, try to understand unclear
- step.
+Horners explanation for exponential involves unclear step - maybe true only for Glauber.
+ See if expoinential is better fit for Glauber,
+ try to understand unclear step.
+\end_layout
+
+\begin_layout Enumerate
+Try fitting stuff to Baym data
 \end_layout
 
 \end_body

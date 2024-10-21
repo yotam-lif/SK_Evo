@@ -23,7 +23,7 @@ def main():
     beta = 1.0  # Inverse temperature
     rho = 1.0  # Sparsity of the coupling matrix
     # Define the number of lowest ranks to plot
-    n = 2  # Example value, adjust as needed
+    n = 8  # Example value, adjust as needed
 
     # Initialize the model
     alpha = init_alpha(N)
@@ -52,7 +52,7 @@ def main():
     print(f"Ranks to Save: {ranks_to_save}")
 
     # Perform relaxation
-    final_alpha, saved_alphas, saved_flips = relax_SK(
+    final_alpha, saved_alphas, saved_flips, saved_ranks = relax_SK(
         alpha=alpha.copy(),
         his=h,
         Jijs=J,
@@ -90,7 +90,7 @@ def main():
                 plt.grid(True)
                 plt.show()
         else:
-            print(f"No configuration saved at rank index {idx}.")
+            continue
 
     mean_abs_lfs = np.array(mean_abs_lfs)
     var_lfs_list = np.array(var_lfs_list)

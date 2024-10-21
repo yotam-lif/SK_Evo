@@ -49,7 +49,7 @@ def main():
     # -------------------------------
 
     # Parameters
-    N = 3000          # Number of spins
+    N = 2000          # Number of spins
     beta = 1.0       # Epistasis strength (inverse temperature)
     rho = 1.0        # Fraction of non-zero coupling elements
     bins = 40         # Number of bins for histograms
@@ -70,7 +70,7 @@ def main():
     ranks = sorted(ranks, reverse=True)  # [1000, 900, ..., 0]
 
     # Relax the system using sswm_flip (sswm=True)
-    final_alpha, saved_alphas, flips = Fs.relax_SK(alpha_initial.copy(), h, J, ranks, sswm=True)
+    final_alpha, saved_alphas, saved_flips, saved_ranks = Fs.relax_SK(alpha_initial.copy(), h, J, ranks, sswm=True)
 
     # Create directory for saving histograms
     output_dir = "sim_bdfes"
@@ -95,7 +95,7 @@ def main():
                 print(f"Fitness is non-positive ({fitness}) at rank {rank}; cannot compute lambda = 1/fitness.")
                 lam_fitness = np.nan
             else:
-                lam_fitness = N / fitness
+                lam_fitness = np.sqrt(N / (2*fitness))
 
             # Set up the plot
             plt.figure(figsize=(10, 7))
@@ -152,7 +152,7 @@ def main():
                 annotation_text += "Fitted linear function: Failed"
 
             if not np.isnan(lam_fitness):
-                annotation_text += f"\nFitness = {fitness:.4f}\nTheoretical $\\lambda$ = N/Fitness = {lam_fitness:.4f}"
+                annotation_text += f"\nFitness = {fitness:.4f}\nTheoretical $\\lambda = \\sqrt{{N/F(t)}}$ = {lam_fitness:.4f}"
             else:
                 annotation_text += "\nFitness: Invalid (<= 0)"
 

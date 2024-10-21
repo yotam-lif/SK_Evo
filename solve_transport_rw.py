@@ -9,7 +9,7 @@ s_max = 20.0     # Maximum s value
 s_min = -s_max   # Minimum s value
 N_s = 200        # Number of spatial grid points
 t_min = 0.0      # Start time
-t_max = 100.0     # End time
+t_max = 70.0     # End time
 
 # Spatial grid
 s = np.linspace(s_min, s_max, N_s)
