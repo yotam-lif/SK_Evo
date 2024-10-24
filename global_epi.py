@@ -1,5 +1,4 @@
-# relaxation_script.py
-
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from Funcs import (
@@ -14,10 +13,9 @@ from Funcs import (
     calc_basic_lfs
 )
 
-
 def main():
     # Parameters
-    N = 2000  # Number of spins
+    N = 4000  # Number of spins
     random_state = 42  # Seed for reproducibility
     beta = 1.0  # Inverse temperature
     rho = 1.0  # Sparsity of the coupling matrix
@@ -67,7 +65,8 @@ def main():
     max_BDFE_list = []
     fitness_list = []
     rank_list = []  # Renamed from len_BDFE_list
-    mean_abs_lfs_list = []  # New list to store mean absolute local fields
+    variance_DFE_list = []  # List to store variance of DFE
+    variance_BDFE_list = []  # List to store variance of BDFE
 
     # Iterate over saved alphas and compute metrics
     for idx, saved_alpha in enumerate(saved_alphas):
@@ -91,11 +90,16 @@ def main():
             # Compute fitness
             fitness = compute_fit_slow(saved_alpha, h, J, F_off=F_off)
 
-            # Calculate basic local fields
-            basic_lfs = calc_basic_lfs(saved_alpha, h, J)
-            abs_basic_lfs = np.abs(basic_lfs)
-            mean_abs_lfs = np.mean(abs_basic_lfs)
-            mean_abs_lfs_list.append(mean_abs_lfs)
+            # Compute variance of DFE
+            variance_DFE = np.var(DFE)
+            variance_DFE_list.append(variance_DFE)
+
+            # Compute variance of BDFE, handle cases with no beneficial effects
+            if BDFE.size > 0:
+                variance_BDFE = np.var(BDFE)
+            else:
+                variance_BDFE = np.nan
+            variance_BDFE_list.append(variance_BDFE)
 
             # Append to lists
             average_DFE_list.append(average_DFE)
@@ -110,7 +114,6 @@ def main():
                   f"BDFE Size = {BDFE.size}, "
                   f"Max BDFE = {max_BDFE:.4f}, "
                   f"Fitness = {fitness:.4f}, "
-                  f"Mean Abs Local Fields = {mean_abs_lfs:.4f}, "
                   f"Flips = {saved_flips[idx]}")
         else:
             print(f"Rank {ranks_to_save[idx]} was not reached during relaxation.")
@@ -119,7 +122,8 @@ def main():
             max_BDFE_list.append(np.nan)
             fitness_list.append(np.nan)
             rank_list.append(np.nan)  # Assign NaN for rank
-            mean_abs_lfs_list.append(np.nan)  # Assign NaN for mean_abs_lfs
+            variance_DFE_list.append(np.nan)  # Assign NaN for variance_DFE
+            variance_BDFE_list.append(np.nan)  # Assign NaN for variance_BDFE
 
     # Convert lists to numpy arrays for plotting
     average_DFE_array = np.array(average_DFE_list)
@@ -127,7 +131,8 @@ def main():
     max_BDFE_array = np.array(max_BDFE_list)
     fitness_array = np.array(fitness_list)
     rank_array = np.array(rank_list)  # Renamed from len_BDFE_array
-    mean_abs_lfs_array = np.array(mean_abs_lfs_list)  # Array for mean absolute local fields
+    variance_DFE_array = np.array(variance_DFE_list)  # Array for variance of DFE
+    variance_BDFE_array = np.array(variance_BDFE_list)  # Array for variance of BDFE
 
     # Remove any NaN entries for the main metrics
     valid_main = (~np.isnan(fitness_array) &
@@ -138,17 +143,17 @@ def main():
     average_DFE_main = average_DFE_array[valid_main]
     average_BDFE_main = average_BDFE_array[valid_main]
     max_BDFE_main = max_BDFE_array[valid_main]
-    mean_abs_lfs_main = mean_abs_lfs_array[valid_main]  # Corresponding mean abs local fields
 
     # Remove any NaN entries for rank
     valid_rank = ~np.isnan(rank_array)
     fitness_rank = fitness_array[valid_rank]
     rank_valid = rank_array[valid_rank]
 
-    # Remove any NaN entries for mean_abs_lfs
-    valid_mean_abs_lfs = ~np.isnan(mean_abs_lfs_array)
-    fitness_lfs = fitness_array[valid_mean_abs_lfs]
-    mean_abs_lfs_valid = mean_abs_lfs_array[valid_mean_abs_lfs]
+    # Remove any NaN entries for the variances
+    valid_variance = (~np.isnan(variance_DFE_array) & ~np.isnan(variance_BDFE_array))
+    fitness_variance = fitness_array[valid_variance]
+    variance_DFE_valid = variance_DFE_array[valid_variance]
+    variance_BDFE_valid = variance_BDFE_array[valid_variance]
 
     # Perform general linear fit: Average DFE = m * Fitness + b
     m_DFE, b_DFE = np.polyfit(fitness_main, average_DFE_main, 1)
@@ -170,13 +175,22 @@ def main():
     print(f"Fitted slope for rank (m_rank): {m_rank:.4f}")
     print(f"Fitted intercept for rank (b_rank): {b_rank:.4f}")
 
-    # Perform linear fit for mean absolute local fields
-    m_mean_abs_lfs, b_mean_abs_lfs = np.polyfit(fitness_lfs, mean_abs_lfs_valid, 1)
-    print(f"Fitted slope for Mean Abs Local Fields (m_mean_abs_lfs): {m_mean_abs_lfs:.4f}")
-    print(f"Fitted intercept for Mean Abs Local Fields (b_mean_abs_lfs): {b_mean_abs_lfs:.4f}")
+    # Perform linear fit for variance of DFE
+    m_var_DFE, b_var_DFE = np.polyfit(fitness_variance, variance_DFE_valid, 1)
+    print(f"Fitted slope for Variance of DFE (m_var_DFE): {m_var_DFE:.4f}")
+    print(f"Fitted intercept for Variance of DFE (b_var_DFE): {b_var_DFE:.4f}")
 
+    # Perform linear fit for variance of BDFE
+    m_var_BDFE, b_var_BDFE = np.polyfit(fitness_variance, variance_BDFE_valid, 1)
+    print(f"Fitted slope for Variance of BDFE (m_var_BDFE): {m_var_BDFE:.4f}")
+    print(f"Fitted intercept for Variance of BDFE (b_var_BDFE): {b_var_BDFE:.4f}")
+
+    print(f'Slope for DFE * -N = {m_DFE * -N:.3f}')
     print(f'Slope for BDFE * -N = {m_BDFE * -N:.3f}')
     print(f'Slope for Max DFE * -N = {m_maxBDFE * -N:.3f}')
+
+    print('Slope for variance of DFE * -N = {:.3f}'.format(m_var_DFE * -N))
+    print('Slope for variance of BDFE * -N = {:.3f}'.format(m_var_BDFE * -N))
 
     # Generate fit line values
     fit_fitness_main = np.linspace(fitness_main.min(), fitness_main.max(), 500)
@@ -187,8 +201,18 @@ def main():
     fit_fitness_rank = np.linspace(fitness_rank.min(), fitness_rank.max(), 500)
     fit_rank = m_rank * fit_fitness_rank + b_rank  # Fit line for rank
 
-    fit_fitness_lfs = np.linspace(fitness_lfs.min(), fitness_lfs.max(), 500)
-    fit_mean_abs_lfs = m_mean_abs_lfs * fit_fitness_lfs + b_mean_abs_lfs  # Fit line for mean abs local fields
+    fit_fitness_variance = np.linspace(fitness_variance.min(), fitness_variance.max(), 500)
+    fit_var_DFE = m_var_DFE * fit_fitness_variance + b_var_DFE  # Fit line for variance of DFE
+    fit_var_BDFE = m_var_BDFE * fit_fitness_variance + b_var_BDFE  # Fit line for variance of BDFE
+
+    # Compute the theoretical variance curve
+    sigma_h2 = np.var(h)
+    sigma_J2 = np.var(J)
+    theoretical_variance = 4 * (sigma_h2 + N*sigma_J2) - 4 * (fitness_array / N) ** 2
+
+    # Create directory for saving plots
+    output_dir = 'global_epi'
+    os.makedirs(output_dir, exist_ok=True)
 
     # Plotting Metrics vs Fitness
     plt.figure(figsize=(14, 10))
@@ -214,6 +238,7 @@ def main():
     plt.legend(fontsize=12)
     plt.grid(True, linestyle='--', alpha=0.7)
     plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, 'metrics_vs_fitness.png'))
     plt.show()
 
     # Plotting rank vs Fitness in a Separate Plot
@@ -230,24 +255,33 @@ def main():
     plt.legend(fontsize=12)
     plt.grid(True, linestyle='--', alpha=0.7)
     plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, 'rank_vs_fitness.png'))
     plt.show()
 
-    # # Plotting Mean Absolute Local Fields vs Fitness in a Separate Plot
-    # plt.figure(figsize=(14, 6))
-    #
-    # # Scatter plot for mean absolute local fields
-    # plt.scatter(fitness_lfs, mean_abs_lfs_valid, color='orange', label='Mean Abs Local Fields', alpha=0.6)
-    # plt.plot(fit_fitness_lfs, fit_mean_abs_lfs, color='orange', linestyle='--',
-    #          label=f'Mean Abs Local Fields = {m_mean_abs_lfs:.4f} * F(t) + {b_mean_abs_lfs:.4f}')
-    #
-    # plt.xlabel('Fitness F(t)', fontsize=14)
-    # plt.ylabel('Mean Absolute Local Fields', fontsize=14)
-    # plt.title('SK Model Relaxation: Mean Absolute Local Fields vs Fitness', fontsize=16)
-    # plt.legend(fontsize=12)
-    # plt.grid(True, linestyle='--', alpha=0.7)
-    # plt.tight_layout()
-    # plt.show()
+    # Plotting Variance of DFE and BDFE vs Fitness
+    plt.figure(figsize=(14, 6))
 
+    # Scatter plot for variance of DFE
+    plt.scatter(fitness_variance, variance_DFE_valid, color='blue', label='Variance of DFE', alpha=0.6)
+    plt.plot(fit_fitness_variance, fit_var_DFE, color='blue', linestyle='--',
+             label=f'Fit Variance of DFE: $\\sigma^2(\\Delta_i(t))$ = {m_var_DFE:.4f} * F(t) + {b_var_DFE:.4f}')
+
+    # Scatter plot for variance of BDFE
+    plt.scatter(fitness_variance, variance_BDFE_valid, color='green', label='Variance of BDFE', alpha=0.6)
+    plt.plot(fit_fitness_variance, fit_var_BDFE, color='green', linestyle='--',
+             label=f'Fit Variance of BDFE: $\\sigma^2(B\\Delta_i(t))$ = {m_var_BDFE:.4f} * F(t) + {b_var_BDFE:.4f}')
+
+    # Plot theoretical variance curve
+    plt.plot(fitness_array, theoretical_variance, color='orange', linestyle='-', label=r'Theoretical $\langle \Delta_i^2 \rangle$')
+
+    plt.xlabel('Fitness F(t)', fontsize=14)
+    plt.ylabel('Variance', fontsize=14)
+    plt.title('Variance of DFE and BDFE vs Fitness', fontsize=16)
+    plt.legend(fontsize=12)
+    plt.grid(True, linestyle='--', alpha=0.7)
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, 'variance_vs_fitness.png'))
+    plt.show()
 
 if __name__ == "__main__":
     main()

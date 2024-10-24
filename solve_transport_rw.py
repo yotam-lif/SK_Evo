@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
 from scipy.optimize import curve_fit
+import os
 
 # Parameters
 s_max = 100.0  # Maximum s value
@@ -13,6 +14,10 @@ c = -1.0  # Speed of the drift term
 sig = 4.0  # Standard deviation
 T_num = 200  # Number of time points
 eps = 1e-5  # Small number to avoid division by zero
+
+# Create directory if it doesn't exist
+output_dir = 'solve_transport_rw'
+os.makedirs(output_dir, exist_ok=True)
 
 # Spatial grid
 s = np.linspace(s_min, s_max, N_s)
@@ -83,7 +88,7 @@ def rhs(t, p):
     """Compute the RHS of the ODE system."""
     dpdt = np.zeros_like(p)
     dpdt += drift_term(c, p, s, ds)
-    dpdt += flip_term(s, p)
+    # dpdt += flip_term(s, p)
     dpdt += diff_term(sig, p, ds)
     # Apply boundary conditions (Dirichlet: p = 0 at boundaries)
     dpdt[0] = 0.0
@@ -121,47 +126,49 @@ plt.xlabel('Position s')
 plt.ylabel('Concentration p(s, t)')
 plt.legend()
 plt.grid(True)
-plt.show()
+plt.savefig(os.path.join(output_dir, 'solution_plot.png'))
+plt.close()
 
-# # -----------------------------
-# # Compute Mean Square Displacement (MSD)
-# # -----------------------------
-# MSD = np.zeros(len(t_eval))
-# for i in range(len(t_eval)):
-#     p = p_all[:, i]
-#     MSD[i] = np.sum(s**2 * p) * ds
-#
-# # Compute the change in MSD from time 0
-# MSD_change = MSD - MSD[0]
-#
-# # Plotting the change in MSD over time
-# plt.figure(figsize=(10, 6))
-# plt.plot(t_eval, MSD_change, 'o', label='ΔMSD data')
-# plt.title('Change in Mean Square Displacement over Time')
-# plt.xlabel('Time t')
-# plt.ylabel('ΔMSD(t) = MSD(t) - MSD(0)')
-# plt.grid(True)
-#
-# # -----------------------------
-# # Fit ΔMSD to f(t) = m * t^a
-# # -----------------------------
-# def msd_fit_func(t, m, a):
-#     return m * t**a
-#
-# # Exclude t=0 to avoid issues with log(0)
-# t_fit = t_eval[1:]
-# MSD_fit = MSD_change[1:]
-#
-# # Perform the curve fitting
-# params, params_covariance = curve_fit(msd_fit_func, t_fit, MSD_fit, p0=[1.0, 1.0])
-#
-# # Extract fitted parameters
-# m_fit, a_fit = params
-# print(f"Fitted parameters: m = {m_fit:.4f}, a = {a_fit:.4f}")
-#
-# # Plot the fitted function
-# t_fit_line = np.linspace(t_min, t_max, 1000)
-# MSD_fit_line = msd_fit_func(t_fit_line, m_fit, a_fit)
-# plt.plot(t_fit_line, MSD_fit_line, '-', label=f'Fit: ΔMSD = {m_fit:.3f} * t^{a_fit:.3f}')
-# plt.legend()
-# plt.show()
+# -----------------------------
+# Compute Mean Square Displacement (MSD)
+# -----------------------------
+MSD = np.zeros(len(t_eval))
+for i in range(len(t_eval)):
+    p = p_all[:, i]
+    MSD[i] = np.sum(s**2 * p) * ds
+
+# Compute the change in MSD from time 0
+MSD_change = MSD - MSD[0]
+
+# Plotting the change in MSD over time
+plt.figure(figsize=(10, 6))
+plt.plot(t_eval, MSD_change, 'o', label='ΔMSD data')
+plt.title('Change in Mean Square Displacement over Time')
+plt.xlabel('Time t')
+plt.ylabel('ΔMSD(t) = MSD(t) - MSD(0)')
+plt.grid(True)
+
+# -----------------------------
+# Fit ΔMSD to f(t) = m * t^a
+# -----------------------------
+def msd_fit_func(t, m, a):
+    return m * t**a
+
+# Exclude t=0 to avoid issues with log(0)
+t_fit = t_eval[1:]
+MSD_fit = MSD_change[1:]
+
+# Perform the curve fitting
+params, params_covariance = curve_fit(msd_fit_func, t_fit, MSD_fit, p0=[1.0, 1.0])
+
+# Extract fitted parameters
+m_fit, a_fit = params
+print(f"Fitted parameters: m = {m_fit:.4f}, a = {a_fit:.4f}")
+
+# Plot the fitted function
+t_fit_line = np.linspace(t_min, t_max, 1000)
+MSD_fit_line = msd_fit_func(t_fit_line, m_fit, a_fit)
+plt.plot(t_fit_line, MSD_fit_line, '-', label=f'Fit: ΔMSD = {m_fit:.3f} * t^{a_fit:.3f}')
+plt.legend()
+plt.savefig(os.path.join(output_dir, 'msd_fit_plot.png'))
+plt.close()

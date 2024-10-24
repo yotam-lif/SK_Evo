@@ -101,11 +101,12 @@ def calc_basic_lfs(alpha, h, J):
     -------
     numpy.ndarray
         The local fields.
+        Divide by 2 because every term appears twice in symmetric case.
     """
-    return h + J @ alpha
+    return h + 0.5 * J @ alpha
 
 
-def calc_kis(alpha, h, J):
+def calc_energies(alpha, h, J):
     """
     Calculate the energy delta of the system.
 
@@ -144,7 +145,7 @@ def calc_DFE(alpha, h, J):
     numpy.ndarray
         The normalized distribution of fitness effects.
     """
-    return -2 * calc_kis(alpha, h, J)
+    return -2 * calc_energies(alpha, h, J)
 
 
 def calc_BDFE(alpha, h, J):
@@ -232,8 +233,8 @@ def glauber_flip(alpha, hi, Jij, beta=10):
     numpy.ndarray
         The probability of flipping a spin.
     """
-    kis = calc_kis(alpha, hi, Jij)
-    ps = (1 - np.tanh(kis * beta)) / 2
+    eis = calc_energies(alpha, hi, Jij)
+    ps = (1 - np.tanh(eis * beta)) / 2
     ps /= np.sum(ps)
     indices = range(len(alpha))
     return np.random.choice(indices, p=ps)
@@ -270,8 +271,9 @@ def compute_fit_slow(alpha, his, Jijs, F_off=0.0):
 
     Returns:
     float: The fitness value for the configuration alpha.
+    Divide by 2 because every term appears twice in symmetric case.
     """
-    return alpha @ (his + Jijs @ alpha) - F_off
+    return alpha @ (his + 0.5 * Jijs @ alpha) - F_off
 
 
 def compute_fitness_delta_mutant(alpha, his, Jijs, k):
@@ -286,9 +288,10 @@ def compute_fitness_delta_mutant(alpha, his, Jijs, k):
 
     Returns:
     float: The change in fitness caused by a mutation at site k.
+    Divide by 2 because every term appears twice in symmetric case.
     """
 
-    return -2 * alpha[k] * (his[k] + Jijs[k] @ alpha)
+    return -2 * alpha[k] * (his[k] + 0.5 * Jijs[k] @ alpha)
 
 
 def relax_SK(alpha, his, Jijs, ranks=None, flips=None, sswm=True):
