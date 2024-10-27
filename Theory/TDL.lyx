@@ -100,17 +100,6 @@ Stuff to do
 \end_layout
 
 \begin_layout Enumerate
-Understand the evolution of fitness as function of flips.
- Try for different N.
- See if this is like in ML where it is linear with same slope at beginning and then levels out like 
-\begin_inset Formula $a-bte^{-ct}$
-\end_inset
-
-.
- Find explanation?
-\end_layout
-
-\begin_layout Enumerate
 Understand diffusion in the model.
  is 
 \begin_inset Formula $D(t)$
@@ -172,6 +161,21 @@ Try fitting shape of DFE to Baym data,
 
 \begin_layout Enumerate
 Explain exponential BDFE?
+\end_layout
+
+\begin_layout Part*
+Nice to have
+\end_layout
+
+\begin_layout Enumerate
+Understand the evolution of fitness as function of flips.
+ Try for different N.
+ See if this is like in ML where it is linear with same slope at beginning and then levels out like 
+\begin_inset Formula $a-bte^{-ct}$
+\end_inset
+
+.
+ Find explanation?
 \end_layout
 
 \end_body
