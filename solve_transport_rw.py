@@ -16,7 +16,7 @@ T_num = 200  # Number of time points
 eps = 1e-5  # Small number to avoid division by zero
 
 # Create directory if it doesn't exist
-output_dir = 'solve_transport_rw'
+output_dir = 'Plots/solve_transport_rw'
 os.makedirs(output_dir, exist_ok=True)
 
 # Spatial grid

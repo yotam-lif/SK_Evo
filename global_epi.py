@@ -211,7 +211,7 @@ def main():
     theoretical_variance = 4 * (sigma_h2 + N*sigma_J2) - 4 * (fitness_array / N) ** 2
 
     # Create directory for saving plots
-    output_dir = 'global_epi'
+    output_dir = 'Plots/global_epi'
     os.makedirs(output_dir, exist_ok=True)
 
     # Plotting Metrics vs Fitness

@@ -70,7 +70,7 @@ def main():
     ranks_to_plot = ranks_to_save[-n:]  # Get the n lowest ranks
 
     # Create directory for saving plots
-    output_dir = 'lf_dist_plots'
+    output_dir = '../Plots/lf_dist_plots'
     os.makedirs(output_dir, exist_ok=True)
 
     # Iterate over saved alphas and compute metrics

@@ -73,7 +73,7 @@ def main():
     final_alpha, saved_alphas, saved_flips, saved_ranks = Fs.relax_SK(alpha_initial.copy(), h, J, ranks, sswm=True)
 
     # Create directory for saving histograms
-    output_dir = "sim_bdfes"
+    output_dir = "Plots/sim_bdfes"
     os.makedirs(output_dir, exist_ok=True)
 
     # Iterate over ranks and corresponding saved alphas
