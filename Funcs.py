@@ -294,86 +294,6 @@ def compute_fitness_delta_mutant(alpha, his, Jijs, k):
     return -2 * alpha[k] * (his[k] + 0.5 * Jijs[k] @ alpha)
 
 
-def relax_SK(alpha, his, Jijs, ranks=None, flips=None, sswm=True):
-    """
-    Relax the Sherrington-Kirkpatrick model with given parameters, saving alpha at specified ranks or flips,
-    and recording the cumulative number of flips (mutations) up to each saved rank or flip.
-
-    Parameters
-    ----------
-    alpha : numpy.ndarray
-        The initial spin configuration.
-    his : numpy.ndarray
-        The local fitness fields.
-    Jijs : numpy.ndarray
-        The coupling matrix.
-    ranks : list or array-like, optional
-        The ranks at which to save the current alpha configuration.
-    flips : list or array-like, optional
-        The flip numbers at which to save the current alpha configuration.
-    sswm : bool, optional
-        Whether to use sswm_flip or glauber_flip for flipping spins.
-
-    Returns
-    -------
-    (numpy.ndarray, list of numpy.ndarray or None, list of int, list of int)
-        alpha: The final spin configuration.
-        time_stamps: The list of alpha configurations saved at the specified ranks or flips.
-                     If a desired rank or flip is not reached, `None` is saved for that rank or flip.
-        saved_flips: List of cumulative number of flips up to each saved alpha configuration.
-        saved_ranks: List of ranks corresponding to each saved alpha configuration.
-    """
-    if ranks is not None:
-        ranks = sorted(ranks, reverse=True)
-    if flips is not None:
-        flips = sorted(flips)
-
-    time_stamps = []
-    saved_flips = []
-    saved_ranks = []
-    current_rank_index = 0
-    current_flip_index = 0
-    rank = calc_rank(alpha, his, Jijs)
-    total_flips = 0
-
-    # Corrected while condition with proper parentheses
-    while rank > 0 and ((ranks is not None and current_rank_index < len(ranks)) or
-                        (flips is not None and current_flip_index < len(flips))):
-        if ranks is not None and rank <= ranks[current_rank_index]:
-            time_stamps.append(alpha.copy())
-            saved_flips.append(total_flips)
-            saved_ranks.append(rank)
-            current_rank_index += 1
-            if current_rank_index >= len(ranks):
-                ranks = None  # Stop checking ranks if all are processed
-
-        if flips is not None and total_flips >= flips[current_flip_index]:
-            time_stamps.append(alpha.copy())
-            saved_flips.append(total_flips)
-            saved_ranks.append(rank)
-            current_flip_index += 1
-            if current_flip_index >= len(flips):
-                flips = None  # Stop checking flips if all are processed
-
-        if ranks is None and flips is None:
-            break
-
-        if sswm:
-            flip_idx = sswm_flip(alpha, his, Jijs)
-        else:
-            flip_idx = glauber_flip(alpha, his, Jijs, beta=10)
-
-        alpha[flip_idx] *= -1
-        total_flips += 1
-        rank = calc_rank(alpha, his, Jijs)
-
-    if rank == 0:
-        time_stamps.append(alpha.copy())
-        saved_flips.append(total_flips)
-        saved_ranks.append(rank)
-
-    return alpha, time_stamps, saved_flips, saved_ranks
-
 def backward_propagate(dfe_evo: np. ndarray, dfe_anc: np. ndarray, beneficial=True):
     """
     Backward propagate the DFE from the initial day(anc) to the target day(evo),
@@ -431,3 +351,124 @@ def forward_propagate(dfe_evo: np. ndarray, dfe_anc: np. ndarray, beneficial=Tru
     propagated_bdfe_0 = [dfe_evo[i] for i in bdfe_0_inds]
 
     return bdfe_0_fits, propagated_bdfe_0
+
+
+def relax_sk_flips(alpha, his, Jijs, flips, sswm=True):
+    """
+    Relax the Sherrington-Kirkpatrick model with given parameters, saving alpha at specified flips.
+    Parameters
+    ----------
+    alpha: numpy.ndarray
+    his: numpy.ndarray
+    Jijs: numpy.ndarray
+    flips: list or array-like
+    sswm: bool, optional
+
+    Returns
+    -------
+    numpy.ndarray
+        The final spin configuration, saved alphas.
+    """
+    saved_alphas = []
+    total_flips = 0
+    rank = calc_rank(alpha, his, Jijs)
+
+    while total_flips < flips[-1] and rank > 0:
+
+        if total_flips in flips:
+            saved_alphas.append(alpha.copy())
+
+        flip_idx = sswm_flip(alpha, his, Jijs) if sswm else glauber_flip(alpha, his, Jijs, beta=10)
+        alpha[flip_idx] *= -1
+        total_flips += 1
+        rank = calc_rank(alpha, his, Jijs)
+
+    if rank == 0:
+        saved_alphas.append(alpha.copy())
+        print("Not all flips reached, rank is 0")
+
+    return alpha, saved_alphas
+
+
+def relax_sk_ranks(alpha, his, Jijs, ranks, sswm=True):
+    """
+    Relax the Sherrington-Kirkpatrick model with given parameters, saving alpha at specified ranks.
+    Parameters
+    ----------
+    alpha: numpy.ndarray
+    his: numpy.ndarray
+    Jijs: numpy.ndarray
+    ranks: list or array-like
+    sswm: bool, optional
+
+    Returns
+    -------
+    numpy.ndarray
+        The final spin configuration, saved alphas.
+    """
+    saved_alphas = []
+    rank = calc_rank(alpha, his, Jijs)
+
+    while rank > 0 and ranks[-1] < rank:
+
+        if rank in ranks:
+            saved_alphas.append(alpha.copy())
+
+        flip_idx = sswm_flip(alpha, his, Jijs) if sswm else glauber_flip(alpha, his, Jijs, beta=10)
+        alpha[flip_idx] *= -1
+        rank = calc_rank(alpha, his, Jijs)
+
+    return alpha, saved_alphas
+
+
+def relax_sk(alpha, his, Jijs, sswm=True):
+    """
+    Relax the Sherrington-Kirkpatrick model with given parameters.
+    Parameters
+    ----------
+    alpha: numpy.ndarray
+    his: numpy.ndarray
+    Jijs: numpy.ndarray
+    sswm: bool, optional
+
+    Returns
+    -------
+    numpy.ndarray
+        The mutation sequence.
+    """
+    flip_sequence = []
+    rank = calc_rank(alpha, his, Jijs)
+
+    while rank > 0:
+        flip_idx = sswm_flip(alpha, his, Jijs) if sswm else glauber_flip(alpha, his, Jijs, beta=10)
+        alpha[flip_idx] *= -1
+        flip_sequence.append(flip_idx)
+        rank = calc_rank(alpha, his, Jijs)
+
+    return flip_sequence
+
+def compute_alpha_from_hist(alpha_0, hist, num_muts):
+    """
+    Compute alpha from the initial alpha and the flip history up to num_muts mutations.
+
+    Parameters
+    ----------
+    alpha_0 : numpy.ndarray
+        The initial spin configuration.
+    hist : list of int
+        The flip history.
+    num_muts : int
+        The number of mutations to consider.
+
+    Returns
+    -------
+    numpy.ndarray
+        The spin configuration after num_muts mutations.
+    """
+    alpha = alpha_0.copy()
+    rel_hist = hist[:num_muts]
+    for flip in rel_hist:
+        alpha[flip] *= -1
+    return alpha
+
+

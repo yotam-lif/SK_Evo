@@ -44,10 +44,10 @@ def main():
 
     # Relax the system using sswm_flip (sswm=True)
     # Now returns flips (number of mutations up to each rank)
-    final_alpha, saved_alphas, flips = Fs.relax_SK(alpha_initial.copy(), h, J, ranks, sswm=True)
+    final_alpha, saved_alphas, saved_flips, saved_ranks = Fs.relax_SK(alpha_initial.copy(), h, J, ranks, sswm=True)
 
     # Calculate initial kis values
-    ki_initial = Fs.calc_kis(alpha_initial, h, J)
+    ki_initial = Fs.calc_energies(alpha_initial, h, J)
 
     # Calculate initial basic local fields
     basic_local_fields_initial = Fs.calc_basic_lfs(alpha_initial, h, J)
@@ -72,7 +72,7 @@ def main():
     curr_dir_path = os.path.dirname(os.path.realpath(__file__))
 
     # Create subdirectory for MSD plots
-    msd_plots_dir = os.path.join(curr_dir_path, 'msd_plots')
+    msd_plots_dir = os.path.join(curr_dir_path, 'Plots', 'msd_plots')
     os.makedirs(msd_plots_dir, exist_ok=True)
 
     # -------------------------------
@@ -83,7 +83,7 @@ def main():
     msd_delta_y_kis = []
     msd_delta_y_lf = []
     msd_delta_y_abs_lf = []
-    mutation_counts = flips  # This serves as our "time" variable
+    mutation_counts = saved_flips  # This serves as our "time" variable
 
     # -------------------------------
     # 4. Iterate Over Ranks and Compute MSDs
@@ -96,7 +96,7 @@ def main():
             # -------------------------------
 
             # Calculate current kis values
-            ki_current = Fs.calc_kis(alpha, h, J)
+            ki_current = Fs.calc_energies(alpha, h, J)
 
             # Calculate current basic local fields
             basic_local_fields_current = Fs.calc_basic_lfs(alpha, h, J)

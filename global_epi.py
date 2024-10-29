@@ -15,10 +15,10 @@ from Funcs import (
 
 def main():
     # Parameters
-    N = 4000  # Number of spins
+    N = 1000  # Number of spins
     random_state = 42  # Seed for reproducibility
     beta = 1.0  # Inverse temperature
-    rho = 1.0  # Sparsity of the coupling matrix
+    rho = 0.05  # Sparsity of the coupling matrix
 
     # Initialize the model
     alpha = init_alpha(N)
@@ -76,12 +76,12 @@ def main():
 
             # Compute average DFE
             average_DFE = np.mean(DFE)
+            rank = len(BDFE)
 
             # Compute average BDFE, handle cases with no beneficial effects
-            if BDFE.size > 0:
+            if rank > 0:
                 average_BDFE = np.mean(BDFE)
                 max_BDFE = np.max(BDFE)
-                rank = BDFE.size  # Renamed from len_BDFE
             else:
                 average_BDFE = np.nan
                 max_BDFE = np.nan
@@ -95,7 +95,7 @@ def main():
             variance_DFE_list.append(variance_DFE)
 
             # Compute variance of BDFE, handle cases with no beneficial effects
-            if BDFE.size > 0:
+            if rank > 0:
                 variance_BDFE = np.var(BDFE)
             else:
                 variance_BDFE = np.nan
@@ -281,6 +281,17 @@ def main():
     plt.grid(True, linestyle='--', alpha=0.7)
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, 'variance_vs_fitness.png'))
+    plt.show()
+
+    # Plotting ranks as a function of flips
+    plt.figure(figsize=(14, 6))
+    plt.plot(saved_flips, saved_ranks, color='purple', marker='o')
+    plt.xlabel('Number of Flips', fontsize=14)
+    plt.ylabel('Rank', fontsize=14)
+    plt.title('SK Model Relaxation: Rank vs Number of Flips', fontsize=16)
+    plt.grid(True, linestyle='--', alpha=0.7)
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, 'rank_vs_flips.png'))
     plt.show()
 
 if __name__ == "__main__":
