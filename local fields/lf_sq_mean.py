@@ -10,73 +10,75 @@ from Funcs import (
     relax_sk,
     compute_fit_slow,
     calc_F_off,
-    compute_alpha_from_hist
+    compute_alpha_from_hist,
+    calc_basic_lfs
 )
 
 def main():
     # Parameters
     N_start = 800
     N_stop = 1600
-    N_step = 50
-
+    N_step = 200
     random_state = 42  # Seed for reproducibility
     beta = 1.0
     rho = 1.0  # Sparsity of the coupling matrix
-    # Define the number of lowest ranks to plot
-    n_times = 200  # Example value, adjust as needed
+    n_times = 100  # Example value, adjust as needed
+    n_repeats = 5  # Number of times to repeat per each N value, for averaging
     dir_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    dir_path = os.path.join(dir_path, "Plots", "pair_corr_dist")
+    dir_path = os.path.join(dir_path, "Plots", "lf_sq_mean")
     os.makedirs(dir_path, exist_ok=True)
 
     num_N = int((N_stop - N_start) / N_step)
-    N = np.linspace(N_start, N_stop, num_N + 1, dtype=int)
+    N_values = np.linspace(N_start, N_stop, num_N + 1, dtype=int)
+    mean_lf_sq_all = np.zeros((num_N + 1, n_times))
 
-    for n in N:
-        # Initialize the model
-        alpha = init_alpha(n)
-        h = init_h(n, random_state=random_state, beta=beta)
-        J = init_J(n, random_state=random_state, beta=beta, rho=rho)
-        F_off = calc_F_off(alpha, h, J)
+    for n_ind, N in enumerate(N_values):
+        print(f"Running for N = {N}")
+        mean_lf_sq_repeats = np.zeros((n_repeats, n_times))
+        fitness_repeats = np.zeros((n_repeats, n_times))
+        for i in range(n_repeats):
+            # Initialize the model
+            alpha = init_alpha(N)
+            h = init_h(N, random_state=random_state, beta=beta)
+            J = init_J(N, random_state=random_state, beta=beta, rho=rho)
+            F_off = calc_F_off(alpha, h, J)
 
-        flip_seq = relax_sk(
-            alpha=alpha.copy(),
-            his=h,
-            Jijs=J,
-            sswm=True  # Change to False to use Glauber flip
-        )
+            flip_seq = relax_sk(
+                alpha=alpha.copy(),
+                his=h,
+                Jijs=J,
+                sswm=True  # Change to False to use Glauber flip
+            )
 
-        num_flips = len(flip_seq)
-        flips = np.linspace(0, num_flips, n_times, dtype=int)
-        saved_alphas = [compute_alpha_from_hist(alpha, flip_seq, flips[flip]) for flip in flips]
+            num_flips = len(flip_seq)
+            flips = np.linspace(0, num_flips, n_times, dtype=int)
+            saved_alphas = [compute_alpha_from_hist(alpha, flip_seq, flip) for flip in flips]
 
+            mean_lf_sq = np.zeros(n_times)
+            fitness_list = np.zeros(n_times)
+            for n_time in range(n_times):
+                alpha_i = saved_alphas[n_time]
+                lfs = Funcs.calc_basic_lfs(alpha_i, h, J)
+                mean_lf_sq[n_time] = np.mean(lfs ** 2)
+                fitness_list[n_time] = compute_fit_slow(alpha_i, h, J, F_off)
 
-        fitness_list = [compute_fit_slow(alpha_i, h, J, F_off) for alpha_i in saved_alphas]
-        f_i_sq_mean = np.zeros(len(saved_alphas))
-        for n_time in range(len(saved_alphas)):
-            alpha_i = saved_alphas[n_time]
-            # The pairwise terms sum per i can be rewritten as (lf_i)^2 - N*sig_J^2 = (lf_i)^2 - beta
-            # Compute J[i, :] * alpha_i for all i
-            lfs = Funcs.calc_basic_lfs(alpha_i, h, J)
-            lfs = lfs ** 2
-            f_i_sq_mean[n_time] = np.mean(lfs)
+            mean_lf_sq_repeats[i] = mean_lf_sq
+            fitness_repeats[i] = fitness_list
 
-        f_i_sq_mean = np.log(f_i_sq_mean)
-        # fitness_list = np.log(fitness_list)
-        f_i_sq_mean =  f_i_sq_mean[int(n_times/2.5):]
-        fitness_list = np.array(fitness_list[int(n_times/2.5):])
+        mean_lf_sq_all[n_ind] = np.mean(mean_lf_sq_repeats, axis=0)
+        mean_fitness_all = np.mean(fitness_repeats, axis=0)
 
-        slope, intercept = np.polyfit(fitness_list, f_i_sq_mean, 1)
-        fit_line = slope * fitness_list + intercept
-
-    plt.figure(figsize=(8, 6))
-    plt.plot(fitness_list, f_i_sq_mean, label="Mean local field squared")
-    plt.plot(fitness_list, fit_line, label="Fit line")
-    plt.text(0.5, 0.5, f"Slope*N: {slope*N:.2f}, intercept: {intercept:.2f}", fontsize=12, transform=plt.gca().transAxes)
-    plt.xlabel("Fitness")
-    plt.ylabel("$\\langle f_i^2 \\rangle$")
-    plt.title(f"$\\langle f_i^2 \\rangle$ vs Fitness; N: {N}")
-    plt.show()
-
+        # Plot the log of mean_lf_sq as a function of fitness for each N
+        plt.figure(figsize=(10, 8))
+        plt.plot(np.log(mean_fitness_all), np.log(mean_lf_sq_all[n_ind]), 'o', label=f"N = {N}")
+        plt.xlabel("log(Fitness)")
+        plt.ylabel("log(Mean Local Field Squared)")
+        plt.title(f"Log-Log Plot of Mean Local Field Squared vs Fitness for N = {N}")
+        plt.legend()
+        plt.grid(True)
+        plt.tight_layout()
+        plt.savefig(os.path.join(dir_path, f"lf_sq_mean_log_log_N_{N}.png"))
+        plt.close()
 
 if __name__ == "__main__":
     main()

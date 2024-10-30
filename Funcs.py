@@ -433,7 +433,7 @@ def relax_sk(alpha, his, Jijs, sswm=True):
 
     Returns
     -------
-    numpy.ndarray
+    list
         The mutation sequence.
     """
     flip_sequence = []
