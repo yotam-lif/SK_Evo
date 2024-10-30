@@ -9,7 +9,7 @@ s_max = 100.0  # Maximum s value
 s_min = -s_max  # Minimum s value
 N_s = 600  # Number of spatial grid points
 t_min = 0.0  # Start time
-t_max = 5.0  # End time
+t_max = 4.0  # End time
 c = -1.0  # Speed of the drift term
 sig = 4.0  # Standard deviation
 T_num = 200  # Number of time points
@@ -23,7 +23,7 @@ os.makedirs(output_dir, exist_ok=True)
 s = np.linspace(s_min, s_max, N_s)
 ds = s[1] - s[0]
 
-x_max = 30
+x_max = 40
 x_min = -x_max
 N_x = int((x_max - x_min) / ds)
 x = np.linspace(x_min, x_max, N_x)
@@ -88,7 +88,7 @@ def rhs(t, p):
     """Compute the RHS of the ODE system."""
     dpdt = np.zeros_like(p)
     dpdt += drift_term(c, p, s, ds)
-    # dpdt += flip_term(s, p)
+    dpdt += flip_term(s, p)
     dpdt += diff_term(sig, p, ds)
     # Apply boundary conditions (Dirichlet: p = 0 at boundaries)
     dpdt[0] = 0.0

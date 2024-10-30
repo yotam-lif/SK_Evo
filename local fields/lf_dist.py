@@ -19,7 +19,7 @@ def main():
     beta = 1.0
     rho = 1.0  # Sparsity of the coupling matrix
     # Define the number of lowest ranks to plot
-    n = 8  # Example value, adjust as needed
+    n = 28  # Example value, adjust as needed
     bins = 50
     num_saves = 30
 
@@ -61,8 +61,10 @@ def main():
         # Now take only the lfs of index i where eis[i] < 0
         aa_lfs = [lfs[i] for i in range(len(eis)) if eis[i] < 0]
 
-        # plt.figure(figsize=(12, 6))
-        # # Histogram for all local fields
+        plt.figure(figsize=(12, 6))
+
+        # Histogram for all local fields
+        # plt.subplot(1, 2, 2)
         # plt.hist(lfs, bins=bins, alpha=0.7, label='All Local Fields', color='blue', edgecolor='black')
         # plt.xlabel('Local Field')
         # plt.ylabel('Frequency')
@@ -70,7 +72,8 @@ def main():
         # plt.legend()
 
         # Histogram for non-aligned local fields
-        # plt.subplot(1, 2, 2)
+        plt.subplot(1, 2, 2)
+        plt.hist(lfs, bins=bins, alpha=0.7, label='All Local Fields', color='blue', edgecolor='black')
         plt.hist(aa_lfs, bins=bins, alpha=0.7, label='Non-Aligned Local Fields', color='orange', edgecolor='black')
         plt.xlabel('Local Field')
         plt.ylabel('Frequency')
