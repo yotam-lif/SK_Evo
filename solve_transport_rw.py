@@ -9,9 +9,10 @@ s_max = 100.0  # Maximum s value
 s_min = -s_max  # Minimum s value
 N_s = 600  # Number of spatial grid points
 t_min = 0.0  # Start time
-t_max = 4.0  # End time
-c = -1.0  # Speed of the drift term
-sig = 4.0  # Standard deviation
+t_max = 5.0  # End time
+c = 1.0  # Speed of the drift term
+D = 4.0
+sig = 2.0  # Standard deviation
 T_num = 200  # Number of time points
 eps = 1e-5  # Small number to avoid division by zero
 
@@ -28,15 +29,6 @@ x_min = -x_max
 N_x = int((x_max - x_min) / ds)
 x = np.linspace(x_min, x_max, N_x)
 
-# Initial condition: Gaussian centered at s = s0
-s0 = 0.0  # Center of the Gaussian
-p0 = np.exp(-((s - s0) ** 2) / (2 * sig ** 2))
-p0 /= np.sum(p0) * ds  # Normalize
-
-# Boundary conditions: p = 0 at s_min and s_max (Dirichlet conditions)
-p0[0] = 0.0
-p0[-1] = 0.0
-
 def theta(_s):
     """Heaviside step function."""
     return 0.5 * (np.sign(_s) + 1)
@@ -50,13 +42,6 @@ def negative_integral(_s, _p):
 
 
 def flip_term(_s: np.ndarray, _p: np.ndarray) -> np.ndarray:
-    """Nonlinear transport term."""
-    # flip_term = np.zeros_like(_p)
-    # flip_flux = theta(-_s) * _p / negative_integral(_s, _p)
-    # # add to positive part
-    # flip_term += np.flip(flip_flux)
-    # # decrease from negative part
-    # flip_term -= flip_flux
     dp_neg = theta(-_s) * _p
     dp_neg *= np.abs(_s)
     dp_pos = np.flip(dp_neg)
@@ -81,13 +66,13 @@ def drift_term(_c, _p, _s, _ds):
 def diff_term(_sig, _p, _ds):
     dpdx2 = np.zeros_like(_p)
     dpdx2[1:-1] = (_p[2:] - 2 * _p[1:-1] + _p[:-2]) / _ds ** 2
-    return 0.5 * _sig**2 * dpdx2
+    return D * dpdx2
 
 # Function to compute the RHS of the ODE system
 def rhs(t, p):
     """Compute the RHS of the ODE system."""
     dpdt = np.zeros_like(p)
-    dpdt += drift_term(c, p, s, ds)
+    dpdt -= drift_term(c, p, s, ds)
     dpdt += flip_term(s, p)
     dpdt += diff_term(sig, p, ds)
     # Apply boundary conditions (Dirichlet: p = 0 at boundaries)
@@ -104,21 +89,34 @@ def normalize(p):
     p /= np.sum(p) * ds  # Normalize the solution
     return p
 
+# Initial condition: Gaussian centered at s = s0
+s0 = 0.0  # Center of the Gaussian
+p0_gauss = np.exp(-((s - s0) ** 2) / (2 * sig ** 2))
+p0_gauss /= np.sum(p0_gauss) * ds  # Normalize
+p0_neg = p0_gauss * theta(-s)
+
 # Solve the PDE using solve_ivp with normalization after each step
-solution = solve_ivp(
-    rhs, [t_min, t_max], p0, t_eval=t_eval, method='RK45',
+solution_gaussian = solve_ivp(
+    rhs, [t_min, t_max], p0_gauss, t_eval=t_eval, method='RK45',
     vectorized=False, events=None
 )
-p_all = np.apply_along_axis(normalize, 0, solution.y)
+p_all_g = np.apply_along_axis(normalize, 0, solution_gaussian.y)
+
+# Solve the PDE using solve_ivp with normalization after each step
+solution_neg = solve_ivp(
+    rhs, [t_min, t_max], p0_neg, t_eval=t_eval, method='RK45',
+    vectorized=False, events=None
+)
+p_all_n = np.apply_along_axis(normalize, 0, solution_neg.y)
 
 # -----------------------------
 # Plotting the solution at selected times
 # -----------------------------
 plt.figure(figsize=(10, 6))
-time_indices = [len(t_eval) // 2, 3 * len(t_eval) // 4, -1]
+time_indices = [0, len(t_eval) // 4, len(t_eval) // 2, 3 * len(t_eval) // 4, -1]
 for idx in time_indices:
-    if idx < p_all.shape[1]:  # Ensure the index is within bounds
-        sol = p_all[:, idx]
+    if idx < p_all_g.shape[1]:  # Ensure the index is within bounds
+        sol = p_all_g[:, idx]
         sol_on_x = np.interp(x, s, sol)
         plt.plot(x, sol_on_x, label=f't = {t_eval[idx]:.3f}')
 plt.title('Solution of the PDE at Different Times')
@@ -126,7 +124,22 @@ plt.xlabel('Position s')
 plt.ylabel('Concentration p(s, t)')
 plt.legend()
 plt.grid(True)
-plt.savefig(os.path.join(output_dir, 'solution_plot.png'))
+plt.savefig(os.path.join(output_dir, 'solution_plot_g.png'))
+plt.close()
+
+plt.figure(figsize=(10, 6))
+time_indices = [0, len(t_eval) // 4, len(t_eval) // 2, 3 * len(t_eval) // 4, -1]
+for idx in time_indices:
+    if idx < p_all_n.shape[1]:  # Ensure the index is within bounds
+        sol = p_all_n[:, idx]
+        sol_on_x = np.interp(x, s, sol)
+        plt.plot(x, sol_on_x, label=f't = {t_eval[idx]:.3f}')
+plt.title('Solution of the PDE at Different Times')
+plt.xlabel('Position s')
+plt.ylabel('Concentration p(s, t)')
+plt.legend()
+plt.grid(True)
+plt.savefig(os.path.join(output_dir, 'solution_plot_n.png'))
 plt.close()
 
 # -----------------------------
@@ -134,7 +147,7 @@ plt.close()
 # -----------------------------
 MSD = np.zeros(len(t_eval))
 for i in range(len(t_eval)):
-    p = p_all[:, i]
+    p = p_all_g[:, i]
     MSD[i] = np.sum(s**2 * p) * ds
 
 # Compute the change in MSD from time 0

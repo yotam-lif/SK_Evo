@@ -13,7 +13,7 @@ from Funcs import (
 
 def main():
     # Parameters
-    N = 1500
+    N = 2500
     random_state = 42
     beta = 1.0
     rho = 1.0
@@ -30,7 +30,7 @@ def main():
 
     # Define ranks at which to save the configurations
     initial_rank = calc_rank(alpha, h, J)
-    ranks_to_save = np.linspace(int(N/10), initial_rank, num_saves, dtype=int)
+    ranks_to_save = np.linspace(int(N/8), initial_rank, num_saves, dtype=int)
     # make sure it is sorted in descending order
     ranks_to_save = sorted(list(set(ranks_to_save)), reverse=True)
 
