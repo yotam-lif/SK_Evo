@@ -167,7 +167,11 @@ def calc_BDFE(alpha, h, J):
         The beneficial fitness effects and the indices of the beneficial mutations.
     """
     DFE = calc_DFE(alpha, h, J)
-    return DFE[DFE > 0], np.where(DFE > 0)[0]
+    r = calc_rank(alpha, h, J)
+    BDFE, b_ind = DFE[DFE >= 0], np.where(DFE > 0)[0]
+    # Normalize the beneficial effects
+    BDFE /= np.sum(BDFE)
+    return BDFE, b_ind
 
 
 def calc_rank(alpha, h, J):
