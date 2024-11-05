@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from misc import Funcs as Fs
 
-def plot_crossings(flips_labels, anc_bdfe, prop_anc_bdfe, evol_bdfe, prop_evol_bdfe, plot_dir, N):
+def plot_crossings(flips_labels, anc_bdfe, prop_anc_bdfe, evol_bdfe, prop_evol_bdfe, plot_dir, N, beta, rho):
     """
     Plot crossings between two consecutive flips.
 
@@ -20,23 +20,23 @@ def plot_crossings(flips_labels, anc_bdfe, prop_anc_bdfe, evol_bdfe, prop_evol_b
 
     # Plot ancestral DFEs
     for j in range(len(anc_bdfe)):
-        plt.plot(flips_labels, [anc_bdfe[j], prop_anc_bdfe[j]], color='red', alpha=0.2)
-    plt.scatter([flips_labels[0]] * len(anc_bdfe), anc_bdfe, color='red', edgecolor='k', s=20, facecolors='none', label='Ancient BDFE')
-    plt.scatter([flips_labels[1]] * len(prop_anc_bdfe), prop_anc_bdfe, color='red', edgecolor='k', s=20, facecolors='none')
+        plt.plot(flips_labels, [anc_bdfe[j], prop_anc_bdfe[j]], color='coral', alpha=0.2)
+    plt.scatter([flips_labels[0]] * len(anc_bdfe), anc_bdfe, color='coral', edgecolor='coral', s=20, facecolors='none', label='Forwards')
+    plt.scatter([flips_labels[1]] * len(prop_anc_bdfe), prop_anc_bdfe, color='coral', edgecolor='coral', s=20, facecolors='none')
 
     # Plot evolved DFEs
     for j in range(len(evol_bdfe)):
-        plt.plot(flips_labels, [evol_bdfe[j], prop_evol_bdfe[j]], color='blue', alpha=0.2)
-    plt.scatter([flips_labels[0]] * len(prop_evol_bdfe), prop_evol_bdfe, color='blue', edgecolor='k', s=20, facecolors='none', label='Evolved BDFE')
-    plt.scatter([flips_labels[1]] * len(evol_bdfe), evol_bdfe, color='blue', edgecolor='k', s=20, facecolors='none')
+        plt.plot(flips_labels, [prop_evol_bdfe[j], evol_bdfe[j]], color='royalblue', alpha=0.2)
+    plt.scatter([flips_labels[0]] * len(prop_evol_bdfe), prop_evol_bdfe, color='royalblue', edgecolor='royalblue', s=20, facecolors='none', label='Backwards')
+    plt.scatter([flips_labels[1]] * len(evol_bdfe), evol_bdfe, color='royalblue', edgecolor='royalblue', s=20, facecolors='none')
 
     # Customize plot
     plt.axhline(0, color="black", linestyle="--", linewidth=1)
     plt.xlabel("Flip")
     plt.ylabel("Fitness (s)")
-    plt.title(f"Crossings between flip {flips_labels[0]} and flip {flips_labels[1]}; N = {N}")
-    plt.legend()
+    plt.title(f"Crossings between {flips_labels[0]} - {flips_labels[1]}; N = {N}; β = {beta}; ρ = {rho}")
     plt.tight_layout()
+    plt.legend()
 
     # Save plot
     plot_path = os.path.join(plot_dir, f"crossings_{flips_labels[0].replace(' ', '_')}_{flips_labels[1].replace(' ', '_')}.png")
@@ -44,7 +44,7 @@ def plot_crossings(flips_labels, anc_bdfe, prop_anc_bdfe, evol_bdfe, prop_evol_b
     plt.close()  # Close the figure to free memory
 
 def main():
-    N = 1000  # Number of spins
+    N = 3000  # Number of spins
     beta = 1.0  # Epistasis strength
     rho = 1.0  # Fraction of non-zero coupling elements
     num_stops = 5
@@ -105,7 +105,9 @@ def main():
             evol_bdfe,
             prop_evol_bdfe,
             plot_dir,
-            N
+            N,
+            beta,
+            rho
         )
 
     print("Plots have been saved successfully.")
