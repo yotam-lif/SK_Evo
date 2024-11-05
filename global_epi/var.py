@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from Funcs import (
+from misc.Funcs import (
     init_alpha,
     init_h,
     init_J,
@@ -71,7 +71,7 @@ def main():
     variance_DFE_valid = variance_DFE_array[valid]
     variance_BDFE_valid = variance_BDFE_array[valid]
 
-    # Perform linear fit for variance of DFE
+    # Perform linear fit for variance of dfe
     m_var_DFE, b_var_DFE = np.polyfit(fitness_valid, variance_DFE_valid, 1)
 
     # Perform linear fit for variance of BDFE
@@ -83,17 +83,17 @@ def main():
     fit_var_BDFE = m_var_BDFE * fit_fitness + b_var_BDFE
 
 
-    # Plotting Variance of DFE and BDFE vs Fitness
+    # Plotting Variance of dfe and BDFE vs Fitness
     plt.figure(figsize=(14, 10))
-    plt.scatter(fitness_valid, variance_DFE_valid, color='blue', label='Variance of DFE', alpha=0.6)
+    plt.scatter(fitness_valid, variance_DFE_valid, color='blue', label='Variance of dfe', alpha=0.6)
     plt.plot(fit_fitness, fit_var_DFE, color='blue', linestyle='--',
-             label=f'Fit Variance of DFE: $\\sigma^2(\\Delta_i(t))$ = {m_var_DFE:.4f} * F(t) + {b_var_DFE:.4f}')
+             label=f'Fit Variance of dfe: $\\sigma^2(\\Delta_i(t))$ = {m_var_DFE:.4f} * F(t) + {b_var_DFE:.4f}')
     plt.scatter(fitness_valid, variance_BDFE_valid, color='green', label='Variance of BDFE', alpha=0.6)
     plt.plot(fit_fitness, fit_var_BDFE, color='green', linestyle='--',
              label=f'Fit Variance of BDFE: $\\sigma^2(B\\Delta_i(t))$ = {m_var_BDFE:.4f} * F(t) + {b_var_BDFE:.4f}')
     plt.xlabel('Fitness F(t)', fontsize=14)
     plt.ylabel('Variance', fontsize=14)
-    plt.title('Variance of DFE and BDFE vs Fitness', fontsize=16)
+    plt.title('Variance of dfe and BDFE vs Fitness', fontsize=16)
     plt.legend(fontsize=12)
     plt.grid(True, linestyle='--', alpha=0.7)
     plt.text(0.5, 0.5, f"m_DFE * N = {m_var_DFE * N:.4f}, m_BDFE * N = {m_var_BDFE * N:.4f}", fontsize=16)

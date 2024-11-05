@@ -2,30 +2,30 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
-import Funcs as Fs
+from misc import Funcs as Fs
 
 
 def plot_dfe_comparison(ax: plt.Axes, dfe_current, dfe_propagated, bins, title):
     """
-    Plot the total DFE and the propagated DFE on the same axis.
+    Plot the total dfe and the propagated dfe on the same axis.
 
     Parameters
     ----------
     ax : plt.Axes
         The matplotlib axis to plot on.
     dfe_current : np.ndarray
-        The DFE at the current time t.
+        The dfe at the current time t.
     dfe_propagated : np.ndarray
-        The propagated DFE from max rank to time t.
+        The propagated dfe from max rank to time t.
     bins : int
         Number of bins for histograms.
     title : str
         Title for the plot.
     """
     sns.histplot(dfe_current, bins=bins, kde=False, stat="probability", color="purple",
-                 label='Current DFE', ax=ax, alpha=0.7)
+                 label='Current dfe', ax=ax, alpha=0.7)
     sns.histplot(dfe_propagated, bins=bins, kde=False, stat="probability", color="blue",
-                 label='Propagated DFE', ax=ax, alpha=0.5)
+                 label='Propagated dfe', ax=ax, alpha=0.5)
 
     ax.set_title(title)
     ax.set_xlabel('Fitness effect')
@@ -76,10 +76,10 @@ def main():
     dfes = [Fs.calc_DFE(alpha, h, J) if alpha is not None else None for alpha in saved_alphas]
     times = flips  # Number of mutations up to each saved rank
 
-    # Identify DFE at max_rank (assuming it's the first one)
+    # Identify dfe at max_rank (assuming it's the first one)
     dfe_max_rank = dfes[0]
     if dfe_max_rank is None:
-        print("DFE at max_rank is not available. Exiting.")
+        print("dfe at max_rank is not available. Exiting.")
         return
 
     # Iterate over ranks and corresponding saved alphas
@@ -87,19 +87,19 @@ def main():
         if alpha_t is not None and dfe_t is not None:
             print(f"Processing Rank {rank} with {t} mutations.")
 
-            # Forward propagate: from max_rank DFE to current DFE
-            # We need to propagate the DFE from max_rank to rank t
-            # For total DFE, we consider all mutations
+            # Forward propagate: from max_rank dfe to current dfe
+            # We need to propagate the dfe from max_rank to rank t
+            # For total dfe, we consider all mutations
 
-            # Since mutations correspond to flipping spins, and the DFE represents the fitness effects
+            # Since mutations correspond to flipping spins, and the dfe represents the fitness effects
             # of flipping each spin, we can use the indices where mutations have occurred
 
             # Find the indices of spins that have flipped between max_rank and current rank
             flips_between_ranks = np.where(alpha_t != saved_alphas[0])[0]
 
-            # Propagate the DFE from max_rank to time t
+            # Propagate the dfe from max_rank to time t
             propagated_dfe = dfe_max_rank.copy()
-            # Update the DFE at the mutated sites
+            # Update the dfe at the mutated sites
             for idx in flips_between_ranks:
                 # Recalculate the fitness effect at this site in the current configuration
                 delta_fit = Fs.compute_fitness_delta_mutant(alpha_t, h, J, idx)
@@ -108,13 +108,13 @@ def main():
             # Plotting
             fig, ax = plt.subplots(figsize=(8, 6))
 
-            # Plot the total DFE at time t and the propagated DFE
+            # Plot the total dfe at time t and the propagated dfe
             plot_dfe_comparison(
                 ax=ax,
                 dfe_current=dfe_t,
                 dfe_propagated=propagated_dfe,
                 bins=bins,
-                title=f"DFE Comparison at Rank {rank}"
+                title=f"dfe Comparison at Rank {rank}"
             )
 
             plt.suptitle(f"Rank {rank} with {t} mutations", fontsize=16)

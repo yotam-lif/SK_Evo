@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit  # Import curve_fit
 
 # Import the Funcs module
-import Funcs as Fs
+from misc import Funcs as Fs
 
 
 def parameterized_function(x, a):
@@ -64,7 +64,7 @@ def main():
     # Iterate over ranks and corresponding saved alphas
     for rank, alpha in zip(ranks, saved_alphas):
         if alpha is not None:
-            # Calculate DFE
+            # Calculate dfe
             DFE = Fs.calc_DFE(alpha, h, J)
 
             # Set up the plot
@@ -75,7 +75,7 @@ def main():
             bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
 
             # Plot the histogram
-            plt.hist(DFE, bins=bins, color='skyblue', edgecolor='black', density=True, alpha=0.6, label='DFE Histogram')
+            plt.hist(DFE, bins=bins, color='skyblue', edgecolor='black', density=True, alpha=0.6, label='dfe Histogram')
 
             # If rank is 0, perform fitting and overlay the fitted function
             if rank == 0:
@@ -104,7 +104,7 @@ def main():
                     print(f"Curve fitting failed for rank {rank}: {e}")
 
             # Title and labels with parameters
-            plt.title(f'DFE Histogram at Rank {rank}; N={N}, β={beta}, ρ={rho}')
+            plt.title(f'dfe Histogram at Rank {rank}; N={N}, β={beta}, ρ={rho}')
             plt.xlabel('Fitness Effect')
             plt.ylabel('Density')
 

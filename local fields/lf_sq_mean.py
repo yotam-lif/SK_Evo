@@ -2,16 +2,15 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-import Funcs
-from Funcs import (
+from misc import Funcs
+from misc.Funcs import (
     init_alpha,
     init_h,
     init_J,
     relax_sk,
     compute_fit_slow,
     calc_F_off,
-    compute_alpha_from_hist,
-    calc_basic_lfs
+    compute_alpha_from_hist
 )
 
 def main():

@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def init_alpha(N):
     """
     Initialize the spin configuration for the Sherrington-Kirkpatrick model.
@@ -15,6 +16,7 @@ def init_alpha(N):
         The spin configuration.
     """
     return np.random.choice([-1, 1], N)
+
 
 def init_h(N, random_state=None, beta=1.0):
     """
@@ -170,7 +172,7 @@ def calc_BDFE(alpha, h, J):
     r = calc_rank(alpha, h, J)
     BDFE, b_ind = DFE[DFE >= 0], np.where(DFE > 0)[0]
     # Normalize the beneficial effects
-    BDFE /= np.sum(BDFE)
+    # BDFE /= np.sum(BDFE)
     return BDFE, b_ind
 
 
@@ -243,6 +245,7 @@ def glauber_flip(alpha, hi, Jij, beta=10):
     indices = range(len(alpha))
     return np.random.choice(indices, p=ps)
 
+
 def calc_F_off(alpha_init, his, Jijs):
     """
     Calculate the fitness offset for the given configuration.
@@ -262,6 +265,7 @@ def calc_F_off(alpha_init, his, Jijs):
         The fitness offset.
     """
     return compute_fit_slow(alpha_init, his, Jijs) - 1
+
 
 def compute_fit_slow(alpha, his, Jijs, F_off=0.0):
     """
@@ -298,24 +302,24 @@ def compute_fitness_delta_mutant(alpha, his, Jijs, k):
     return -2 * alpha[k] * (his[k] + 0.5 * Jijs[k] @ alpha)
 
 
-def backward_propagate(dfe_evo: np. ndarray, dfe_anc: np. ndarray, beneficial=True):
+def backward_propagate(dfe_evo: np.ndarray, dfe_anc: np.ndarray, beneficial=True):
     """
-    Backward propagate the DFE from the initial day(anc) to the target day(evo),
+    Backward propagate the dfe from the initial day(anc) to the target day(evo),
     based on whether beneficial or deleterious mutations are selected.
 
     Parameters
     ----------
     dfe_evo : np. ndarray
-        The DFE at the target day.
+        The dfe at the target day.
     dfe_anc : np. ndarray
-        The DFE at the initial day.
+        The dfe at the initial day.
     beneficial : bool, optional
         Whether to consider beneficial mutations. The default is True.
 
     Returns
     -------
     np. ndarray
-        The propagated DFE.
+        The propagated dfe.
 
     """
     bdfe_t = [(i, dfe_evo[i]) for i in range(len(dfe_evo)) if (dfe_evo[i] >= 0 if beneficial else dfe_evo[i] <= 0)]
@@ -328,24 +332,24 @@ def backward_propagate(dfe_evo: np. ndarray, dfe_anc: np. ndarray, beneficial=Tr
     return bdfe_t_fits, propagated_bdfe_t
 
 
-def forward_propagate(dfe_evo: np. ndarray, dfe_anc: np. ndarray, beneficial=True):
+def forward_propagate(dfe_evo: np.ndarray, dfe_anc: np.ndarray, beneficial=True):
     """
-    Forward propagate the DFE from the initial day(anc) to the target day(evo),
+    Forward propagate the dfe from the initial day(anc) to the target day(evo),
     based on whether beneficial or deleterious mutations are selected.
 
     Parameters
     ----------
     dfe_evo : np. ndarray
-        The DFE at the target day.
+        The dfe at the target day.
     dfe_anc : np. ndarray
-        The DFE at the initial day.
+        The dfe at the initial day.
     beneficial : bool, optional
         Whether to consider beneficial mutations. The default is True.
 
     Returns
     -------
     np. ndarray
-        The propagated DFE.
+        The propagated dfe.
     """
     bdfe_0 = [(i, dfe_anc[i]) for i in range(len(dfe_anc)) if (dfe_anc[i] >= 0 if beneficial else dfe_anc[i] <= 0)]
 
@@ -394,7 +398,7 @@ def relax_sk_flips(alpha, his, Jijs, flips, sswm=True):
     return alpha, saved_alphas
 
 
-def relax_sk_ranks(alpha, his, Jijs, ranks, sswm=True):
+def relax_sk_ranks(alpha, his, Jijs, fin_rank, num_ranks, sswm=True):
     """
     Relax the Sherrington-Kirkpatrick model with given parameters, saving alpha at specified ranks.
     Parameters
@@ -402,18 +406,20 @@ def relax_sk_ranks(alpha, his, Jijs, ranks, sswm=True):
     alpha: numpy.ndarray
     his: numpy.ndarray
     Jijs: numpy.ndarray
-    ranks: list or array-like
+    fin_rank: int
+    num_ranks: int
     sswm: bool, optional
 
     Returns
     -------
-    numpy.ndarray
+    numpy.ndarray, list
         The final spin configuration, saved alphas.
     """
     saved_alphas = []
     rank = calc_rank(alpha, his, Jijs)
+    ranks = sorted(np.linspace(rank, fin_rank, num_ranks, dtype=int), reverse=True)
 
-    while rank > 0 and ranks[-1] < rank:
+    while rank > fin_rank:
 
         if rank in ranks:
             saved_alphas.append(alpha.copy())
@@ -422,7 +428,9 @@ def relax_sk_ranks(alpha, his, Jijs, ranks, sswm=True):
         alpha[flip_idx] *= -1
         rank = calc_rank(alpha, his, Jijs)
 
-    return alpha, saved_alphas
+    # Save the final alpha
+    saved_alphas.append(alpha.copy())
+    return alpha, saved_alphas, ranks
 
 
 def relax_sk(alpha, his, Jijs, sswm=True):
@@ -451,6 +459,7 @@ def relax_sk(alpha, his, Jijs, sswm=True):
 
     return flip_sequence
 
+
 def compute_alpha_from_hist(alpha_0, hist, num_muts):
     """
     Compute alpha from the initial alpha and the flip history up to num_muts mutations.
@@ -474,5 +483,3 @@ def compute_alpha_from_hist(alpha_0, hist, num_muts):
     for flip in rel_hist:
         alpha[flip] *= -1
     return alpha
-
-

@@ -1,12 +1,8 @@
 import os
-import numpy as np
-import seaborn as sns
 import matplotlib.pyplot as plt
-from scipy.stats import pearsonr, spearmanr  # For calculating correlation coefficients
-import pandas as pd  # For saving correlation data
 
 # Import the Funcs module
-from Funcs import *
+from misc.Funcs import *
 
 def main():
     # -------------------------------

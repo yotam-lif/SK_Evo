@@ -5,7 +5,7 @@ from scipy.optimize import curve_fit
 from sklearn.metrics import r2_score  # Importing R^2 metric
 
 # Import the Funcs module
-import Funcs as Fs
+from misc import Funcs as Fs
 
 
 def main():

@@ -6,7 +6,8 @@ from scipy.optimize import curve_fit
 from scipy import special
 
 # Import the Funcs module
-import Funcs as Fs
+from misc import Funcs as Fs
+
 
 def linear_exp_dist(x, _lambda):
     """
@@ -18,7 +19,7 @@ def log_airy_func(x, a, b):
     """
     Log of the Airy function for fitting: log(a * Ai(b * x))
     """
-    ai, _, _, _ = special.airy(b * x)
+    ai = special.airy(b * x)[0]
     return a + np.log(ai)
 
 def calculate_chi_squared_log(observed_density, expected_log_density, bin_width):
@@ -37,10 +38,10 @@ def main():
     # -------------------------------
 
     # Parameters
-    N = 1000          # Number of spins
+    N = 2000          # Number of spins
     beta = 1.0       # Epistasis strength (inverse temperature)
     rho = 1.0        # Fraction of non-zero coupling elements
-    bins = 60         # Number of bins for histograms
+    bins = 50         # Number of bins for histograms
 
     # Initialize spin configuration
     alpha_initial = Fs.init_alpha(N)
@@ -59,7 +60,7 @@ def main():
     final_alpha, saved_alphas = Fs.relax_sk_ranks(alpha_initial.copy(), h, J, ranks, sswm=True)
 
     # Create directory for saving histograms
-    output_dir = "Plots/sim_bdfes"
+    output_dir = "../Plots/sim_bdfes"
     os.makedirs(output_dir, exist_ok=True)
 
     # Iterate over ranks and corresponding saved alphas

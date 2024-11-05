@@ -25,7 +25,7 @@ def main():
     max_fitnesses = []
 
     # Create directory for saving plots
-    output_dir = 'Plots/fit_trajs'
+    output_dir = '../Plots/fit_trajs'
     os.makedirs(output_dir, exist_ok=True)
 
     # Plot trajectories for different N values

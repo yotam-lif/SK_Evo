@@ -1,14 +1,13 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from Funcs import (
+from misc.Funcs import (
     init_alpha,
     init_h,
     init_J,
     relax_sk_ranks,
     compute_fit_slow,
     calc_rank,
-    calc_F_off,
     calc_basic_lfs, calc_energies
 )
 
