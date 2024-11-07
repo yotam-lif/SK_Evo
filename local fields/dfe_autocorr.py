@@ -2,6 +2,8 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import pearsonr
+import pandas as pd
+import seaborn as sns
 from misc.Funcs import (
     init_alpha,
     init_h,
@@ -33,6 +35,10 @@ def main():
     # Create directory for saving plots
     output_dir = '../Plots/dfe_autocorr_plots'
     os.makedirs(output_dir, exist_ok=True)
+    scatter_dir = os.path.join(output_dir, 'scatter_plots')
+    ridge_dir = os.path.join(output_dir, 'ridge_plots')
+    os.makedirs(scatter_dir, exist_ok=True)
+    os.makedirs(ridge_dir, exist_ok=True)
 
     alpha_0 = saved_alphas[0]
     # Iterate over flip_nums and plot scatter plots
@@ -73,7 +79,34 @@ def main():
         # Save the figure
         plot_filename = f'dfe_autocorr_{i}.png'
         plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, plot_filename))
+        plt.savefig(os.path.join(scatter_dir, plot_filename))
+        plt.close()
+
+        # Plot ridge plots
+        plt.figure(figsize=(12, 6))
+        # Subplot 1: energies_i vs. energies_i1
+        plt.subplot(1, 2, 1)
+        # Create a DataFrame
+        df = pd.DataFrame({
+            f'DFE (flip {flips[i]})': deltas_i,
+            f'DFE (flip {flips[i+1]})': deltas_i1
+        })
+        sns.kdeplot(data=df, x=f'DFE (flip {flips[i]})', y=f'DFE (flip {flips[i+1]})', fill=True)
+        plt.plot([min_val, max_val], [min_val, max_val], 'r--')
+
+        # Subplot 2: energies_0 vs. energies_i1
+        plt.subplot(1, 2, 2)
+        # Create a DataFrame
+        df = pd.DataFrame({
+            f'DFE (flip 0)': deltas_0,
+            f'DFE (flip {flips[i+1]})': deltas_i1
+        })
+        sns.kdeplot(data=df, x=f'DFE (flip 0)', y=f'DFE (flip {flips[i+1]})', fill=True)
+
+        # Save the figure
+        plot_filename = f'dfe_autocorr_{i}.png'
+        plt.tight_layout()
+        plt.savefig(os.path.join(ridge_dir, plot_filename))
         plt.close()
 
     print("Plots have been saved successfully.")
