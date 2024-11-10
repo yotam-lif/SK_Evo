@@ -92,6 +92,7 @@ def main():
             f'DFE (flip {flips[i+1]})': deltas_i1
         })
         sns.kdeplot(data=df, x=f'DFE (flip {flips[i]})', y=f'DFE (flip {flips[i+1]})', fill=True)
+        plt.title(f'Pearson Correlation: {corr_i_i1:.2f}')
         plt.plot([min_val, max_val], [min_val, max_val], 'r--')
 
         # Subplot 2: energies_0 vs. energies_i1
@@ -102,6 +103,7 @@ def main():
             f'DFE (flip {flips[i+1]})': deltas_i1
         })
         sns.kdeplot(data=df, x=f'DFE (flip 0)', y=f'DFE (flip {flips[i+1]})', fill=True)
+        plt.title(f'Pearson Correlation: {corr_0_i1:.2f}')
 
         # Save the figure
         plot_filename = f'dfe_autocorr_{i}.png'
