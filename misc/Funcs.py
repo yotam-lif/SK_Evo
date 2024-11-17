@@ -398,7 +398,7 @@ def relax_sk_flips(alpha, his, Jijs, flips, sswm=True):
     return alpha, saved_alphas
 
 
-def relax_sk_ranks(alpha, his, Jijs, fin_rank, num_ranks, sswm=True):
+def relax_sk_ranks(alpha, his, Jijs, num_ranks, fin_rank=0, sswm=True):
     """
     Relax the Sherrington-Kirkpatrick model with given parameters, saving alpha at specified ranks.
     Parameters

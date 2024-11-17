@@ -1,8 +1,8 @@
 import os
+import numpy as np
 import matplotlib.pyplot as plt
-
-# Import the Funcs module
-from misc.Funcs import *
+from misc.Funcs import init_alpha, init_h, init_J, relax_sk_ranks, calc_BDFE
+import scienceplots
 
 def main():
     # -------------------------------
@@ -12,7 +12,7 @@ def main():
     # Parameters
     N_start = 1000
     N_end = 2000
-    N_step = 200
+    N_step = 250
     N_num = int((N_end - N_start) / N_step) + 1
     N = np.linspace(N_start, N_end, N_num, dtype=int)  # Number of spins
     beta = 1.0  # Epistasis strength
@@ -20,10 +20,12 @@ def main():
     random_state = 42  # Seed for reproducibility
     num_saves = 30
 
+    plt.style.use('science')
+
     plt.figure()
-    plt.xlabel("Rank / N")
-    plt.ylabel(f"$ N\\langle \\Delta_{{ij}} \\rangle $ for unstable $i$")
-    plt.title("Mean Drifts vs Rank")
+    plt.xlabel("$r(t) / N$")
+    plt.ylabel(f"$ N\\langle d_{{ij}} \\rangle $ for unstable $i$")
+    # plt.title("Mean Drifts vs. Rank")
     plt.gca().invert_xaxis()  # Reverse the x-axis
 
     dir_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -36,21 +38,14 @@ def main():
         h = init_h(n, random_state=random_state, beta=beta)
         J = init_J(n, random_state=random_state, beta=beta, rho=rho)
 
-        # Define ranks at which to save the configurations
-        initial_rank = calc_rank(alpha, h, J)
-        ranks_to_save = np.linspace(0, initial_rank, num_saves, dtype=int)
-        # Reverse the order of the ranks to save
-        ranks_to_save = ranks_to_save[::-1]
-        print(f"Initial Rank: {initial_rank}")
-
         # Perform relaxation
-        final_alpha, saved_alphas = relax_sk_ranks(
+        final_alpha, saved_alphas, ranks = relax_sk_ranks(
             alpha=alpha.copy(),
             his=h,
             Jijs=J,
-            ranks=ranks_to_save,
+            num_ranks=num_saves,
             sswm=True  # Change to False to use Glauber flip
-            )
+        )
 
         # -------------------------------
         # 2. Calculate Drifts
@@ -59,7 +54,7 @@ def main():
         # We want to look at the mean of these terms for i's, such that Delta_i > 0, i.e. unstable spins.
         means = []
         valid_ranks = []
-        for rank, alpha_i in zip(ranks_to_save, saved_alphas):
+        for rank, alpha_i in zip(ranks, saved_alphas):
             if alpha_i is not None:
                 Delta_ij = np.outer(alpha_i, alpha_i)
                 Delta_ij = -2 * np.multiply(Delta_ij, J)
@@ -72,15 +67,16 @@ def main():
                 valid_ranks.append(rank)
 
         valid_ranks = np.array(valid_ranks) / n
-        means = np.array(means) * n
-        plt.plot(valid_ranks, means, marker='o', label=f"N={int(n)}")
+        means = [np.mean(mean) * n for mean in means]
+        print(f'N={n}, means not nan = {len(means)}')
+        plt.plot(valid_ranks, means, marker='o', markersize=5, label=f"N={int(n)}")
 
     # -------------------------------
     # 3. Plot Drifts
     # -------------------------------
     plt.legend()
+    plt.savefig(os.path.join(dir_path, "drift_means.png"), dpi=500)
     plt.show()
-    plt.savefig(os.path.join(dir_path, "drift_means.png"))
 
 if __name__ == "__main__":
     main()
