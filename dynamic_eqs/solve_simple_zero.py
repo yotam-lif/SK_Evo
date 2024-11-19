@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
-from scipy.optimize import curve_fit
 import os
 
 # Parameters
@@ -24,11 +23,6 @@ os.makedirs(output_dir, exist_ok=True)
 s = np.linspace(s_min, s_max, N_s)
 ds = s[1] - s[0]
 
-x_max = 40
-x_min = -x_max
-N_x = int((x_max - x_min) / ds)
-x = np.linspace(x_min, x_max, N_x)
-
 def theta(_s):
     """Heaviside step function."""
     return 0.5 * (np.sign(_s) + 1)
@@ -36,10 +30,8 @@ def theta(_s):
 def negative_integral(_s, _p):
     """Compute the integral of p(s) over negative part of s."""
     integrand = _p
-    # integrand *= _s
     integral = np.sum(integrand[_s < 0]) * ds
     return integral if integral > eps else eps  # Prevent division by zero
-
 
 def flip_term(_s: np.ndarray, _p: np.ndarray) -> np.ndarray:
     dp_neg = theta(-_s) * _p
@@ -61,7 +53,6 @@ def drift_term(_c, _p, _s, _ds):
     else:
         dpdx[:] = 0.0
     return _c * dpdx
-
 
 def diff_term(_sig, _p, _ds):
     dpdx2 = np.zeros_like(_p)
@@ -93,7 +84,6 @@ def normalize(p):
 s0 = 0.0  # Center of the Gaussian
 p0_gauss = np.exp(-((s - s0) ** 2) / (2 * sig ** 2))
 p0_gauss /= np.sum(p0_gauss) * ds  # Normalize
-p0_neg = p0_gauss * theta(-s)
 
 # Solve the PDE using solve_ivp with normalization after each step
 solution_gaussian = solve_ivp(
@@ -102,86 +92,19 @@ solution_gaussian = solve_ivp(
 )
 p_all_g = np.apply_along_axis(normalize, 0, solution_gaussian.y)
 
-# Solve the PDE using solve_ivp with normalization after each step
-solution_neg = solve_ivp(
-    rhs, [t_min, t_max], p0_neg, t_eval=t_eval, method='RK45',
-    vectorized=False, events=None
-)
-p_all_n = np.apply_along_axis(normalize, 0, solution_neg.y)
+# Find the index of s closest to 0
+s0_index = np.argmin(np.abs(s - s0))
 
-# -----------------------------
-# Plotting the solution at selected times
-# -----------------------------
+# Extract the values of the function at s=0 over time
+p_at_s0 = p_all_g[s0_index, :]
+
+# Plotting the value of the function at s=0 as a function of time
 plt.figure(figsize=(10, 6))
-time_indices = [0, len(t_eval) // 4, len(t_eval) // 2, 3 * len(t_eval) // 4, -1]
-for idx in time_indices:
-    if idx < p_all_g.shape[1]:  # Ensure the index is within bounds
-        sol = p_all_g[:, idx]
-        sol_on_x = np.interp(x, s, sol)
-        plt.plot(x, sol_on_x, label=f't = {t_eval[idx]:.3f}')
-plt.title('Solution of the PDE at Different Times')
-plt.xlabel('Position s')
-plt.ylabel('Concentration p(s, t)')
-plt.legend()
-plt.grid(True)
-plt.savefig(os.path.join(output_dir, 'solution_plot_g.png'))
-plt.close()
-
-plt.figure(figsize=(10, 6))
-time_indices = [0, len(t_eval) // 4, len(t_eval) // 2, 3 * len(t_eval) // 4, -1]
-for idx in time_indices:
-    if idx < p_all_n.shape[1]:  # Ensure the index is within bounds
-        sol = p_all_n[:, idx]
-        sol_on_x = np.interp(x, s, sol)
-        plt.plot(x, sol_on_x, label=f't = {t_eval[idx]:.3f}')
-plt.title('Solution of the PDE at Different Times')
-plt.xlabel('Position s')
-plt.ylabel('Concentration p(s, t)')
-plt.legend()
-plt.grid(True)
-plt.savefig(os.path.join(output_dir, 'solution_plot_n.png'))
-plt.close()
-
-# -----------------------------
-# Compute Mean Square Displacement (MSD)
-# -----------------------------
-MSD = np.zeros(len(t_eval))
-for i in range(len(t_eval)):
-    p = p_all_g[:, i]
-    MSD[i] = np.sum(s**2 * p) * ds
-
-# Compute the change in MSD from time 0
-MSD_change = MSD - MSD[0]
-
-# Plotting the change in MSD over time
-plt.figure(figsize=(10, 6))
-plt.plot(t_eval, MSD_change, 'o', label='ΔMSD data')
-plt.title('Change in Mean Square Displacement over Time')
+plt.plot(t_eval, p_at_s0, 'o-', label='p(s=0, t)')
+plt.title('Value of the Function at s=0 over Time')
 plt.xlabel('Time t')
-plt.ylabel('ΔMSD(t) = MSD(t) - MSD(0)')
+plt.ylabel('Concentration p(s=0, t)')
 plt.grid(True)
-
-# -----------------------------
-# Fit ΔMSD to f(t) = m * t^a
-# -----------------------------
-def msd_fit_func(t, m, a):
-    return m * t**a
-
-# Exclude t=0 to avoid issues with log(0)
-t_fit = t_eval[1:]
-MSD_fit = MSD_change[1:]
-
-# Perform the curve fitting
-params, params_covariance = curve_fit(msd_fit_func, t_fit, MSD_fit, p0=[1.0, 1.0])
-
-# Extract fitted parameters
-m_fit, a_fit = params
-print(f"Fitted parameters: m = {m_fit:.4f}, a = {a_fit:.4f}")
-
-# Plot the fitted function
-t_fit_line = np.linspace(t_min, t_max, 1000)
-MSD_fit_line = msd_fit_func(t_fit_line, m_fit, a_fit)
-plt.plot(t_fit_line, MSD_fit_line, '-', label=f'Fit: ΔMSD = {m_fit:.3f} * t^{a_fit:.3f}')
 plt.legend()
-plt.savefig(os.path.join(output_dir, 'msd_fit_plot.png'))
+plt.savefig(os.path.join(output_dir, 'value_at_s0_plot.png'))
 plt.close()
