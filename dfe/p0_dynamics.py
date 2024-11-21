@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from misc.Funcs import init_alpha, init_h, init_J, relax_sk, calc_DFE, curate_alpha_list
 
 # Parameters
-N = 2000  # Number of spins
+N = 4000  # Number of spins
 beta = 1.0  # Epistasis strength
 rho = 1.0  # Fraction of non-zero coupling elements
 random_state = 42  # Seed for reproducibility
@@ -33,7 +33,7 @@ for alpha_i in alpha_list:
         # Calculate BDFE
         DFE = calc_DFE(alpha_i, h, J)
         # Create histogram
-        hist, bin_edges = np.histogram(DFE, bins=50, density=True)
+        hist, bin_edges = np.histogram(DFE, bins=75, density=True)
         bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
 
         # Find the bin containing delta=0
@@ -43,7 +43,7 @@ for alpha_i in alpha_list:
 
 # Plot the size of the bin with delta=0 as a function of time
 plt.figure()
-plt.plot(time_points, bin_sizes, 'o-', label='Size of bin with delta=0')
+plt.plot(time_points, bin_sizes, 'o-')
 plt.ylabel('$P(0, t)$')
 plt.xlabel('$t$')
 plt.grid(True)
