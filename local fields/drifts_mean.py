@@ -62,12 +62,14 @@ def main():
                 # Get Delta_ij with rows only corresponding to indexes in bdfe_ind
                 Delta_ij = Delta_ij[bdfe_ind]
                 # Get the mean of all terms
-                mean_Delta_ij = np.mean(Delta_ij, axis=1)
+                # mean_Delta_ij = np.mean(Delta_ij, axis=1)
+                mean_Delta_ij = np.sum(Delta_ij, axis=1)
                 means.append(mean_Delta_ij)
                 valid_ranks.append(rank)
 
         valid_ranks = np.array(valid_ranks) / n
-        means = [np.mean(mean) * n for mean in means]
+        # means = [np.mean(mean) * n for mean in means]
+        means = [np.sum(mean) / n for mean in means]
         print(f'N={n}, means not nan = {len(means)}')
         plt.plot(valid_ranks, means, marker='o', markersize=5, label=f"N={int(n)}")
 
@@ -75,7 +77,7 @@ def main():
     # 3. Plot Drifts
     # -------------------------------
     plt.legend()
-    plt.savefig(os.path.join(dir_path, "drift_means.png"), dpi=500)
+    plt.savefig(os.path.join(dir_path, "drift_sums.png"), dpi=300)
     plt.show()
 
 if __name__ == "__main__":

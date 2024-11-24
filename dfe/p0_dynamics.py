@@ -1,19 +1,25 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from misc.Funcs import init_alpha, init_h, init_J, relax_sk, calc_DFE, curate_alpha_list
+from misc.Funcs import init_alpha, init_h, init_J, relax_sk, calc_DFE, curate_alpha_list, calc_rank, compute_fit_slow, calc_F_off
+import scienceplots
 
 # Parameters
-N = 4000  # Number of spins
+N = 3000  # Number of spins
 beta = 1.0  # Epistasis strength
 rho = 1.0  # Fraction of non-zero coupling elements
 random_state = 42  # Seed for reproducibility
-num_points = 200
+num_points = 100
+plt.style.use('science')
+plt.figure()
+
+plt.gca().invert_xaxis()
 
 # Initialize the model
 alpha = init_alpha(N)
 h = init_h(N, random_state=random_state, beta=beta)
 J = init_J(N, random_state=random_state, beta=beta, rho=rho)
+F_off = calc_F_off(alpha, h, J)
 
 # Perform relaxation and save alphas at different time points
 flip_seq = relax_sk(alpha.copy(), h, J, sswm=True)
@@ -41,11 +47,15 @@ for alpha_i in alpha_list:
         zero_bin_size = hist[zero_bin_index] if 0 <= zero_bin_index < len(hist) else 0
         bin_sizes.append(zero_bin_size)
 
+r_list = []
+for alpha in alpha_list:
+    # r_list.append(compute_fit_slow(alpha, h, J, F_off))
+    r_list.append(calc_rank(alpha, h, J)/N)
+
 # Plot the size of the bin with delta=0 as a function of time
-plt.figure()
-plt.plot(time_points, bin_sizes, 'o-')
+plt.plot(r_list, bin_sizes, 'o-', markersize=3)
 plt.ylabel('$P(0, t)$')
-plt.xlabel('$t$')
+plt.xlabel('$r(t)/N$')
 plt.grid(True)
-plt.savefig(os.path.join(output_dir, 'bin_size_over_time.png'))
+plt.savefig(os.path.join(output_dir, 'P0_rank.png'), dpi=300)
 plt.close()
