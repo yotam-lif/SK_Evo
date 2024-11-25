@@ -7,6 +7,7 @@ import scienceplots
 
 # Import the Funcs module
 from misc import Funcs as Fs
+
 plt.style.use('science')
 
 
@@ -16,12 +17,16 @@ def linear_exp_dist(x, _lambda, a):
     """
     return -_lambda * x + a
 
+
 def log_airy_func(x, a, b):
     """
     Log of the Airy function for fitting: log(a * Ai(b * x))
     """
     ai = special.airy(b * x)[0]
+    # To avoid log(0), set a minimum value
+    ai = np.where(ai <= 0, 1e-10, ai)
     return a + np.log(ai)
+
 
 def calculate_chi_squared_log(observed_density, expected_log_density, bin_width):
     """
@@ -33,27 +38,29 @@ def calculate_chi_squared_log(observed_density, expected_log_density, bin_width)
     chi_sq = np.sum(((log_observed - expected_log_density) ** 2) / expected_log_density) * bin_width
     return chi_sq
 
+
 def main():
     # -------------------------------
     # 1. Initialize SK Environment
     # -------------------------------
 
     # Parameters
-    N = 2000          # Number of spins
-    beta = 1.0       # Epistasis strength (inverse temperature)
-    rho = 1.0        # Fraction of non-zero coupling elements
-    bins = 70         # Number of bins for histograms
-    num_ranks = 15
-    num_repeats = 10
+    N = 2000  # Number of spins
+    beta = 1.0  # Epistasis strength (inverse temperature)
+    rho = 1.0  # Fraction of non-zero coupling elements
+    bins = 70  # Number of bins for histograms
+    num_points = 10  # Number of ranks to consider
+    num_repeats = 10  # Number of simulation repeats
 
     # Create directory for saving histograms
     output_dir = "../Plots/sim_bdfes"
     os.makedirs(output_dir, exist_ok=True)
 
-    # Initialize arrays to store cumulative histograms
-    cumulative_histograms = {rank: np.zeros(bins) for rank in range(num_ranks)}
+    # Initialize cumulative histograms using a list of lists
+    bdfes = [[] for _ in range(num_points)]
 
     for repeat in range(num_repeats):
+        print(f"\nStarting repeat {repeat + 1} of {num_repeats}...")
         # Initialize spin configuration
         alpha_initial = Fs.init_alpha(N)
 
@@ -64,31 +71,21 @@ def main():
         J = Fs.init_J(N, beta=beta, rho=rho)
 
         # Relax the system using sswm_flip (sswm=True)
-        final_alpha, saved_alphas, ranks = Fs.relax_sk_ranks(alpha_initial.copy(), h, J, num_ranks=num_ranks, sswm=True)
+        flip_seq = Fs.relax_sk(alpha_initial.copy(), h, J, sswm=True)
+        alphas, _ = Fs.curate_alpha_list(alpha_initial, flip_seq, num_points)
+        for i, alpha in enumerate(alphas):
+            # Calculate the BDFE for the current rank
+            BDFE, _ = Fs.calc_BDFE(alpha, h, J)
+            bdfes[i].extend(BDFE)
 
-        # Iterate over ranks and corresponding saved alphas
-        for rank, alpha in zip(ranks, saved_alphas):
-            if alpha is not None:
-                # Calculate BDFE
-                BDFE, bdfe_indices = Fs.calc_BDFE(alpha, h, J)
+    # Now create histograms for each rank
+    for i, bdfes_i in enumerate(bdfes):
+        if len(bdfes_i) == 0:
+            print(f"No beneficial effects at flip_point {i}; skipping histogram.")
+            continue
 
-                # Check if there are any beneficial effects
-                if len(BDFE) == 0:
-                    print(f"No beneficial effects at rank {rank}; skipping histogram.")
-                    continue
-
-                # Calculate histogram data
-                hist, bin_edges = np.histogram(BDFE, bins=bins, density=False)
-                cumulative_histograms[rank] += hist
-
-    # Average the histograms over the number of repeats
-    for rank in cumulative_histograms:
-        cumulative_histograms[rank] /= num_repeats
-
-    # Plot the averaged histograms
-    for rank in cumulative_histograms:
-        hist = cumulative_histograms[rank]
-        bin_edges = np.linspace(0, BDFE.max(), bins + 1)
+        # Compute histogram data
+        hist, bin_edges = np.histogram(bdfes_i, bins=bins, density=False)
         bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
         bin_width = bin_edges[1] - bin_edges[0]
 
@@ -113,7 +110,7 @@ def main():
             _lambda_fit_error, a_fit_error = np.sqrt(np.diag(pcov2))
 
             # Generate fitted y data in log-space
-            x_fit = np.linspace(0, BDFE.max(), 1000)
+            x_fit = np.linspace(0, max(bdfes_i), 1000)
             y_fit_log = linear_exp_dist(x_fit, _lambda_fit, a_fit)
             y_fit = np.exp(y_fit_log)
 
@@ -125,7 +122,7 @@ def main():
             chi_sq = calculate_chi_squared_log(hist[valid], expected_log_density, bin_width)
 
         except RuntimeError as e:
-            print(f"Curve fitting failed for rank {rank} (Linear Fit): {e}")
+            print(f"Curve fitting failed for rank {i} (Linear Fit): {e}")
             _lambda_fit, a_fit, chi_sq = np.nan, np.nan, np.nan
 
         # Fit: Log of Airy function
@@ -142,7 +139,7 @@ def main():
             plt.plot(x_fit, y_fit_airy, color='blue', linestyle='--', label='Fitted Airy')
 
         except RuntimeError as e:
-            print(f"Curve fitting failed for rank {rank} (Airy Fit): {e}")
+            print(f"Curve fitting failed for flip_point {i} (Airy Fit): {e}")
             a_fit_airy, b_fit_airy = np.nan, np.nan
 
         # Annotate the plot with fit parameters and chi-squared values
@@ -166,7 +163,7 @@ def main():
                  bbox=dict(boxstyle="round,pad=0.5", facecolor="white", alpha=0.8))
 
         # Title and labels with parameters
-        plt.title(f'BDFE Histogram at Rank {rank}; N={N}, $\\beta$={beta}, $\\rho$={rho}', fontsize=14)
+        plt.title(f'BDFE Histogram at flip_point {i}; N={N}, $\\beta$={beta}, $\\rho$={rho}', fontsize=14)
         plt.xlabel('Beneficial Fitness Effect', fontsize=12)
         plt.ylabel('Density (log scale)', fontsize=12)  # Updated ylabel
 
@@ -174,14 +171,15 @@ def main():
         plt.legend()
 
         # Save the plot
-        plot_filename = f'bdfes_rank_{int(rank)}.png'
+        plot_filename = f'bdfes_flip_point_{i}.png'
         plt.tight_layout()
         plt.savefig(os.path.join(output_dir, plot_filename), dpi=300)
         plt.close()
 
-        print(f"Histogram for rank {rank} saved as {plot_filename}")
+        print(f"Histogram for flip_point {i} saved as {plot_filename}")
 
     print(f"\nAll histograms have been saved in the '{output_dir}' directory.")
+
 
 if __name__ == "__main__":
     main()
