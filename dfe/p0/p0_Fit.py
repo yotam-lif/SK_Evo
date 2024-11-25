@@ -27,7 +27,7 @@ alpha_list, time_points = curate_alpha_list(alpha, flip_seq, num_points)
 
 
 # Create directory for saving histograms
-output_dir = "../Plots/p0_dynamics"
+output_dir = "../../Plots/p0_dynamics"
 os.makedirs(output_dir, exist_ok=True)
 
 # Initialize list to store the size of the bin with delta=0
@@ -47,15 +47,14 @@ for alpha_i in alpha_list:
         zero_bin_size = hist[zero_bin_index] if 0 <= zero_bin_index < len(hist) else 0
         bin_sizes.append(zero_bin_size)
 
-r_list = []
+F_list = []
 for alpha in alpha_list:
-    # r_list.append(compute_fit_slow(alpha, h, J, F_off))
-    r_list.append(calc_rank(alpha, h, J)/N)
+    F_list.append(compute_fit_slow(alpha, h, J, F_off))
 
 # Plot the size of the bin with delta=0 as a function of time
-plt.plot(r_list, bin_sizes, 'o-', markersize=3)
+plt.plot(F_list, bin_sizes, 'o-', markersize=3)
 plt.ylabel('$P(0, t)$')
-plt.xlabel('$r(t)/N$')
+plt.xlabel('$F(t)$')
 plt.grid(True)
-plt.savefig(os.path.join(output_dir, 'P0_rank.png'), dpi=300)
+plt.savefig(os.path.join(output_dir, 'P0_Fit.png'), dpi=300)
 plt.close()
