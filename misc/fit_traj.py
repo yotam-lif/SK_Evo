@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from Funcs import (
+from cmn import (
     init_alpha,
     init_h,
     init_J,

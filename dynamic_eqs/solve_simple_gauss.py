@@ -46,7 +46,7 @@ def flip_term(_s: np.ndarray, _p: np.ndarray) -> np.ndarray:
     dp_neg *= np.abs(_s)
     dp_pos = np.flip(dp_neg)
     flip_term = dp_pos - dp_neg
-    flip_term /= negative_integral(_s, _p)
+    # flip_term /= negative_integral(_s, _p)
     return flip_term
 
 # Function to compute the advection term using the upwind scheme

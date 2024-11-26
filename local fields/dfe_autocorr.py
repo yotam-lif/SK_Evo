@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import pearsonr
 import pandas as pd
 import seaborn as sns
-from misc.Funcs import (
+from misc.cmn import (
     init_alpha,
     init_h,
     init_J,

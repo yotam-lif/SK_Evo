@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from misc import Funcs as Fs
+from misc import cmn as Fs
 
 def plot_crossings(flips_labels, anc_bdfe, prop_anc_bdfe, evol_bdfe, prop_evol_bdfe, plot_dir, N, beta, rho):
     """

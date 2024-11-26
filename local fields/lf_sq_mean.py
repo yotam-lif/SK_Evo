@@ -2,8 +2,8 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-from misc import Funcs
-from misc.Funcs import (
+from misc import cmn
+from misc.cmn import (
     init_alpha,
     init_h,
     init_J,

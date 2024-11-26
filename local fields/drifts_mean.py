@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from misc.Funcs import init_alpha, init_h, init_J, relax_sk_ranks, calc_BDFE
+from misc.cmn import init_alpha, init_h, init_J, relax_sk_ranks, calc_BDFE
 import scienceplots
 
 def main():
