@@ -460,7 +460,7 @@ def relax_sk(alpha, his, Jijs, sswm=True):
     return flip_sequence
 
 
-def compute_alpha_from_hist(alpha_0, hist, num_muts):
+def compute_alpha_from_hist(alpha_0, hist, num_muts=None):
     """
     Compute alpha from the initial alpha and the flip history up to num_muts mutations.
 
@@ -479,7 +479,10 @@ def compute_alpha_from_hist(alpha_0, hist, num_muts):
         The spin configuration after num_muts mutations.
     """
     alpha = alpha_0.copy()
-    rel_hist = hist[:num_muts]
+    if num_muts is None:
+        rel_hist = hist
+    else:
+        rel_hist = hist[:num_muts]
     for flip in rel_hist:
         alpha[flip] *= -1
     return alpha
