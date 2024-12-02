@@ -487,7 +487,7 @@ def compute_alpha_from_hist(alpha_0, hist, num_muts=None):
         alpha[flip] *= -1
     return alpha
 
-def curate_alpha_list(alpha_0, hist, num_points):
+def curate_alpha_list(alpha_0, hist, flips):
     """
     Curate the alpha list to have num_points elements.
 
@@ -497,8 +497,8 @@ def curate_alpha_list(alpha_0, hist, num_points):
         The initial spin configuration.
     hist : list of int
         The flip history.
-    num_points : int
-        The number of points to curate.
+    flips : list of int
+        The points to curate.
 
     Returns
     -------
@@ -506,9 +506,7 @@ def curate_alpha_list(alpha_0, hist, num_points):
         The curated list of spin configurations.
     """
     alpha_list = []
-    num_muts = len(hist)
-    time_points = np.linspace(0, num_muts, num_points, dtype=int)
-    for t in time_points:
-        alpha_t = compute_alpha_from_hist(alpha_0, hist, t)
+    for flip in flips:
+        alpha_t = compute_alpha_from_hist(alpha_0, hist, flip)
         alpha_list.append(alpha_t)
-    return alpha_list, time_points
+    return alpha_list

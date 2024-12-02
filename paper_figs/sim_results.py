@@ -5,17 +5,15 @@ import seaborn as sns
 import pickle
 from misc.uncmn_dfe import gen_final_dfes
 import matplotlib.ticker as ticker
-from misc.uncmn_scrambling import gen_crossings
+import misc.uncmn_scrambling as scr
 from misc import cmn
 import scienceplots
 
 # Define a consistent style
 plt.style.use('science')
 plt.rcParams['font.family'] = 'Helvetica Neue'
-sns.color_palette(palette='crest')
-# Load the data from the run_data directory
-
-file_path = 'run_data/data.pkl'
+file_path = '../misc/run_data/N4000_rho100_beta100_repeats50.pkl'
+color = sns.color_palette('CMRmap')
 
 with open(file_path, 'rb') as f:
     data = pickle.load(f)
@@ -24,22 +22,17 @@ def create_fig_dfe_fin(ax, N_arr, beta, rho, num_repeats, num_bins):
     print("\n create_fig_dfe_fin called")
     dfes = gen_final_dfes(N_arr, beta, rho, num_repeats)
     for idx, dfe in enumerate(dfes):
-        hist, bin_edges = np.histogram(dfe, bins=num_bins, density=True)
-        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-        ax.bar(bin_centers, hist, width=bin_edges[1] - bin_edges[0], alpha=0.5, label=f'N={N_arr[idx]}')
+        # hist, bin_edges = np.histogram(dfe, bins=num_bins, density=True)
+        # bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+        # ax.bar(bin_centers, hist, width=bin_edges[1] - bin_edges[0], alpha=0.6, label=f'N={N_arr[idx]}', color=color[idx % len(color)])
+        sns.kdeplot(dfe, ax=ax, label=f'N={N_arr[idx]}', color=color[idx % len(color)], fill=True, alpha=0.6)
 
     ax.set_xlabel('$\\Delta$', fontsize=14)
     ax.set_ylabel('$P(\\Delta)$', fontsize=14)
     ax.set_xlim(None, 0)
-    ax.legend(fontsize=12, title_fontsize=12, loc='upper left', bbox_to_anchor=(0.075, 0.925))
-
-    # Make the subplot frames thicker
-    for spine in ax.spines.values():
-        spine.set_linewidth(2)  # Change the thickness of the border
+    ax.legend(fontsize=12, title_fontsize=12, loc='upper left', bbox_to_anchor=(0.075, 0.925), frameon=True)
 
     # Make tick lines
-    ax.tick_params(axis='both', which='major', length=20, width=1, labelsize=14)
-    ax.tick_params(axis='both', which='minor', length=10, width=1, labelsize=14)
     ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True, prune='both', nbins=5))
     ax.xaxis.set_minor_locator(ticker.AutoMinorLocator())
     ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=False, prune='both', nbins=4))
@@ -50,31 +43,29 @@ def create_fig_dfe_fin(ax, N_arr, beta, rho, num_repeats, num_bins):
     # Label the ticks at the limits
     ax.set_xticklabels(['0.0'] + [f'{tick:.1f}' for tick in current_ticks])
 
-
-def create_fig_bdfe_hists(ax, num_points, num_repeats, num_bins):
+def create_fig_bdfe_hists(ax, points_lst, num_bins, num_flips):
     """
     Creates BDFE histograms on the given Axes.
     """
     print("\n create_fig_bdfe_hists called")
-    bdfes = [[] for _ in range(num_points)]
-    for entry in data:
-        alphas, _ = cmn.curate_alpha_list(entry['init_alpha'], entry['flip_seq'], num_points)
-        h = entry['h']
-        J = entry['J']
-        for j in range(num_points):
-            bdfes[j].append(cmn.calc_BDFE(alphas[j], h, J))
+    num = len(points_lst)
+    bdfes = [[] for _ in range(num)]
+    for repeat in data:
+        alphas = cmn.curate_alpha_list(repeat['init_alpha'], repeat['flip_seq'], points_lst)
+        h = repeat['h']
+        J = repeat['J']
+        for j in range(num):
+            bdfes[j].extend(cmn.calc_BDFE(alphas[j], h, J)[0])
 
-    low, up = int(num_points * 0.5), int(num_points * 0.7)
-    flip_percent = np.linspace(0, 100, num_points)
+    flip_percent = (points_lst / num_flips) * 100
 
     # Store the labels for the legend
-    for idx, i in enumerate(range(low, up)):
-        bdfe_i = bdfes[i]
-        hist, bin_edges = np.histogram(bdfe_i, bins=num_bins)
-        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-        label = f'{flip_percent[i]:.0f}$\\%$'  # Format the label for percentage
-
-        ax.bar(bin_centers, hist, width=bin_edges[1] - bin_edges[0], alpha=0.5, label=label)
+    for i, bdfe in enumerate(bdfes):
+        # hist, bin_edges = np.histogram(bdfe, bins=num_bins, density=True)
+        # bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+        # label = f'{flip_percent[i]:.0f}$\\%$'  # Format the label for percentage
+        # ax.bar(bin_centers, hist, width=bin_edges[1] - bin_edges[0], alpha=0.6, label=label, color=color[i % len(color)])
+        sns.kdeplot(bdfe, ax=ax, label=f'{flip_percent[i]:.0f}$\\%$', color=color[i % len(color)], fill=True, alpha=0.6)
 
     ax.set_xlabel('$\\Delta$', fontsize=14)
     ax.set_ylabel('$log \\left( P_+ (\\Delta) \\right)$', fontsize=14)
@@ -82,11 +73,7 @@ def create_fig_bdfe_hists(ax, num_points, num_repeats, num_bins):
     ax.set_yscale('log')
 
     # Adjust legend
-    ax.legend(title='$\\%$ of flips', fontsize=12, title_fontsize=12, loc='upper right', bbox_to_anchor=(0.925, 0.925))
-
-    # Make tick lines
-    ax.tick_params(axis='both', which='major', length=20, width=1, labelsize=14)
-    ax.tick_params(axis='both', which='minor', length=10, width=1, labelsize=14)
+    ax.legend(title='$\\%$ of flips', fontsize=12, title_fontsize=12, loc='upper right', bbox_to_anchor=(0.925, 0.925), frameon=True )
 
     # Set major and minor x-ticks automatically
     ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=False, prune='both', nbins=3))
@@ -95,12 +82,6 @@ def create_fig_bdfe_hists(ax, num_points, num_repeats, num_bins):
     # Set major and minor y-ticks automatically with pruning
     ax.yaxis.set_major_locator(plt.LogLocator(base=10.0, numticks=2))
     ax.yaxis.set_minor_locator(ticker.NullLocator())
-    # Format the x-axis values (to one decimal point)
-    # ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x:.1f}'))
-
-    # Make the subplot frames thicker
-    for spine in ax.spines.values():
-        spine.set_linewidth(2)  # Change the thickness of the border
 
     # Get the current ticks and limits
     current_ticks = ax.get_xticks()
@@ -112,14 +93,37 @@ def create_fig_bdfe_hists(ax, num_points, num_repeats, num_bins):
     ax.set_xticklabels([f'{xlim[0]:.1f}'] + [f'{tick:.1f}' for tick in current_ticks])
 
 
-def create_fig_evo_anc(ax):
+def create_fig_evo_anc(ax, flip1, flip2, repeat):
     """
-    Placeholder for Evolution Ancestor plot.
     """
-    ax.scatter(np.random.rand(10), np.random.rand(10), label='Placeholder Scatter')
-    ax.set_xlabel('X-axis Label', fontsize=12)
-    ax.set_ylabel('Y-axis Label', fontsize=12)
-    ax.legend()
+    print("\n create_fig_evo_anc called")
+    data_entry = data[repeat]
+    alpha_initial = data_entry['init_alpha']
+    h = data_entry['h']
+    J = data_entry['J']
+    flip_seq = data_entry['flip_seq']
+    bdfe1, prop_bdfe1 = scr.propagate_forward(alpha_initial, h, J, flip_seq, flip1, flip2)
+    bdfe2, prop_bdfe2 = scr.propagate_backward(alpha_initial, h, J, flip_seq, flip1, flip2)
+    # Create subplots
+    ax1, ax2 = ax.subplots(1, 2)
+
+    # Plot KDEs for bdfe1 and prop_bdfe1
+    sns.kdeplot(bdfe1, ax=ax1, label=f'BDFE Ancestor (flip {flip1})', color=color[0], fill=True, alpha=0.6)
+    sns.kdeplot(prop_bdfe1, ax=ax1, label=f'Propagated BDFE (flip {flip2})', color=color[1], fill=True, alpha=0.6)
+    ax1.set_xlabel('$\\Delta$', fontsize=14)
+    ax1.set_ylabel('$P(\\Delta)$', fontsize=14)
+    ax1.legend(fontsize=12, frameon=True)
+
+    # Plot KDEs for bdfe2 and prop_bdfe2
+    sns.kdeplot(bdfe2, ax=ax2, label=f'BDFE Evolved (flip {flip2})', color=color[1], fill=True, alpha=0.6)
+    sns.kdeplot(prop_bdfe2, ax=ax2, label=f'Propagated BDFE (flip {flip1})', color=color[0], fill=True, alpha=0.6)
+    ax2.set_xlabel('$\\Delta$', fontsize=14)
+    ax2.set_ylabel('$P(\\Delta)$', fontsize=14)
+    ax2.legend(fontsize=12, frameon=True)
+
+    # Adjust layout
+    plt.tight_layout()
+
 
 
 def create_fig_crossings(ax, flip1, flip2, repeat):
@@ -139,13 +143,7 @@ def create_fig_crossings(ax, flip1, flip2, repeat):
     h = data_entry['h']
     J = data_entry['J']
     flip_seq = data_entry['flip_seq']
-    alpha1 = cmn.compute_alpha_from_hist(alpha_initial, flip_seq, flip1)
-    alpha2 = cmn.compute_alpha_from_hist(alpha_initial, flip_seq, flip2)
-    dfe1 = cmn.calc_DFE(alpha1, h, J)
-    dfe2 = cmn.calc_DFE(alpha2, h, J)
-    bdfe1, bdfe1_ind = cmn.calc_BDFE(alpha1, h, J)
-    bdfe2, bdfe2_ind = cmn.calc_BDFE(alpha2, h, J)
-    gen_crossings(ax, dfe1, dfe2, bdfe1, bdfe2, bdfe1_ind, bdfe2_ind, flip1, flip2)
+    scr.gen_crossings(ax, alpha_initial, h, J, flip_seq, flip1, flip2)
 
 
 
@@ -154,10 +152,26 @@ if __name__ == "__main__":
     big_fig, axs = plt.subplots(2, 2, figsize=(12, 10))  # Adjust size for clarity
 
     # Create each subplot
-    create_fig_dfe_fin(axs[0, 0], N_arr=[1000, 2000], beta=1.0, rho=1.0, num_repeats=2, num_bins=75)
-    create_fig_bdfe_hists(axs[0, 1], N=1000, beta=1.0, rho=1.0, num_points=20, num_repeats=2, num_bins=50)
-    create_fig_evo_anc(axs[1, 0])
-    create_fig_crossings(axs[1, 1], N=2000, beta=1.0, rho=1.0, num_points=10)
+    N = 4000
+    num_flips = int(N * 0.64)
+    high = int(num_flips*0.85)
+    low = int(num_flips*0.7)
+    flip_list = np.linspace(low, high, 4, dtype=int)
+    crossings_repeat = 10
+    crossings_flip_anc = 400
+    crossings_flip_evo = 800
+
+    for ax in axs.flatten():
+        ax.tick_params(axis='both', which='major', length=20, width=1, labelsize=14)
+        ax.tick_params(axis='both', which='minor', length=10, width=1, labelsize=14)
+        # Make the subplot frames thicker
+        for spine in ax.spines.values():
+            spine.set_linewidth(2)  # Change the thickness of the border
+
+    create_fig_dfe_fin(axs[0, 0], N_arr=[1000, 1500, 2000], beta=1.0, rho=1.0, num_repeats=2, num_bins=50)
+    create_fig_bdfe_hists(axs[0, 1], points_lst=flip_list, num_bins=50, num_flips=num_flips)
+    create_fig_evo_anc(axs[1, 0], crossings_flip_anc, crossings_flip_evo, crossings_repeat)
+    create_fig_crossings(axs[1, 1], crossings_flip_anc, crossings_flip_evo, crossings_repeat)
 
     # Panel labels (A-D)
     panel_labels = ['A', 'B', 'C', 'D']
