@@ -19,6 +19,21 @@ with open(file_path, 'rb') as f:
     data = pickle.load(f)
 
 def create_fig_dfe_fin(ax, N_arr, beta, rho, num_repeats, num_bins):
+    """
+    Creates DFE histograms on the given Axes.
+
+    Parameters:
+        ax (plt.Axes): The matplotlib axis to plot on.
+        N_arr (list): The list of system sizes to consider.
+        beta (float): The beta parameter for the DFE.
+        rho (float): The rho parameter for the DFE.
+        num_repeats (int): The number of repeats to consider.
+        num_bins (int): The number of bins to use in the histogram.
+
+    Returns:
+        None
+
+    """
     print("\n create_fig_dfe_fin called")
     dfes = gen_final_dfes(N_arr, beta, rho, num_repeats)
     for idx, dfe in enumerate(dfes):
@@ -46,6 +61,15 @@ def create_fig_dfe_fin(ax, N_arr, beta, rho, num_repeats, num_bins):
 def create_fig_bdfe_hists(ax, points_lst, num_bins, num_flips):
     """
     Creates BDFE histograms on the given Axes.
+
+    Parameters:
+        ax (plt.Axes): The matplotlib axis to plot on.
+        points_lst (np.ndarray): The list of points to consider for the BDFE.
+        num_bins (int): The number of bins to use in the histogram.
+        num_flips (int): The total number of flips in the system.
+
+    Returns:
+        None
     """
     print("\n create_fig_bdfe_hists called")
     num = len(points_lst)
@@ -92,9 +116,40 @@ def create_fig_bdfe_hists(ax, points_lst, num_bins, num_flips):
     # Label the ticks at the limits
     ax.set_xticklabels([f'{xlim[0]:.1f}'] + [f'{tick:.1f}' for tick in current_ticks])
 
-
-def create_fig_evo_anc(ax, flip1, flip2, repeat):
+def create_fig_crossings(ax, flip1, flip2, repeat):
     """
+    Generate and plot crossing data.
+
+    Parameters:
+        ax (plt.Axes): The matplotlib axis to plot on.
+        flip1 (int): The first flip to consider.
+        flip2 (int): The second flip to consider.
+        repeat (int): The repeat index.
+
+    Returns:
+        None
+    """
+    print("\n create_fig_crossings called")
+    data_entry = data[repeat]
+    alpha_initial = data_entry['init_alpha']
+    h = data_entry['h']
+    J = data_entry['J']
+    flip_seq = data_entry['flip_seq']
+    scr.gen_crossings(ax, alpha_initial, h, J, flip_seq, flip1, flip2)
+
+
+def create_fig_evo_anc(ax1, ax2, flip1, flip2, repeat):
+    """
+    Generate and plot evolutionary ancestor data.
+
+    Parameters:
+        ax (plt.Axes): The matplotlib axis to plot on.
+        flip1 (int): The first flip to consider.
+        flip2 (int): The second flip to consider.
+        repeat (int): The repeat index.
+
+    Returns:
+        None
     """
     print("\n create_fig_evo_anc called")
     data_entry = data[repeat]
@@ -102,19 +157,19 @@ def create_fig_evo_anc(ax, flip1, flip2, repeat):
     h = data_entry['h']
     J = data_entry['J']
     flip_seq = data_entry['flip_seq']
+
+    # Propagate forward and backward for the given flips
     bdfe1, prop_bdfe1 = scr.propagate_forward(alpha_initial, h, J, flip_seq, flip1, flip2)
     bdfe2, prop_bdfe2 = scr.propagate_backward(alpha_initial, h, J, flip_seq, flip1, flip2)
-    # Create subplots
-    ax1, ax2 = ax.subplots(1, 2)
 
-    # Plot KDEs for bdfe1 and prop_bdfe1
+    # Plot KDEs for bdfe1 and prop_bdfe1 on ax1
     sns.kdeplot(bdfe1, ax=ax1, label=f'BDFE Ancestor (flip {flip1})', color=color[0], fill=True, alpha=0.6)
     sns.kdeplot(prop_bdfe1, ax=ax1, label=f'Propagated BDFE (flip {flip2})', color=color[1], fill=True, alpha=0.6)
     ax1.set_xlabel('$\\Delta$', fontsize=14)
     ax1.set_ylabel('$P(\\Delta)$', fontsize=14)
     ax1.legend(fontsize=12, frameon=True)
 
-    # Plot KDEs for bdfe2 and prop_bdfe2
+    # Plot KDEs for bdfe2 and prop_bdfe2 on ax2
     sns.kdeplot(bdfe2, ax=ax2, label=f'BDFE Evolved (flip {flip2})', color=color[1], fill=True, alpha=0.6)
     sns.kdeplot(prop_bdfe2, ax=ax2, label=f'Propagated BDFE (flip {flip1})', color=color[0], fill=True, alpha=0.6)
     ax2.set_xlabel('$\\Delta$', fontsize=14)
@@ -126,30 +181,9 @@ def create_fig_evo_anc(ax, flip1, flip2, repeat):
 
 
 
-def create_fig_crossings(ax, flip1, flip2, repeat):
-    """
-    Generate and plot crossings between two specific flips.
-
-    Parameters:
-        ax (plt.Axes): The matplotlib axis to plot on.
-        N (int): Number of spins.
-        beta (float): Epistasis strength.
-        rho (float): Fraction of non-zero coupling elements.
-        num_points (int): Number of stops (flips) to consider.
-    """
-    print("\n create_fig_crossings called")
-    data_entry = data[repeat]
-    alpha_initial = data_entry['init_alpha']
-    h = data_entry['h']
-    J = data_entry['J']
-    flip_seq = data_entry['flip_seq']
-    scr.gen_crossings(ax, alpha_initial, h, J, flip_seq, flip1, flip2)
-
-
-
 if __name__ == "__main__":
     # Create a large figure with subplots
-    big_fig, axs = plt.subplots(2, 2, figsize=(12, 10))  # Adjust size for clarity
+    big_fig, axs = plt.subplots(2, 3, figsize=(12, 10))  # Adjust size for clarity
 
     # Create each subplot
     N = 4000
@@ -158,8 +192,8 @@ if __name__ == "__main__":
     low = int(num_flips*0.7)
     flip_list = np.linspace(low, high, 4, dtype=int)
     crossings_repeat = 10
-    crossings_flip_anc = 400
-    crossings_flip_evo = 800
+    crossings_flip_anc = 800
+    crossings_flip_evo = 1200
 
     for ax in axs.flatten():
         ax.tick_params(axis='both', which='major', length=20, width=1, labelsize=14)
@@ -170,11 +204,13 @@ if __name__ == "__main__":
 
     create_fig_dfe_fin(axs[0, 0], N_arr=[1000, 1500, 2000], beta=1.0, rho=1.0, num_repeats=2, num_bins=50)
     create_fig_bdfe_hists(axs[0, 1], points_lst=flip_list, num_bins=50, num_flips=num_flips)
-    create_fig_evo_anc(axs[1, 0], crossings_flip_anc, crossings_flip_evo, crossings_repeat)
-    create_fig_crossings(axs[1, 1], crossings_flip_anc, crossings_flip_evo, crossings_repeat)
+    create_fig_crossings(axs[0, 2], crossings_flip_anc, crossings_flip_evo, crossings_repeat)
+    create_fig_evo_anc(axs[1, 0], axs[1, 1], crossings_flip_anc, crossings_flip_evo, crossings_repeat)
+    # Hide the last subplot
+    axs[1, 2].axis('off')
 
-    # Panel labels (A-D)
-    panel_labels = ['A', 'B', 'C', 'D']
+    # Panel labels (A-E)
+    panel_labels = ['A', 'B', 'C', 'D' 'E']
     for i, ax in enumerate(axs.flatten()):
         ax.text(-0.1, 1.1, panel_labels[i], transform=ax.transAxes,
                 fontsize=16, fontweight='heavy', va='top', ha='left')
