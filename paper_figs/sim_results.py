@@ -210,8 +210,8 @@ if __name__ == "__main__":
     axs[1, 2].axis('off')
 
     # Panel labels (A-E)
-    panel_labels = ['A', 'B', 'C', 'D' 'E']
-    for i, ax in enumerate(axs.flatten()):
+    panel_labels = ['A', 'B', 'C', 'D', 'E']
+    for i, ax in enumerate(axs.flatten()[:-1]):
         ax.text(-0.1, 1.1, panel_labels[i], transform=ax.transAxes,
                 fontsize=16, fontweight='heavy', va='top', ha='left')
 
