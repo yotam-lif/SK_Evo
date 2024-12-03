@@ -65,7 +65,7 @@ def create_fig_ge(ax, num_points, repeat, N):
     sns.regplot(x=fits, y=var_dfe, ax=ax, color=color[1], scatter=True, label='Var DFE')
     sns.regplot(x=fits, y=var_bdfe, ax=ax, color=color[2], scatter=True, label='Var BDFE')
     sns.regplot(x=fits, y=rank, ax=ax, color=color[3], scatter=True, label='$r(t) / N$')
-    ax.set_xlabel('Walk Completion (\\%)', fontsize=14)
+    ax.set_xlabel('F(t) (\\% from maximum reached)', fontsize=14)
     ax.set_ylabel('Value', fontsize=14)
     ax.legend(fontsize=12, title_fontsize=12, loc='upper right', bbox_to_anchor=(0.925, 0.925), frameon=True)
 
@@ -90,9 +90,9 @@ def create_fig_dfe_fin(ax, N, beta_arr, rho, num_repeats, num_bins):
         dfe = gen_final_dfe(N, beta, rho, num_repeats)
         hist, bin_edges = np.histogram(dfe, bins=num_bins, density=True)
         bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-        kde = gaussian_kde(dfe)
-        ax.bar(bin_centers, hist, width=bin_edges[1] - bin_edges[0], alpha=0.4, label=f'$\\beta ={beta_arr[i]:.1f}$', color=color[-(i % len(color))])
-        ax.plot(bin_centers, kde(bin_centers), color=color[-(i % len(color))], lw=2, alpha=0.4)
+        # kde = gaussian_kde(dfe)
+        ax.bar(bin_centers, hist, width=bin_edges[1] - bin_edges[0], alpha=0.6, label=f'$\\beta ={beta_arr[i]:.1f}$', color=color[i % len(color)], edgecolor=color[i % len(color)])
+        # ax.plot(bin_centers, kde(bin_centers), color=color[-(i % len(color))], lw=2, alpha=0.4)
 
     ax.set_xlabel('$\\Delta$', fontsize=14)
     ax.set_ylabel('$P(\\Delta)$', fontsize=14)
@@ -191,7 +191,7 @@ def create_fig_crossings(ax, flip1, flip2, repeat):
     J = data_entry['J']
     flip_seq = data_entry['flip_seq']
     color1 = color[0]
-    color2 = color[2]
+    color2 = color[3]
     scr.gen_crossings(ax, alpha_initial, h, J, flip_seq, flip1, flip2, color1, color2)
 
 
@@ -214,23 +214,27 @@ def create_fig_evo_anc(ax1, ax2, flip1, flip2, repeat):
     h = data_entry['h']
     J = data_entry['J']
     flip_seq = data_entry['flip_seq']
+    num_flips = len(flip_seq)
 
     # Propagate forward and backward for the given flips
     bdfe1, prop_bdfe1, dfe_evo = scr.propagate_forward(alpha_initial, h, J, flip_seq, flip1, flip2)
     bdfe2, prop_bdfe2, dfe_anc = scr.propagate_backward(alpha_initial, h, J, flip_seq, flip1, flip2)
 
+    flip1_percent = int((flip1 / num_flips) * 100)
+    flip2_percent = int((flip2 / num_flips) * 100)
+
     # Plot KDEs for bdfe1 and prop_bdfe1 on ax1
-    sns.kdeplot(bdfe1, ax=ax1, label=f'BDFE Ancestor (flip {flip1})', color=color[0], fill=True, alpha=0.6)
-    sns.kdeplot(prop_bdfe1, ax=ax1, label=f'Propagated BDFE (flip {flip2})', color=color[1], fill=True, alpha=0.6)
-    sns.kdeplot(dfe_evo, ax=ax1, label=f'DFE Evo (flip {flip2})', color=color[2], fill=True, alpha=0.6)
+    sns.kdeplot(bdfe1, ax=ax1, label=f'BDFE Anc.', color=color[0], fill=True, alpha=0.6)
+    sns.kdeplot(prop_bdfe1, ax=ax1, label=f'Propagated Anc. BDFE', color=color[1], fill=True, alpha=0.6)
+    sns.kdeplot(dfe_evo, ax=ax1, label=f'DFE Evo.', color=color[2], fill=True, alpha=0.6)
     ax1.set_xlabel('$\\Delta$', fontsize=14)
     ax1.set_ylabel('$P(\\Delta)$', fontsize=14)
     ax1.legend(fontsize=12, frameon=True)
 
     # Plot KDEs for bdfe2 and prop_bdfe2 on ax2
-    sns.kdeplot(bdfe2, ax=ax2, label=f'BDFE Evolved (flip {flip2})', color=color[1], fill=True, alpha=0.6)
-    sns.kdeplot(prop_bdfe2, ax=ax2, label=f'Propagated BDFE (flip {flip1})', color=color[0], fill=True, alpha=0.6)
-    sns.kdeplot(dfe_anc, ax=ax2, label=f'DFE Anc (flip {flip1})', color=color[2], fill=True, alpha=0.6)
+    sns.kdeplot(bdfe2, ax=ax2, label=f'BDFE Evo.', color=color[1], fill=True, alpha=0.6)
+    sns.kdeplot(prop_bdfe2, ax=ax2, label=f'Propagated Evo. BDFE', color=color[0], fill=True, alpha=0.6)
+    sns.kdeplot(dfe_anc, ax=ax2, label=f'DFE Anc.', color=color[2], fill=True, alpha=0.6)
     ax2.set_xlabel('$\\Delta$', fontsize=14)
     ax2.set_ylabel('$P(\\Delta)$', fontsize=14)
     ax2.legend(fontsize=12, frameon=True)

@@ -78,9 +78,12 @@ def gen_crossings(ax, alpha_init, h, J, flip_seq, anc_flip, evo_flip, color1, co
     # Extract proposed DFEs based on indices
     bdfe1, prop_bdfe1, _ = propagate_forward(alpha_init, h, J, flip_seq, anc_flip, evo_flip)
     bdfe2, prop_bdfe2, _ = propagate_backward(alpha_init, h, J, flip_seq, anc_flip, evo_flip)
+    num_flips = len(flip_seq)
+    flip_anc_percent = int(anc_flip * 100 / num_flips)
+    flip_evo_percent = int(evo_flip * 100 / num_flips)
 
     # Prepare data for plotting
-    flips_labels = [f"flip {anc_flip}", f"flip {evo_flip}"]
+    flips_labels = [f"{flip_anc_percent} \\%", f"{flip_evo_percent} \\%"]
 
     # Plot ancestral DFEs
     color_anc = color1
@@ -98,7 +101,7 @@ def gen_crossings(ax, alpha_init, h, J, flip_seq, anc_flip, evo_flip, color1, co
 
     # Customize plot
     ax.axhline(0, color="black", linestyle="--", linewidth=1)
-    ax.set_xlabel("Flip")
+    ax.set_xlabel("\\% of walk completed")
     ax.set_ylabel("$\\Delta$")
     ax.legend(fontsize=12, frameon=True)
     ax.figure.tight_layout()
