@@ -28,7 +28,7 @@ def propagate_forward(alpha_init, h, J, flip_seq, anc_flip, evo_flip):
     dfe_evo = cmn.calc_DFE(alpha_evo, h, J)
     prop_bdfe = dfe_evo[bdfe_anc_ind]
 
-    return bdfe_anc, prop_bdfe
+    return bdfe_anc, prop_bdfe, dfe_evo
 
 def propagate_backward(alpha_init, h, J, flip_seq, anc_flip, evo_flip):
     """
@@ -55,10 +55,10 @@ def propagate_backward(alpha_init, h, J, flip_seq, anc_flip, evo_flip):
     dfe_anc = cmn.calc_DFE(alpha_anc, h, J)
     prop_bdfe = dfe_anc[bdfe_evo_ind]
 
-    return bdfe_evo, prop_bdfe
+    return bdfe_evo, prop_bdfe, dfe_anc
 
 
-def gen_crossings(ax, alpha_init, h, J, flip_seq, anc_flip, evo_flip):
+def gen_crossings(ax, alpha_init, h, J, flip_seq, anc_flip, evo_flip, color1, color2):
     """
     Generate and plot crossings between two specific flips.
 
@@ -72,17 +72,19 @@ def gen_crossings(ax, alpha_init, h, J, flip_seq, anc_flip, evo_flip):
         bdfe2_ind (np.ndarray): Indices of BDFE at the second flip.
         flip1 (int): Index of the first flip.
         flip2 (int): Index of the second flip.
+        color1: Color for the first flip.
+        color2: Color for the second flip.
     """
     # Extract proposed DFEs based on indices
-    bdfe1, prop_bdfe1 = propagate_forward(alpha_init, h, J, flip_seq, anc_flip, evo_flip)
-    bdfe2, prop_bdfe2 = propagate_backward(alpha_init, h, J, flip_seq, anc_flip, evo_flip)
+    bdfe1, prop_bdfe1, _ = propagate_forward(alpha_init, h, J, flip_seq, anc_flip, evo_flip)
+    bdfe2, prop_bdfe2, _ = propagate_backward(alpha_init, h, J, flip_seq, anc_flip, evo_flip)
 
     # Prepare data for plotting
     flips_labels = [f"flip {anc_flip}", f"flip {evo_flip}"]
 
     # Plot ancestral DFEs
-    color_anc = 'coral'
-    color_evo = 'royalblue'
+    color_anc = color1
+    color_evo = color2
     for j in range(len(bdfe1)):
         ax.plot(flips_labels, [bdfe1[j], prop_bdfe1[j]], color=color_anc, alpha=0.075)
     ax.scatter([flips_labels[0]] * len(bdfe1), bdfe1, color=color_anc, edgecolor=color_anc, s=20, facecolors='none', label='Forwards')

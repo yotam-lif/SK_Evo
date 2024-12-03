@@ -5,14 +5,14 @@ import matplotlib.pyplot as plt
 import os
 
 
-def gen_final_dfes(N_arr, beta, rho, num_repeats):
+def gen_final_dfe(N, beta, rho, num_repeats):
     """
     Generate final DFE histograms.
 
     Parameters
     ----------
-    N_arr : list
-        List of N values.
+    N : int
+        N value.
     beta : float
         Epistasis strength.
     rho : float
@@ -22,23 +22,19 @@ def gen_final_dfes(N_arr, beta, rho, num_repeats):
 
     Returns
     -------
-    final_dfes : list of np.ndarray
-        List of final DFEs for each N value.
+    final_dfe : np.ndarray
+        Final DFE.
     """
-    final_dfes = []
-    for N in N_arr:
-        print(f"\nStarting N={N}...")
-        final_dfes_N = np.empty(0, dtype=float)
-        for _ in range(num_repeats):
-            alpha_initial = cmn.init_alpha(N)
-            h = cmn.init_h(N, beta=beta)
-            J = cmn.init_J(N, beta=beta, rho=rho)
-            flip_seq = cmn.relax_sk(alpha_initial.copy(), h, J, sswm=True)
-            final_alpha = cmn.compute_alpha_from_hist(alpha_initial, flip_seq)
-            dfe = cmn.calc_DFE(final_alpha, h, J)
-            final_dfes_N = np.concatenate((final_dfes_N, dfe))
-        final_dfes.append(final_dfes_N)
-    return final_dfes
+    final_dfe = np.array([])
+    for _ in range(num_repeats):
+        alpha_initial = cmn.init_alpha(N)
+        h = cmn.init_h(N, beta=beta)
+        J = cmn.init_J(N, beta=beta, rho=rho)
+        flip_seq = cmn.relax_sk(alpha_initial.copy(), h, J, sswm=True)
+        final_alpha = cmn.compute_alpha_from_hist(alpha_initial, flip_seq)
+        dfe = cmn.calc_DFE(final_alpha, h, J)
+        final_dfe = np.concatenate((final_dfe, dfe))
+    return final_dfe.flatten()
 
 def gen_bdfes(N, beta, rho, num_points, num_repeats):
     """
@@ -77,6 +73,8 @@ def gen_bdfes(N, beta, rho, num_points, num_repeats):
             bdfes[i].extend(BDFE)
 
     return bdfes
+
+
 
 
 
