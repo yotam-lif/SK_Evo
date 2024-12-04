@@ -40,7 +40,7 @@ def create_fig_ge(ax, num_points, repeat, N):
     J = data_entry['J']
     F_off = cmn.calc_F_off(alpha_initial, h, J)
     flip_seq = data_entry['flip_seq']
-    flip_numbs = np.linspace(0, len(flip_seq), num_points, dtype=int)
+    flip_numbs = np.linspace(0, len(flip_seq)-1, num_points, dtype=int)
     alphas = cmn.curate_alpha_list(alpha_initial, flip_seq, flip_numbs)
     mean_dfe = []
     var_dfe = []
@@ -191,7 +191,7 @@ def create_fig_crossings(ax, flip1, flip2, repeat):
     J = data_entry['J']
     flip_seq = data_entry['flip_seq']
     color1 = color[0]
-    color2 = color[3]
+    color2 = color[2]
     scr.gen_crossings(ax, alpha_initial, h, J, flip_seq, flip1, flip2, color1, color2)
 
 
@@ -225,19 +225,19 @@ def create_fig_evo_anc(ax1, ax2, flip1, flip2, repeat):
 
     # Plot KDEs for bdfe1 and prop_bdfe1 on ax1
     sns.kdeplot(bdfe1, ax=ax1, label=f'BDFE Anc.', color=color[0], fill=True, alpha=0.6)
-    sns.kdeplot(prop_bdfe1, ax=ax1, label=f'Propagated Anc. BDFE', color=color[1], fill=True, alpha=0.6)
+    sns.kdeplot(prop_bdfe1, ax=ax1, label=f'Propagated Anc.\nBDFE', color=color[1], fill=True, alpha=0.6)
     sns.kdeplot(dfe_evo, ax=ax1, label=f'DFE Evo.', color=color[2], fill=True, alpha=0.6)
     ax1.set_xlabel('$\\Delta$', fontsize=14)
     ax1.set_ylabel('$P(\\Delta)$', fontsize=14)
-    ax1.legend(fontsize=12, frameon=True)
+    ax1.legend(fontsize=12, frameon=True, loc='upper left')
 
     # Plot KDEs for bdfe2 and prop_bdfe2 on ax2
     sns.kdeplot(bdfe2, ax=ax2, label=f'BDFE Evo.', color=color[1], fill=True, alpha=0.6)
-    sns.kdeplot(prop_bdfe2, ax=ax2, label=f'Propagated Evo. BDFE', color=color[0], fill=True, alpha=0.6)
+    sns.kdeplot(prop_bdfe2, ax=ax2, label=f'Propagated Evo.\nBDFE', color=color[0], fill=True, alpha=0.6)
     sns.kdeplot(dfe_anc, ax=ax2, label=f'DFE Anc.', color=color[2], fill=True, alpha=0.6)
     ax2.set_xlabel('$\\Delta$', fontsize=14)
     ax2.set_ylabel('$P(\\Delta)$', fontsize=14)
-    ax2.legend(fontsize=12, frameon=True)
+    ax2.legend(fontsize=12, frameon=True, loc='upper left')
 
     # Adjust layout
     plt.tight_layout()
@@ -264,7 +264,7 @@ if __name__ == "__main__":
         for spine in ax.spines.values():
             spine.set_linewidth(2)  # Change the thickness of the border
 
-    create_fig_ge(axs[0, 0], num_points=40, repeat=10, N=N)
+    create_fig_ge(axs[0, 0], num_points=50, repeat=10, N=N)
     create_fig_dfe_fin(axs[0, 1], N=2000, beta_arr=[0.0001, 0.5, 1.0], rho=1.0, num_repeats=3, num_bins=60)
     create_fig_bdfe_hists(axs[0, 2], points_lst=flip_list, num_bins=50, num_flips=num_flips)
     create_fig_crossings(axs[1, 0], crossings_flip_anc, crossings_flip_evo, crossings_repeat)
