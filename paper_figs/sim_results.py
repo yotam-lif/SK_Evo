@@ -193,6 +193,14 @@ def create_fig_e(ax_left, ax_right, flip1, flip2, repeat, color):
     ax_left.spines['right'].set_visible(False)
     ax_right.spines['left'].set_visible(False)
 
+    # Remove ticks on the right side of the left axis
+    ax_left.yaxis.set_ticks_position('left')
+    ax_left.tick_params(labelright=False, right=False)
+
+    # Remove ticks on the right axis
+    ax_right.tick_params(labelright=False, right=False)
+    ax_right.tick_params(labelleft=False, left=False)
+
     # Common Y label on the left subplot
     ax_left.set_ylabel("$P(\\Delta)$", fontsize=14)
     ax_right.set_ylabel("")
@@ -205,22 +213,6 @@ def create_fig_e(ax_left, ax_right, flip1, flip2, repeat, color):
 
 
 if __name__ == "__main__":
-    # Instead of a simple 2x3 grid, use GridSpec to allow custom layout
-    big_fig = plt.figure(figsize=(12, 10))
-    gs = GridSpec(2, 3, figure=big_fig)
-
-    # Top row: A, B, C
-    axA = big_fig.add_subplot(gs[0, 0])
-    axB = big_fig.add_subplot(gs[0, 1])
-    axC = big_fig.add_subplot(gs[0, 2])
-
-    # Bottom row: D and then a large E spanning what was E and F
-    axD = big_fig.add_subplot(gs[1, 0])
-    # Create two axes side by side for E
-    # We'll treat these as one panel E visually
-    axE_left = big_fig.add_subplot(gs[1, 1], sharey=None)   # Left part of E
-    axE_right = big_fig.add_subplot(gs[1, 2], sharey=axE_left)  # Right part of E shares y with left
-
     N = 4000
     num_flips = int(N * 0.64)
     high = int(num_flips * 0.8)
@@ -230,6 +222,24 @@ if __name__ == "__main__":
     crossings_flip_anc = 800
     crossings_flip_evo = 1200
 
+    big_fig = plt.figure(figsize=(12, 10))
+    gs = GridSpec(2, 3, figure=big_fig)
+
+    # Top row: A, B, C
+    axA = big_fig.add_subplot(gs[0, 0])
+    axB = big_fig.add_subplot(gs[0, 1])
+    axC = big_fig.add_subplot(gs[0, 2])
+
+    # Bottom row: D and E
+    axD = big_fig.add_subplot(gs[1, 0])
+
+    # Create a sub-GridSpec for E that spans the last two columns in the bottom row
+    # and set wspace=0 only for this sub-GridSpec
+    gs_e = gs[1, 1:].subgridspec(1, 2, wspace=0)
+
+    axE_left = big_fig.add_subplot(gs_e[0, 0])
+    axE_right = big_fig.add_subplot(gs_e[0, 1], sharey=axE_left)
+
     # Tweak tick params for consistency
     for ax in [axA, axB, axC, axD, axE_left, axE_right]:
         ax.tick_params(axis='both', which='major', length=10, width=1, labelsize=14)
@@ -238,12 +248,10 @@ if __name__ == "__main__":
             spine.set_linewidth(2)
 
     # Create subplots A-D as before
-    create_fig_ge(axA, num_points=50, repeat=10, N=N)
-    create_fig_dfe_fin(axB, N=2000, beta_arr=[0.0001, 0.5, 1.0], rho=1.0, num_repeats=3, num_bins=100)
-    create_fig_bdfe_hists(axC, points_lst=flip_list, num_bins=50, num_flips=num_flips)
-    create_fig_crossings(axD, crossings_flip_anc, crossings_flip_evo, crossings_repeat)
-
-    # Create new combined figure E
+    # create_fig_ge(axA, num_points=50, repeat=10, N=N)
+    # create_fig_dfe_fin(axB, N=2000, beta_arr=[0.0001, 0.5, 1.0], rho=1.0, num_repeats=3, num_bins=100)
+    # create_fig_bdfe_hists(axC, points_lst=flip_list, num_bins=50, num_flips=num_flips)
+    # create_fig_crossings(axD, crossings_flip_anc, crossings_flip_evo, crossings_repeat)
     create_fig_e(axE_left, axE_right, flip1=crossings_flip_anc, flip2=crossings_flip_evo, repeat=crossings_repeat, color=color)
 
     # Label the panels
