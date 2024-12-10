@@ -101,7 +101,7 @@ def create_fig_dfe_fin(ax, N, beta_arr, rho, num_repeats, num_bins):
     ax.set_xlabel('$\\Delta$', fontsize=14)
     ax.set_ylabel('$P(\\Delta)$', fontsize=14)
     ax.set_xlim(None, 0)
-    ax.legend(fontsize=12, title_fontsize=12, loc='upper left', bbox_to_anchor=(0.075, 0.925), frameon=True, markerscale=2)
+    ax.legend(fontsize=12, title_fontsize=12, loc='upper left', bbox_to_anchor=(0.075, 0.925), frameon=True, markerscale=3)
 
     # Make tick lines
     ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True, prune='both', nbins=5))
@@ -156,8 +156,8 @@ def create_fig_bdfe_hists(ax, points_lst, num_bins, num_flips):
     ax.set_yscale('log')
 
     # Adjust legend
-    ax.legend(title='$\\%$ of walk completed', fontsize=12, title_fontsize=12, loc='upper right', bbox_to_anchor=(0.925, 0.925),
-              frameon=True, markerscale=2)
+    ax.legend(title='$\\%$ of walk \ncompleted', fontsize=12, title_fontsize=12, loc='upper right', bbox_to_anchor=(0.925, 0.925),
+              frameon=True, markerscale=3)
 
     # Set major and minor x-ticks automatically
     ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=False, prune='both', nbins=3))
