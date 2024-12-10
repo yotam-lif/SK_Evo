@@ -2,6 +2,7 @@ import argparse
 import cmn
 import os
 import pickle
+import numpy as np
 
 def generate_data(N, beta, rho, n_repeats, output_dir):
     """

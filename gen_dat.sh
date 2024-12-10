@@ -1,1 +1,4 @@
+module load python
+module load numpy
+
 python misc/generate_data.py 1000 1.0 1.0 2 './run_data'
