@@ -101,7 +101,8 @@ def gen_crossings(ax, alpha_init, h, J, flip_seq, anc_flip, evo_flip, color1, co
 
     # Customize plot
     ax.axhline(0, color="black", linestyle="--", linewidth=1)
-    ax.set_xlabel("\\% of walk completed")
-    ax.set_ylabel("$\\Delta$")
+    ax.set_xlabel("\\% of walk completed", fontsize=14)
+    ax.set_ylabel("$\\Delta$", fontsize=14)
     ax.legend(fontsize=12, frameon=True)
+    ax.set_xticklabels([])
     ax.figure.tight_layout()

@@ -14,7 +14,7 @@ import scienceplots
 plt.style.use('science')
 plt.rcParams['font.family'] = 'Helvetica Neue'
 file_path = '../misc/run_data/N4000_rho100_beta100_repeats50.pkl'
-color = sns.color_palette('CMRmap', 4)
+color = sns.color_palette('CMRmap', 5)
 
 with open(file_path, 'rb') as f:
     data = pickle.load(f)
@@ -52,7 +52,7 @@ def create_fig_ge(ax, num_points, repeat, N):
         dfe = cmn.calc_DFE(alpha, h, J)
         bdfe = cmn.calc_BDFE(alpha, h, J)[0]
         fits.append(cmn.compute_fit_slow(alpha, h, J, F_off))
-        mean_dfe.append(np.mean(dfe))
+        mean_dfe.append(np.mean(dfe) + 1)
         var_dfe.append(np.var(dfe))
         mean_bdfe.append(np.mean(bdfe))
         var_bdfe.append(np.var(bdfe))
@@ -61,13 +61,14 @@ def create_fig_ge(ax, num_points, repeat, N):
     rank = [r / N for r in rank]
     max_fit = fits[-1]
     fits = [fit * 100 / max_fit for fit in fits]
-    sns.regplot(x=fits, y=mean_bdfe, ax=ax, color=color[0], scatter=True, label='Mean BDFE')
-    sns.regplot(x=fits, y=var_dfe, ax=ax, color=color[1], scatter=True, label='Var DFE')
-    sns.regplot(x=fits, y=var_bdfe, ax=ax, color=color[2], scatter=True, label='Var BDFE')
-    sns.regplot(x=fits, y=rank, ax=ax, color=color[3], scatter=True, label='$r(t) / N$')
-    ax.set_xlabel('F(t) (\\% from maximum reached)', fontsize=14)
+    sns.regplot(x=fits, y=mean_dfe, ax=ax, color=color[0], scatter=True, label=r'$\mathbb{E} [P(\Delta)] + 1$')
+    sns.regplot(x=fits, y=var_dfe, ax=ax, color=color[1], scatter=True, label=r'$\text{Var} [P(\Delta)]$')
+    sns.regplot(x=fits, y=mean_bdfe, ax=ax, color=color[2], scatter=True, label=r'$\mathbb{E} [P_+ (\Delta)]$')
+    sns.regplot(x=fits, y=var_bdfe, ax=ax, color=color[3], scatter=True, label=r'$\text{Var} [P_+ (\Delta)]$')
+    sns.regplot(x=fits, y=rank, ax=ax, color=color[4], scatter=True, label='$r(t) / N$')
+    ax.set_xlabel('Fitness (\\% from maximum reached)', fontsize=14)
     ax.set_ylabel('Value', fontsize=14)
-    ax.legend(fontsize=12, title_fontsize=12, loc='upper right', bbox_to_anchor=(0.925, 0.925), frameon=True)
+    ax.legend(fontsize=10, title_fontsize=12, loc='upper right', bbox_to_anchor=(0.925, 0.925), frameon=True)
 
 def create_fig_dfe_fin(ax, N, beta_arr, rho, num_repeats, num_bins):
     """
@@ -91,13 +92,16 @@ def create_fig_dfe_fin(ax, N, beta_arr, rho, num_repeats, num_bins):
         hist, bin_edges = np.histogram(dfe, bins=num_bins, density=True)
         bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
         # kde = gaussian_kde(dfe)
-        ax.bar(bin_centers, hist, width=bin_edges[1] - bin_edges[0], alpha=0.6, label=f'$\\beta ={beta_arr[i]:.1f}$', color=color[i % len(color)], edgecolor=color[i % len(color)])
+        # ax.bar(bin_centers, hist, width=bin_edges[1] - bin_edges[0], alpha=0.6, label=f'$\\beta ={beta_arr[i]:.1f}$', color=color[i % len(color)], edgecolor=color[i % len(color)])
         # ax.plot(bin_centers, kde(bin_centers), color=color[-(i % len(color))], lw=2, alpha=0.4)
+        ax.scatter(bin_centers, hist, label=f'$\\beta ={beta_arr[i]:.1f}$', color=color[i % len(color)],
+                   edgecolor=color[i % len(color)], s=5, alpha=0.6)
+        ax.plot(bin_centers, hist, color=color[i % len(color)], lw=2, alpha=0.6)
 
     ax.set_xlabel('$\\Delta$', fontsize=14)
     ax.set_ylabel('$P(\\Delta)$', fontsize=14)
     ax.set_xlim(None, 0)
-    ax.legend(fontsize=12, title_fontsize=12, loc='upper left', bbox_to_anchor=(0.075, 0.925), frameon=True)
+    ax.legend(fontsize=12, title_fontsize=12, loc='upper left', bbox_to_anchor=(0.075, 0.925), frameon=True, markerscale=2)
 
     # Make tick lines
     ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True, prune='both', nbins=5))
@@ -138,20 +142,22 @@ def create_fig_bdfe_hists(ax, points_lst, num_bins, num_flips):
 
     # Store the labels for the legend
     for i, bdfe in enumerate(bdfes):
-        # hist, bin_edges = np.histogram(bdfe, bins=num_bins, density=True)
-        # bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-        # label = f'{flip_percent[i]:.0f}$\\%$'  # Format the label for percentage
+        hist, bin_edges = np.histogram(bdfe, bins=num_bins, density=True)
+        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+        label = f'{flip_percent[i]:.0f}$\\%$'  # Format the label for percentage
         # ax.bar(bin_centers, hist, width=bin_edges[1] - bin_edges[0], alpha=0.6, label=label, color=color[i % len(color)])
-        sns.kdeplot(bdfe, ax=ax, label=f'{flip_percent[i]:.0f}$\\%$', color=color[i % len(color)], fill=True, alpha=0.5)
+        ax.scatter(bin_centers, hist, label=label, color=color[i % len(color)], edgecolor=color[i % len(color)], s=5, alpha=0.6)
+        ax.plot(bin_centers, hist, color=color[i % len(color)], lw=2, alpha=0.6)
+        # sns.kdeplot(bdfe, ax=ax, label=f'{flip_percent[i]:.0f}$\\%$', color=color[i % len(color)], fill=True, alpha=0.5)
 
     ax.set_xlabel('$\\Delta$', fontsize=14)
     ax.set_ylabel('$log \\left( P_+ (\\Delta) \\right)$', fontsize=14)
-    ax.set_xlim(0, None)
+    ax.set_xlim(0, 0.5)
     ax.set_yscale('log')
 
     # Adjust legend
-    ax.legend(title='$\\%$ of flips', fontsize=12, title_fontsize=12, loc='upper right', bbox_to_anchor=(0.925, 0.925),
-              frameon=True)
+    ax.legend(title='$\\%$ of walk completed', fontsize=12, title_fontsize=12, loc='upper right', bbox_to_anchor=(0.925, 0.925),
+              frameon=True, markerscale=2)
 
     # Set major and minor x-ticks automatically
     ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=False, prune='both', nbins=3))
@@ -265,8 +271,8 @@ if __name__ == "__main__":
             spine.set_linewidth(2)  # Change the thickness of the border
 
     create_fig_ge(axs[0, 0], num_points=50, repeat=10, N=N)
-    create_fig_dfe_fin(axs[0, 1], N=2000, beta_arr=[0.0001, 0.5, 1.0], rho=1.0, num_repeats=3, num_bins=60)
-    create_fig_bdfe_hists(axs[0, 2], points_lst=flip_list, num_bins=50, num_flips=num_flips)
+    create_fig_dfe_fin(axs[0, 1], N=2000, beta_arr=[0.0001, 0.5, 1.0], rho=1.0, num_repeats=3, num_bins=100)
+    create_fig_bdfe_hists(axs[0, 2], points_lst=flip_list, num_bins=100, num_flips=num_flips)
     create_fig_crossings(axs[1, 0], crossings_flip_anc, crossings_flip_evo, crossings_repeat)
     create_fig_evo_anc(axs[1, 1], axs[1, 2], crossings_flip_anc, crossings_flip_evo, crossings_repeat)
 

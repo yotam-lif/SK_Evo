@@ -1,5 +1,4 @@
-# generate_data.py
-
+import argparse
 import cmn
 import os
 import pickle
@@ -40,17 +39,15 @@ def generate_data(N, beta, rho, n_repeats, output_dir):
 
     print(f"Data saved to {output_file}")
 
-def main():
-    """
-    Main function to generate data with predefined parameters.
-    """
-    N = 4000
-    beta = 1.0
-    rho = 1.0
-    n_repeats = 50
-    output_dir = 'run_data'
-
-    generate_data(N, beta, rho, n_repeats, output_dir)
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description='Generate data for spins, epistasis strength, and coupling elements.')
+    parser.add_argument('--N', type=int, required=True, help='Number of spins')
+    parser.add_argument('--beta', type=float, required=True, help='Epistasis strength')
+    parser.add_argument('--rho', type=float, required=True, help='Fraction of non-zero coupling elements')
+    parser.add_argument('--n_repeats', type=int, required=True, help='Number of repeats for data generation')
+    parser.add_argument('--output_dir', type=str, required=True, help='Directory to save the generated data')
+
+    args = parser.parse_args()
+
+    generate_data(args.N, args.beta, args.rho, args.n_repeats, args.output_dir)
