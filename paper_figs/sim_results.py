@@ -146,11 +146,6 @@ def create_fig_crossings(ax, flip1, flip2, repeat):
 
 
 def create_fig_e(ax_left, ax_right, flip1, flip2, repeat, color):
-    """
-    Create the combined figure E that looks like one subplot, but is actually two:
-    Left side: black = dfe_evo; color[1] = bdfe1, prop_bdfe2
-    Right side: black = dfe_anc; color[2] = bdfe2, prop_bdfe1
-    """
     data_entry = data[repeat]
     alpha_initial = data_entry['init_alpha']
     h = data_entry['h']
@@ -161,33 +156,35 @@ def create_fig_e(ax_left, ax_right, flip1, flip2, repeat, color):
     bdfe1, prop_bdfe1, dfe_evo = scr.propagate_forward(alpha_initial, h, J, flip_seq, flip1, flip2)
     bdfe2, prop_bdfe2, dfe_anc = scr.propagate_backward(alpha_initial, h, J, flip_seq, flip1, flip2)
 
-    # Clear if needed
     ax_left.clear()
     ax_right.clear()
 
     # Left subplot:
-    # Black = dfe_evo
     sns.kdeplot(dfe_evo, ax=ax_left, color='black', fill=True, alpha=0.6)
-    # color[1] = bdfe1, prop_bdfe2
     sns.kdeplot(bdfe1, ax=ax_left, color=color[1], fill=True, alpha=0.6)
-    sns.kdeplot(prop_bdfe2, ax=ax_left, color=color[0], fill=True, alpha=0.6)
+    sns.kdeplot(prop_bdfe2, ax=ax_left, color=color[2], fill=True, alpha=0.6)
 
     # Right subplot:
-    # Black = dfe_anc
     sns.kdeplot(dfe_anc, ax=ax_right, color='black', fill=True, alpha=0.6)
-    # color[2] = bdfe2, prop_bdfe1
-    sns.kdeplot(bdfe2, ax=ax_right, color=color[0], fill=True, alpha=0.6)
+    sns.kdeplot(bdfe2, ax=ax_right, color=color[2], fill=True, alpha=0.6)
     sns.kdeplot(prop_bdfe1, ax=ax_right, color=color[1], fill=True, alpha=0.6)
 
     # Vertical dotted lines at x=0
     ax_left.axvline(x=0, color='black', linestyle='--', linewidth=1)
     ax_right.axvline(x=0, color='black', linestyle='--', linewidth=1)
 
-    # Only show a tick at 0
+    # Only show a tick at 0 for x
     ax_left.set_xticks([0])
     ax_left.set_xticklabels(['0'])
     ax_right.set_xticks([0])
     ax_right.set_xticklabels(['0'])
+
+    # Previously we removed y-ticks from the right axis. Now let's keep them:
+    # Remove these lines: ax_right.set_yticks([]), ax_right.set_yticklabels([])
+    # The right axis shares y with the left, so it will have the same tick positions.
+    # We just remove labels on the right side:
+    ax_right.yaxis.set_ticks_position('right')
+    ax_right.tick_params(axis='y', labelleft=False, labelright=False)
 
     # Remove spines to merge visually
     ax_left.spines['right'].set_visible(False)
@@ -196,10 +193,6 @@ def create_fig_e(ax_left, ax_right, flip1, flip2, repeat, color):
     # Remove ticks on the right side of the left axis
     ax_left.yaxis.set_ticks_position('left')
     ax_left.tick_params(labelright=False, right=False)
-
-    # Remove ticks on the right axis
-    ax_right.tick_params(labelright=False, right=False)
-    ax_right.tick_params(labelleft=False, left=False)
 
     # Common Y label on the left subplot
     ax_left.set_ylabel("$P(\\Delta)$", fontsize=14)
@@ -232,11 +225,7 @@ if __name__ == "__main__":
 
     # Bottom row: D and E
     axD = big_fig.add_subplot(gs[1, 0])
-
-    # Create a sub-GridSpec for E that spans the last two columns in the bottom row
-    # and set wspace=0 only for this sub-GridSpec
     gs_e = gs[1, 1:].subgridspec(1, 2, wspace=0)
-
     axE_left = big_fig.add_subplot(gs_e[0, 0])
     axE_right = big_fig.add_subplot(gs_e[0, 1], sharey=axE_left)
 
@@ -247,22 +236,32 @@ if __name__ == "__main__":
         for spine in ax.spines.values():
             spine.set_linewidth(2)
 
-    # Create subplots A-D as before
     # create_fig_ge(axA, num_points=50, repeat=10, N=N)
     # create_fig_dfe_fin(axB, N=2000, beta_arr=[0.0001, 0.5, 1.0], rho=1.0, num_repeats=3, num_bins=100)
     # create_fig_bdfe_hists(axC, points_lst=flip_list, num_bins=50, num_flips=num_flips)
     # create_fig_crossings(axD, crossings_flip_anc, crossings_flip_evo, crossings_repeat)
     create_fig_e(axE_left, axE_right, flip1=crossings_flip_anc, flip2=crossings_flip_evo, repeat=crossings_repeat, color=color)
 
+    # Remove the x=0 label from subplots A-D (if they have ticks and a '0' label):
+    for ax in [axA, axB, axC, axD]:
+        xticks = ax.get_xticks()
+        # Replace the label at 0 with an empty string
+        new_labels = []
+        for t in xticks:
+            if np.isclose(t, 0.0):
+                new_labels.append('')
+            else:
+                # Format other ticks normally
+                new_labels.append(f'{t:.1f}')
+        ax.set_xticklabels(new_labels)
+
     # Label the panels
     panel_labels = ['A', 'B', 'C', 'D', 'E']
     ax_list = [axA, axB, axC, axD, axE_left]
-    # Since E spans two axes, we'll label the left one
     for i, ax in enumerate(ax_list):
         ax.text(-0.1, 1.1, panel_labels[i], transform=ax.transAxes,
                 fontsize=16, fontweight='heavy', va='top', ha='left')
 
-    # Tight layout
     big_fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
     # Save the figure
