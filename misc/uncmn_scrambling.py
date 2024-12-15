@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import misc.cmn_sk as cmn
+from misc import cmn, cmn_sk
 # import os
 
 def propagate_forward(alpha_init, h, J, flip_seq, anc_flip, evo_flip):
@@ -20,12 +20,12 @@ def propagate_forward(alpha_init, h, J, flip_seq, anc_flip, evo_flip):
         prop_bdfe (np.ndarray): Propagated BDFE at the evolved flip.
     """
     # Compute alpha vectors at the ancestor and evolved flips
-    alpha_anc = cmn.compute_alpha_from_hist(alpha_init, flip_seq, anc_flip)
-    alpha_evo = cmn.compute_alpha_from_hist(alpha_init, flip_seq, evo_flip)
+    alpha_anc = cmn.compute_sigma_from_hist(alpha_init, flip_seq, anc_flip)
+    alpha_evo = cmn.compute_sigma_from_hist(alpha_init, flip_seq, evo_flip)
 
     # Compute DFEs and BDFEs at the ancestor and evolved flips
-    bdfe_anc, bdfe_anc_ind = cmn.calc_BDFE(alpha_anc, h, J)
-    dfe_evo = cmn.calc_DFE(alpha_evo, h, J)
+    bdfe_anc, bdfe_anc_ind = cmn_sk.calc_BDFE(alpha_anc, h, J)
+    dfe_evo = cmn_sk.calc_DFE(alpha_evo, h, J)
     prop_bdfe = dfe_evo[bdfe_anc_ind]
 
     return bdfe_anc, prop_bdfe, dfe_evo
@@ -47,12 +47,12 @@ def propagate_backward(alpha_init, h, J, flip_seq, anc_flip, evo_flip):
         prop_bdfe (np.ndarray): Propagated BDFE at the ancestor flip.
     """
     # Compute alpha vectors at the ancestor and evolved flips
-    alpha_anc = cmn.compute_alpha_from_hist(alpha_init, flip_seq, anc_flip)
-    alpha_evo = cmn.compute_alpha_from_hist(alpha_init, flip_seq, evo_flip)
+    alpha_anc = cmn.compute_sigma_from_hist(alpha_init, flip_seq, anc_flip)
+    alpha_evo = cmn.compute_sigma_from_hist(alpha_init, flip_seq, evo_flip)
 
     # Compute DFEs and BDFEs at the ancestor and evolved flips
-    bdfe_evo, bdfe_evo_ind = cmn.calc_BDFE(alpha_evo, h, J)
-    dfe_anc = cmn.calc_DFE(alpha_anc, h, J)
+    bdfe_evo, bdfe_evo_ind = cmn_sk.calc_BDFE(alpha_evo, h, J)
+    dfe_anc = cmn_sk.calc_DFE(alpha_anc, h, J)
     prop_bdfe = dfe_anc[bdfe_evo_ind]
 
     return bdfe_evo, prop_bdfe, dfe_anc
@@ -64,16 +64,17 @@ def gen_crossings(ax, alpha_init, h, J, flip_seq, anc_flip, evo_flip, color1, co
 
     Parameters:
         ax (plt.Axes): The matplotlib axis to plot on.
-        dfe1 (np.ndarray): DFE at the first flip.
-        dfe2 (np.ndarray): DFE at the second flip.
-        bdfe1 (np.ndarray): BDFE at the first flip.
-        bdfe2 (np.ndarray): BDFE at the second flip.
-        bdfe1_ind (np.ndarray): Indices of BDFE at the first flip.
-        bdfe2_ind (np.ndarray): Indices of BDFE at the second flip.
-        flip1 (int): Index of the first flip.
-        flip2 (int): Index of the second flip.
-        color1: Color for the first flip.
-        color2: Color for the second flip.
+        alpha_init (np.ndarray): Initial alpha vector.
+        h (np.ndarray): External field vector.
+        J (np.ndarray): Coupling matrix.
+        flip_seq (np.ndarray): Sequence of flips.
+        anc_flip (int): Index of the ancestor flip.
+        evo_flip (int): Index of the evolved flip.
+        color1: Color for the ancestral DFEs.
+        color2: Color for the evolved DFEs.
+
+    Returns:
+        None
     """
     # Extract proposed DFEs based on indices
     bdfe1, prop_bdfe1, _ = propagate_forward(alpha_init, h, J, flip_seq, anc_flip, evo_flip)

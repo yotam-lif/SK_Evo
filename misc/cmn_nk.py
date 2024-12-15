@@ -3,415 +3,194 @@ import numpy as np
 class NK:
     """
     The NK model.
+    N: Number of loci.
+    K: Each locus's fitness depends on itself and its K neighbors.
     """
-    def __init__(self, N, K):
+
+    def __init__(self, N, K, mean=0.0, std=1.0, seed=None):
+        """
+        Initialize the NK model.
+
+        Parameters
+        ----------
+        N : int
+            Number of loci.
+        K : int
+            Number of neighbors per locus.
+        mean : float
+            Mean of the Gaussian distribution used for fitness draws.
+        std : float
+            Standard deviation of the Gaussian distribution used for fitness draws.
+        seed : int, optional
+            Random seed for reproducibility.
+        """
         self.N = N
         self.K = K
-        self.table = {}
+        self.mean = mean
+        self.std = std
 
-    def compute_fitness(self, sigma):
-        if sigma in self.table:
-            return self.table[sigma]
-        else:
-            fit = 0
-            for i in range(self.N):
+        if seed is not None:
+            np.random.seed(seed)
+
+        # contributions[i] is a dictionary where:
+        # key: tuple of states (S_i, S_j1, ..., S_jK)
+        # value: fitness value drawn from Gaussian
+        self.fis = [dict() for _ in range(N)]
+
+    def compute_fitness(self, sigma, f_off=0.0):
+        """
+        Compute the total fitness of a given configuration.
+        The fitness is the mean of f_i over all loci i.
+
+        Parameters
+        ----------
+        sigma : numpy.ndarray
+            Array of locus states, typically -1 or +1.
+        f_off : float, optional
+            Fitness offset to be subtracted from the total fitness. Default is 0.0.
+
+        Returns
+        -------
+        float
+            The total fitness of the configuration.
+        """
+        fit_sum = 0.0
+
+        for i in range(self.N):
+            # Identify the pattern: locus i and its K neighbors (circular)
+            # We'll consider the next K loci in a circular fashion.
+            indices = [(i + offset) % self.N for offset in range(self.K + 1)]
+            kclique_i = tuple(sigma[idx] for idx in indices)
+            # Check if we already have a fitness value for this pattern
+            if kclique_i not in self.fis[i]:
+                # Draw from a Gaussian distribution and store
+                self.fis[i][kclique_i] = np.random.normal(self.mean, self.std)
+            # Add the contribution for this pattern
+            fit_sum += self.fis[i][kclique_i]
+
+        # The total fitness is the average of all f_i
+        return fit_sum / self.N - f_off
 
 
-def init_sigma(N):
+def compute_dfe(sigma, nk, f_off=0.0):
     """
-    Initialize the spin configuration for the Sherrington-Kirkpatrick model.
+    Compute the distribution of fitness effects (DFE) for a given configuration.
 
     Parameters
     ----------
-    N : int
-        The number of spins.
+    sigma : numpy.ndarray
+        Array of locus states, typically -1 or +1.
+    nk : NK
+        An instance of the NK model.
+    f_off : float, optional
+        Fitness offset to be subtracted from the total fitness. Default is 0.0.
 
     Returns
     -------
     numpy.ndarray
-        The spin configuration.
+        The DFE for the given configuration.
     """
-    return np.random.choice([-1, 1], N)
+    dfe = np.zeros(nk.N)
+    curr_fit = nk.compute_fitness(sigma, f_off)
+    for i in range(nk.N):
+        sigma_prime = sigma.copy()
+        sigma_prime[i] = -sigma_prime[i]
+        dfe[i] = nk.compute_fitness(sigma_prime, f_off) - curr_fit
+    return dfe
 
-
-def calc_DFE(alpha, h, J):
+def compute_bdfe(sigma, nk, f_off=0.0):
     """
-    Calculate the distribution of fitness effects.
+    Compute the beneficial distribution of fitness effects (bDFE) for a given configuration.
 
     Parameters
     ----------
-    alpha : numpy.ndarray
-        The spin configuration.
-    h : numpy.ndarray
-        The external fields.
-    J : numpy.ndarray
-        The coupling matrix.
+    sigma : numpy.ndarray
+        Array of locus states, typically -1 or +1.
+    nk : NK
+        An instance of the NK model.
+    f_off : float, optional
+        Fitness offset to be subtracted from the total fitness. Default is 0.0.
 
     Returns
     -------
     numpy.ndarray
-        The normalized distribution of fitness effects.
+        The bDFE for the given configuration.
+    numpy.ndarray
+        Indices of beneficial mutations.
     """
-    return -2 * calc_energies(alpha, h, J)
+    dfe = compute_dfe(sigma, nk, f_off)
+    bdfe = dfe[dfe >= 0]
+    b_ind = np.where(dfe >= 0)[0]
+    return bdfe, b_ind
 
-
-def calc_BDFE(alpha, h, J):
+def compute_rank(sigma, nk, f_off=0.0):
     """
-    Calculate the Beneficial distribution of fitness effects.
+    Compute the rank of a given configuration.
+    The rank is the number of beneficial mutations.
 
     Parameters
     ----------
-    alpha : numpy.ndarray
-        The spin configuration.
-    h : numpy.ndarray
-        The external fields.
-    J : numpy.ndarray
-        The coupling matrix.
-
-    Returns
-    -------
-    (numpy.ndarray, numpy.ndarray)
-        The beneficial fitness effects and the indices of the beneficial mutations.
-    """
-    DFE = calc_DFE(alpha, h, J)
-    r = calc_rank(alpha, h, J)
-    BDFE, b_ind = DFE[DFE >= 0], np.where(DFE > 0)[0]
-    # Normalize the beneficial effects
-    # BDFE /= np.sum(BDFE)
-    return BDFE, b_ind
-
-
-def calc_rank(alpha, h, J):
-    """
-    Calculate the rank of the spin configuration.
-
-    Parameters
-    ----------
-    alpha : numpy.ndarray
-        The spin configuration.
-    h : numpy.ndarray
-        The external fields.
-    J : numpy.ndarray
-        The coupling matrix.
+    sigma : numpy.ndarray
+        Array of locus states, typically -1 or +1.
+    nk : NK
+        An instance of the NK model.
+    f_off : float, optional
+        Fitness offset to be subtracted from the total fitness. Default is 0.0.
 
     Returns
     -------
     int
-        The rank of the spin configuration.
+        The rank of the configuration.
     """
-    DFE = calc_DFE(alpha, h, J)
-    return np.sum(DFE > 0)
+    dfe = compute_dfe(sigma, nk, f_off)
+    return np.sum(dfe >= 0)
 
-
-def sswm_flip(alpha, his, Jijs):
+def sswm_choice(sigma, nk, f_off=0.0):
     """
-    Choose a spin to flip using probabilities of the sswm regime probabilities.
+    Select a site for mutation using the Strong Selection Weak Mutation (SSWM) model.
 
     Parameters
     ----------
-    alpha : numpy.ndarray
-        The spin configuration.
-    his : numpy.ndarray
-        The local fitness fields.
-    Jijs : numpy.ndarray
+    sigma : numpy.ndarray
+        Array of locus states, typically -1 or +1.
+    nk : NK
+        An instance of the NK model.
+    f_off : float, optional
+        Fitness offset to be subtracted from the total fitness. Default is 0.0.
 
     Returns
     -------
-    int : The index of the spin to flip.
+    int
+        The index of the selected site for mutation.
     """
-    effects, indices = calc_BDFE(alpha, his, Jijs)
-    effects /= np.sum(effects)
-    return np.random.choice(indices, p=effects)
+    bdfe, b_ind = compute_bdfe(sigma, nk, f_off)
+    bdfe /= np.sum(bdfe)
+    return np.random.choice(b_ind, p=bdfe)
 
-
-def glauber_flip(alpha, hi, Jij, beta=10):
+def relax_nk(sigma_init, nk, f_off=0.0):
     """
-    Choose a spin to flip using the Glauber probabilities.
+    Relax a given configuration using the NK model.
 
     Parameters
     ----------
-    alpha : numpy.ndarray
-        The spin configuration.
-    hi : numpy.ndarray
-        The local fitness fields.
-    Jij : numpy.ndarray
-        The coupling matrix.
-    beta : float
-        The inverse temperature.
-
-    Returns
-    -------
-    numpy.ndarray
-        The probability of flipping a spin.
-    """
-    eis = calc_energies(alpha, hi, Jij)
-    ps = (1 - np.tanh(eis * beta)) / 2
-    ps /= np.sum(ps)
-    indices = range(len(alpha))
-    return np.random.choice(indices, p=ps)
-
-
-def calc_F_off(alpha_init, his, Jijs):
-    """
-    Calculate the fitness offset for the given configuration.
-
-    Parameters
-    ----------
-    alpha_init : numpy.ndarray
-        The initial spin configuration.
-    his : numpy.ndarray
-        The local fitness fields.
-    Jijs : numpy.ndarray
-        The coupling matrix.
-
-    Returns
-    -------
-    float
-        The fitness offset.
-    """
-    return compute_fit_slow(alpha_init, his, Jijs) - 1
-
-
-def compute_fit_slow(alpha, his, Jijs, F_off=0.0):
-    """
-    Compute the fitness of the genome configuration alpha using full slow computation.
-
-    Parameters:
-    alpha (np.ndarray): The genome configuration (vector of -1 or 1).
-    his (np.ndarray): The vector of site-specific contributions to fitness.
-    Jijs (np.ndarray): The interaction matrix between genome sites.
-    F_off (float): The fitness offset, defaults to 0.
-
-    Returns:
-    float: The fitness value for the configuration alpha.
-    Divide by 2 because every term appears twice in symmetric case.
-    """
-    return alpha @ (his + 0.5 * Jijs @ alpha) - F_off
-
-
-def compute_fitness_delta_mutant(alpha, his, Jijs, k):
-    """
-    Compute the fitness change for a mutant at site k.
-
-    Parameters:
-    alpha (np.ndarray): The genome configuration.
-    hi (np.ndarray): The vector of site-specific fitness contributions.
-    f_i (np.ndarray): The local fitness fields.
-    k (int): The index of the mutation site.
-
-    Returns:
-    float: The change in fitness caused by a mutation at site k.
-    Divide by 2 because every term appears twice in symmetric case.
-    """
-
-    return -2 * alpha[k] * (his[k] + 0.5 * Jijs[k] @ alpha)
-
-
-def backward_propagate(dfe_evo: np.ndarray, dfe_anc: np.ndarray, beneficial=True):
-    """
-    Backward propagate the dfe from the initial day(anc) to the target day(evo),
-    based on whether beneficial or deleterious mutations are selected.
-
-    Parameters
-    ----------
-    dfe_evo : np. ndarray
-        The dfe at the target day.
-    dfe_anc : np. ndarray
-        The dfe at the initial day.
-    beneficial : bool, optional
-        Whether to consider beneficial mutations. The default is True.
-
-    Returns
-    -------
-    np. ndarray
-        The propagated dfe.
-
-    """
-    bdfe_t = [(i, dfe_evo[i]) for i in range(len(dfe_evo)) if (dfe_evo[i] >= 0 if beneficial else dfe_evo[i] <= 0)]
-
-    bdfe_t_inds = [x[0] for x in bdfe_t]
-    bdfe_t_fits = [x[1] for x in bdfe_t]
-
-    propagated_bdfe_t = [dfe_anc[i] for i in bdfe_t_inds]
-
-    return bdfe_t_fits, propagated_bdfe_t
-
-
-def forward_propagate(dfe_evo: np.ndarray, dfe_anc: np.ndarray, beneficial=True):
-    """
-    Forward propagate the dfe from the initial day(anc) to the target day(evo),
-    based on whether beneficial or deleterious mutations are selected.
-
-    Parameters
-    ----------
-    dfe_evo : np. ndarray
-        The dfe at the target day.
-    dfe_anc : np. ndarray
-        The dfe at the initial day.
-    beneficial : bool, optional
-        Whether to consider beneficial mutations. The default is True.
-
-    Returns
-    -------
-    np. ndarray
-        The propagated dfe.
-    """
-    bdfe_0 = [(i, dfe_anc[i]) for i in range(len(dfe_anc)) if (dfe_anc[i] >= 0 if beneficial else dfe_anc[i] <= 0)]
-
-    bdfe_0_inds = [x[0] for x in bdfe_0]
-    bdfe_0_fits = [x[1] for x in bdfe_0]
-
-    propagated_bdfe_0 = [dfe_evo[i] for i in bdfe_0_inds]
-
-    return bdfe_0_fits, propagated_bdfe_0
-
-
-def relax_sk_flips(alpha, his, Jijs, flips, sswm=True):
-    """
-    Relax the Sherrington-Kirkpatrick model with given parameters, saving alpha at specified flips.
-    Parameters
-    ----------
-    alpha: numpy.ndarray
-    his: numpy.ndarray
-    Jijs: numpy.ndarray
-    flips: list or array-like
-    sswm: bool, optional
+    sigma_init : numpy.ndarray
+        Initial array of locus states, typically -1 or +1.
+    nk : NK
+        An instance of the NK model.
+    f_off : float, optional
+        Fitness offset to be subtracted from the total fitness. Default is 0.0.
 
     Returns
     -------
     numpy.ndarray
-        The final spin configuration, saved alphas.
+        The relaxed configuration.
     """
-    saved_alphas = []
-    total_flips = 0
-    rank = calc_rank(alpha, his, Jijs)
-
-    while total_flips < flips[-1] and rank > 0:
-
-        if total_flips in flips:
-            saved_alphas.append(alpha.copy())
-
-        flip_idx = sswm_flip(alpha, his, Jijs) if sswm else glauber_flip(alpha, his, Jijs, beta=10)
-        alpha[flip_idx] *= -1
-        total_flips += 1
-        rank = calc_rank(alpha, his, Jijs)
-
-    if rank == 0:
-        saved_alphas.append(alpha.copy())
-        print("Not all flips reached, rank is 0")
-
-    return alpha, saved_alphas
-
-
-def relax_sk_ranks(alpha, his, Jijs, num_ranks, fin_rank=0, sswm=True):
-    """
-    Relax the Sherrington-Kirkpatrick model with given parameters, saving alpha at specified ranks.
-    Parameters
-    ----------
-    alpha: numpy.ndarray
-    his: numpy.ndarray
-    Jijs: numpy.ndarray
-    fin_rank: int
-    num_ranks: int
-    sswm: bool, optional
-
-    Returns
-    -------
-    numpy.ndarray, list
-        The final spin configuration, saved alphas.
-    """
-    saved_alphas = []
-    rank = calc_rank(alpha, his, Jijs)
-    ranks = sorted(np.linspace(rank, fin_rank, num_ranks, dtype=int), reverse=True)
-
-    while rank > fin_rank:
-
-        if rank in ranks:
-            saved_alphas.append(alpha.copy())
-
-        flip_idx = sswm_flip(alpha, his, Jijs) if sswm else glauber_flip(alpha, his, Jijs, beta=10)
-        alpha[flip_idx] *= -1
-        rank = calc_rank(alpha, his, Jijs)
-
-    # Save the final alpha
-    saved_alphas.append(alpha.copy())
-    return alpha, saved_alphas, ranks
-
-
-def relax_sk(alpha, his, Jijs, sswm=True):
-    """
-    Relax the Sherrington-Kirkpatrick model with given parameters.
-    Parameters
-    ----------
-    alpha: numpy.ndarray
-    his: numpy.ndarray
-    Jijs: numpy.ndarray
-    sswm: bool, optional
-
-    Returns
-    -------
-    list
-        The mutation sequence.
-    """
-    flip_sequence = []
-    rank = calc_rank(alpha, his, Jijs)
-
+    sigma = sigma_init.copy()
+    rank = compute_rank(sigma, nk, f_off)
+    flip_hist = []
     while rank > 0:
-        flip_idx = sswm_flip(alpha, his, Jijs) if sswm else glauber_flip(alpha, his, Jijs, beta=10)
-        alpha[flip_idx] *= -1
-        flip_sequence.append(flip_idx)
-        rank = calc_rank(alpha, his, Jijs)
-
-    return flip_sequence
-
-
-def compute_alpha_from_hist(alpha_0, hist, num_muts=None):
-    """
-    Compute alpha from the initial alpha and the flip history up to num_muts mutations.
-
-    Parameters
-    ----------
-    alpha_0 : numpy.ndarray
-        The initial spin configuration.
-    hist : list of int
-        The flip history.
-    num_muts : int
-        The number of mutations to consider.
-
-    Returns
-    -------
-    numpy.ndarray
-        The spin configuration after num_muts mutations.
-    """
-    alpha = alpha_0.copy()
-    if num_muts is None:
-        rel_hist = hist
-    else:
-        rel_hist = hist[:num_muts]
-    for flip in rel_hist:
-        alpha[flip] *= -1
-    return alpha
-
-def curate_alpha_list(alpha_0, hist, flips):
-    """
-    Curate the alpha list to have num_points elements.
-
-    Parameters
-    ----------
-    alpha_0 : numpy.ndarray
-        The initial spin configuration.
-    hist : list of int
-        The flip history.
-    flips : list of int
-        The points to curate.
-
-    Returns
-    -------
-    list
-        The curated list of spin configurations.
-    """
-    alpha_list = []
-    for flip in flips:
-        alpha_t = compute_alpha_from_hist(alpha_0, hist, flip)
-        alpha_list.append(alpha_t)
-    return alpha_list
+        i = sswm_choice(sigma, nk, f_off)
+        flip_hist.append(i)
+        sigma[i] = -sigma[i]
+        rank = compute_rank(sigma, nk, f_off)
+    return flip_hist

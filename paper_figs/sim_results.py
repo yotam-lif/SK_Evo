@@ -7,7 +7,7 @@ from misc.uncmn_dfe import gen_final_dfe
 from scipy.stats import gaussian_kde
 import matplotlib.ticker as ticker
 import misc.uncmn_scrambling as scr
-from misc import cmn_sk
+from misc import cmn, cmn_sk
 import scienceplots
 from matplotlib.gridspec import GridSpec
 
@@ -29,10 +29,10 @@ def create_fig_ge(ax, num_points, repeat, N):
     alpha_initial = data_entry['init_alpha']
     h = data_entry['h']
     J = data_entry['J']
-    F_off = cmn.calc_F_off(alpha_initial, h, J)
+    F_off = cmn_sk.calc_F_off(alpha_initial, h, J)
     flip_seq = data_entry['flip_seq']
     flip_numbs = np.linspace(0, len(flip_seq)-1, num_points, dtype=int)
-    alphas = cmn.curate_alpha_list(alpha_initial, flip_seq, flip_numbs)
+    alphas = cmn.curate_sigma_list(alpha_initial, flip_seq, flip_numbs)
     mean_dfe = []
     var_dfe = []
     mean_bdfe = []
@@ -40,18 +40,18 @@ def create_fig_ge(ax, num_points, repeat, N):
     rank = []
     fits = []
     for alpha in alphas:
-        dfe = cmn.calc_DFE(alpha, h, J)
-        bdfe = cmn.calc_BDFE(alpha, h, J)[0]
-        fits.append(cmn.compute_fit_slow(alpha, h, J, F_off))
+        dfe = cmn_sk.calc_DFE(alpha, h, J)
+        bdfe = cmn_sk.calc_BDFE(alpha, h, J)[0]
+        fits.append(cmn_sk.compute_fit_slow(alpha, h, J, F_off))
         mean_dfe.append(np.mean(dfe) + 1)
         var_dfe.append(np.var(dfe))
         mean_bdfe.append(np.mean(bdfe))
         var_bdfe.append(np.var(bdfe))
-        rank.append(cmn.calc_rank(alpha, h, J))
+        rank.append(cmn_sk.calc_rank(alpha, h, J))
 
     rank = [r / N for r in rank]
     max_fit = fits[-1]
-    fits = [fit * 100 / max_fit for fit in fits]
+    fits = [(fit / max_fit) * 100 for fit in fits]
     sns.regplot(x=fits, y=mean_dfe, ax=ax, color=color[0], scatter=True, label=r'$\mathbb{E} [P(\Delta)] + 1$')
     sns.regplot(x=fits, y=var_dfe, ax=ax, color=color[1], scatter=True, label=r'$\text{Var} [P(\Delta)]$')
     sns.regplot(x=fits, y=mean_bdfe, ax=ax, color=color[2], scatter=True, label=r'$\mathbb{E} [P_+ (\Delta)]$')
@@ -94,11 +94,11 @@ def create_fig_bdfe_hists(ax, points_lst, num_bins, num_flips):
     bdfes = [[] for _ in range(num)]
     del_max = 0.3
     for repeat in data:
-        alphas = cmn.curate_alpha_list(repeat['init_alpha'], repeat['flip_seq'], points_lst)
+        alphas = cmn.curate_sigma_list(repeat['init_alpha'], repeat['flip_seq'], points_lst)
         h = repeat['h']
         J = repeat['J']
         for j in range(num):
-            bdfe = cmn.calc_BDFE(alphas[j], h, J)[0]
+            bdfe = cmn_sk.calc_BDFE(alphas[j], h, J)[0]
             bdfes[j].extend(bdfe[bdfe < del_max])
 
     flip_percent = (points_lst / num_flips) * 100
@@ -160,9 +160,9 @@ def create_fig_e(ax_left, ax_right, flip1, flip2, repeat, color):
     ax_right.clear()
 
     # Left subplot:
-    sns.kdeplot(dfe_evo, ax=ax_left, color='black', fill=True, alpha=0.6)
-    sns.kdeplot(bdfe1, ax=ax_left, color=color[1], fill=True, alpha=0.6)
-    sns.kdeplot(prop_bdfe2, ax=ax_left, color=color[2], fill=True, alpha=0.6)
+    sns.kdeplot(dfe_evo, ax=ax_left, color='black', fill=True, alpha=0.6, label='Current DFE')
+    sns.kdeplot(bdfe1, ax=ax_left, color=color[1], fill=True, alpha=0.6, label='Forwards Propagation')
+    sns.kdeplot(prop_bdfe2, ax=ax_left, color=color[2], fill=True, alpha=0.6, label='Backwards Propagation')
 
     # Right subplot:
     sns.kdeplot(dfe_anc, ax=ax_right, color='black', fill=True, alpha=0.6)
@@ -175,14 +175,10 @@ def create_fig_e(ax_left, ax_right, flip1, flip2, repeat, color):
 
     # Only show a tick at 0 for x
     ax_left.set_xticks([0])
-    ax_left.set_xticklabels(['0'])
+    ax_left.set_xticklabels([r'$\Delta = 0$'])
     ax_right.set_xticks([0])
-    ax_right.set_xticklabels(['0'])
+    ax_right.set_xticklabels([r'$\Delta = 0$'])
 
-    # Previously we removed y-ticks from the right axis. Now let's keep them:
-    # Remove these lines: ax_right.set_yticks([]), ax_right.set_yticklabels([])
-    # The right axis shares y with the left, so it will have the same tick positions.
-    # We just remove labels on the right side:
     ax_right.yaxis.set_ticks_position('right')
     ax_right.tick_params(axis='y', labelleft=False, labelright=False)
 
@@ -204,6 +200,8 @@ def create_fig_e(ax_left, ax_right, flip1, flip2, repeat, color):
     ax_right.tick_params(axis='both', which='major', length=10, width=1, labelsize=14)
     ax_right.tick_params(axis='both', which='minor', length=5, width=1, labelsize=14)
 
+    ax_left.legend(fontsize=16, title_fontsize=12, loc='upper left', frameon=True)
+
 
 if __name__ == "__main__":
     N = 4000
@@ -217,6 +215,10 @@ if __name__ == "__main__":
 
     big_fig = plt.figure(figsize=(12, 10))
     gs = GridSpec(2, 3, figure=big_fig)
+    annotation_ax = big_fig.add_axes((0.0, 0.0, 1.0, 1.0), facecolor='none')
+    annotation_ax.set_xticks([])
+    annotation_ax.set_yticks([])
+    annotation_ax.axis('off')
 
     # Top row: A, B, C
     axA = big_fig.add_subplot(gs[0, 0])
@@ -236,14 +238,14 @@ if __name__ == "__main__":
         for spine in ax.spines.values():
             spine.set_linewidth(2)
 
-    # create_fig_ge(axA, num_points=50, repeat=10, N=N)
+    create_fig_ge(axA, num_points=50, repeat=10, N=N)
     # create_fig_dfe_fin(axB, N=2000, beta_arr=[0.0001, 0.5, 1.0], rho=1.0, num_repeats=3, num_bins=100)
     # create_fig_bdfe_hists(axC, points_lst=flip_list, num_bins=50, num_flips=num_flips)
-    # create_fig_crossings(axD, crossings_flip_anc, crossings_flip_evo, crossings_repeat)
+    create_fig_crossings(axD, crossings_flip_anc, crossings_flip_evo, crossings_repeat)
     create_fig_e(axE_left, axE_right, flip1=crossings_flip_anc, flip2=crossings_flip_evo, repeat=crossings_repeat, color=color)
 
-    # Remove the x=0 label from subplots A-D (if they have ticks and a '0' label):
-    for ax in [axA, axB, axC, axD]:
+    # Remove the x=0 label from subplots:
+    for ax in [axB, axC, axD]:
         xticks = ax.get_xticks()
         # Replace the label at 0 with an empty string
         new_labels = []
