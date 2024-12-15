@@ -1,5 +1,5 @@
 # Import the Funcs module
-from misc import cmn
+from misc import cmn_sk
 import numpy as np
 import matplotlib.pyplot as plt
 import os

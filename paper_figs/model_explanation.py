@@ -18,14 +18,14 @@ gs = fig.add_gridspec(1, 3, wspace=0.1)
 # Subfigure A
 ########################################
 axA = fig.add_subplot(gs[0, 0])
-axA.set_title('A', loc='left', fontweight='heavy', fontsize=16)
+axA.set_title('A', loc='left', fontweight='heavy', fontsize=20)
 
 # Display the formula inside the subplot area
 formula = r'$F(\vec{\sigma}) = \sum\limits_{i=1}^{N} \sigma_i h_i + \frac{1}{2} \sum\limits_{i,j}^{N} \sigma_i J_{ij} \sigma_j$'
-axA.text(0.5, 0.95, formula, ha='center', va='top', transform=axA.transAxes, fontsize=20)
+axA.text(0.5, 0.95, formula, ha='center', va='top', transform=axA.transAxes, fontsize=24)
 
 # Add the text \alpha_i \in {\pm 1 }
-axA.text(0.5, 0.7, r'$\sigma_i \in \{\pm 1\}$', ha='center', va='top', transform=axA.transAxes, fontsize=20)
+axA.text(0.5, 0.7, r'$\sigma_i \in \{\pm 1\}$', ha='center', va='top', transform=axA.transAxes, fontsize=24)
 
 # Draw a series of spins as squares with arrows
 L = 11
@@ -35,7 +35,7 @@ color_plus = cmap(0.6)  # Color for +1
 color_minus = cmap(0.4)  # Color for -1
 colors = [color_plus if a == 1 else color_minus for a in alpha]
 
-y_base = 0.7
+y_base = 0.65
 rect_height = 0.06
 width = 0.05
 
@@ -69,7 +69,7 @@ axA.axis('off')
 # Subfigure B
 ########################################
 axB = fig.add_subplot(gs[0, 1])
-axB.set_title('B', loc='left', fontweight='heavy', fontsize=16)
+axB.set_title('B', loc='left', fontweight='heavy', fontsize=20)
 
 # Create a fully connected random regular graph (from your original code)
 N = 100
@@ -123,7 +123,7 @@ neg_line = plt.Line2D([0], [0], color=neg_color, alpha=0.8, lw=2, label=r'$J_{ij
 plus_node = plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='white', markeredgecolor='black', markersize=5, label=r'$\sigma_i = +1$')
 minus_node = plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='black', markeredgecolor='black', markersize=5, label=r'$\sigma_i = -1$')
 
-axB.legend(handles=[plus_node, minus_node, pos_line, neg_line], loc='lower right', fontsize=14, markerscale=2, frameon=True)
+axB.legend(handles=[plus_node, minus_node, pos_line, neg_line], loc='lower right', fontsize=16, markerscale=2, frameon=True)
 
 axB.axis('off')
 
@@ -131,7 +131,7 @@ axB.axis('off')
 # Subfigure C
 ########################################
 axC = fig.add_subplot(gs[0, 2])
-axC.set_title('C', loc='left', fontweight='heavy', fontsize=16)
+axC.set_title('C', loc='left', fontweight='heavy', fontsize=20)
 
 beta0_xmin = -1.0
 beta0_xmax = -0.025
@@ -166,15 +166,14 @@ axC.annotate('increasing $\\beta$', xy=(0, -1.0), xytext=(-0.5, -3.0),
              arrowprops=dict(facecolor='black', shrink=0.05, width=1),
              fontsize=10, ha='center')
 
-axC.set_ylabel(r'$F(\vec{\sigma})$', fontsize=16)
-axC.legend(frameon=True, loc='upper right', fontsize=14)
+axC.set_ylabel(r'$F(\vec{\sigma})$', fontsize=18)
+axC.set_xlabel(r'$\vec{\sigma}$', fontsize=18)
+axC.legend(frameon=True, loc='upper right', fontsize=18)
 axC.spines.right.set_visible(False)
 axC.spines.top.set_visible(False)
 axC.set_xticklabels([])
 axC.set_yticklabels([])
 axC.tick_params(axis='both', which='both', length=0)
-
-plt.tight_layout()
 
 output_dir = '../Plots/paper_figs'
 os.makedirs(output_dir, exist_ok=True)

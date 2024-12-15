@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from misc.cmn import init_alpha, init_h, init_J, relax_sk, calc_DFE, curate_alpha_list, calc_rank, compute_fit_slow, calc_F_off
+from misc.cmn_sk import init_alpha, init_h, init_J, relax_sk, calc_DFE, curate_alpha_list, calc_rank, compute_fit_slow, calc_F_off
 import scienceplots
 
 # Parameters

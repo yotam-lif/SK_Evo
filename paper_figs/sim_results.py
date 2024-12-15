@@ -7,7 +7,7 @@ from misc.uncmn_dfe import gen_final_dfe
 from scipy.stats import gaussian_kde
 import matplotlib.ticker as ticker
 import misc.uncmn_scrambling as scr
-from misc import cmn
+from misc import cmn_sk
 import scienceplots
 from matplotlib.gridspec import GridSpec
 

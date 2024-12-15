@@ -1,5 +1,5 @@
 import argparse
-import cmn
+import cmn_sk
 import os
 import pickle
 import numpy as np
