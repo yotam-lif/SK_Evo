@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pickle
 from misc.uncmn_dfe import gen_final_dfe
-from scipy.stats import gaussian_kde
 import matplotlib.ticker as ticker
 import misc.uncmn_scrambling as scr
 from misc import cmn, cmn_sk
@@ -60,6 +59,8 @@ def create_fig_ge(ax, num_points, repeat, N):
     ax.set_xlabel('Fitness (\\% from maximum reached)', fontsize=14)
     ax.set_ylabel('Value', fontsize=14)
     ax.legend(fontsize=10, title_fontsize=12, loc='lower left', frameon=True)
+    # Set x-axis to display integer values
+    ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True, nbins=5))
 
 
 def create_fig_dfe_fin(ax, N, beta_arr, rho, num_repeats, num_bins):
@@ -158,16 +159,15 @@ def create_fig_e(ax_left, ax_right, flip1, flip2, repeat, color):
 
     ax_left.clear()
     ax_right.clear()
+    stat = 'density'
 
     # Left subplot:
-    sns.kdeplot(dfe_evo, ax=ax_left, color='black', fill=True, alpha=0.6, label='Current DFE')
-    sns.kdeplot(bdfe1, ax=ax_left, color=color[1], fill=True, alpha=0.6, label='Forwards Propagation')
-    sns.kdeplot(prop_bdfe2, ax=ax_left, color=color[2], fill=True, alpha=0.6, label='Backwards Propagation')
+    sns.histplot(dfe_anc, ax=ax_left, color='grey', kde=False, bins=30, label='DFE', alpha=0.6, stat=stat, element="step", edgecolor="black")
+    sns.histplot(prop_bdfe2, ax=ax_left, color=color[2], kde=False, bins=30, label='Backwards BDFE', alpha=0.5, stat=stat, element="step", edgecolor="black")
 
     # Right subplot:
-    sns.kdeplot(dfe_anc, ax=ax_right, color='black', fill=True, alpha=0.6)
-    sns.kdeplot(bdfe2, ax=ax_right, color=color[2], fill=True, alpha=0.6)
-    sns.kdeplot(prop_bdfe1, ax=ax_right, color=color[1], fill=True, alpha=0.6)
+    sns.histplot(dfe_evo, ax=ax_right, color='grey', kde=False, bins=30, alpha=0.6, stat=stat, element="step", edgecolor="black")
+    sns.histplot(prop_bdfe1, ax=ax_right, color=color[1], kde=False, bins=30, label='Forwards BDFE', alpha=0.5, stat=stat, element="step", edgecolor="black")
 
     # Vertical dotted lines at x=0
     ax_left.axvline(x=0, color='black', linestyle='--', linewidth=1)
@@ -200,7 +200,23 @@ def create_fig_e(ax_left, ax_right, flip1, flip2, repeat, color):
     ax_right.tick_params(axis='both', which='major', length=10, width=1, labelsize=14)
     ax_right.tick_params(axis='both', which='minor', length=5, width=1, labelsize=14)
 
-    ax_left.legend(fontsize=16, title_fontsize=12, loc='upper left', frameon=True)
+    # Annotate text above to the left of each vertical line
+    flip_percent = f'{int(flip1 * 100 / num_flips)}\\% of walk\ncompleted'
+    ax_left.annotate(flip_percent, xy=(0.5, 0.5), xycoords='axes fraction', xytext=(0, 0),
+                     textcoords='offset points', ha='right', va='bottom', fontsize=12, color='black')
+
+    flip_percent = f'{int(flip2 * 100 / num_flips)}\\% of walk\ncompleted'
+    ax_right.annotate(flip_percent, xy=(0.5, 0.5), xycoords='axes fraction', xytext=(60, 70),
+                      textcoords='offset points', ha='right', va='bottom', fontsize=12, color='black')
+
+    # Get handles and labels from both subplots
+    handles_left, labels_left = ax_left.get_legend_handles_labels()
+    handles_right, labels_right = ax_right.get_legend_handles_labels()
+    # Combine handles and labels
+    handles = handles_left + handles_right
+    labels = labels_left + labels_right
+    # Set the combined legend on the left subplot
+    ax_left.legend(handles=handles, labels=labels, fontsize=12, title_fontsize=12, loc='upper left', frameon=True)
 
 
 if __name__ == "__main__":
@@ -211,14 +227,10 @@ if __name__ == "__main__":
     flip_list = np.linspace(low, high, 4, dtype=int)
     crossings_repeat = 10
     crossings_flip_anc = 800
-    crossings_flip_evo = 1200
+    crossings_flip_evo = 1400
 
     big_fig = plt.figure(figsize=(12, 10))
     gs = GridSpec(2, 3, figure=big_fig)
-    annotation_ax = big_fig.add_axes((0.0, 0.0, 1.0, 1.0), facecolor='none')
-    annotation_ax.set_xticks([])
-    annotation_ax.set_yticks([])
-    annotation_ax.axis('off')
 
     # Top row: A, B, C
     axA = big_fig.add_subplot(gs[0, 0])
@@ -241,7 +253,7 @@ if __name__ == "__main__":
     create_fig_ge(axA, num_points=50, repeat=10, N=N)
     # create_fig_dfe_fin(axB, N=2000, beta_arr=[0.0001, 0.5, 1.0], rho=1.0, num_repeats=3, num_bins=100)
     # create_fig_bdfe_hists(axC, points_lst=flip_list, num_bins=50, num_flips=num_flips)
-    create_fig_crossings(axD, crossings_flip_anc, crossings_flip_evo, crossings_repeat)
+    # create_fig_crossings(axD, crossings_flip_anc, crossings_flip_evo, crossings_repeat)
     create_fig_e(axE_left, axE_right, flip1=crossings_flip_anc, flip2=crossings_flip_evo, repeat=crossings_repeat, color=color)
 
     # Remove the x=0 label from subplots:
@@ -264,9 +276,30 @@ if __name__ == "__main__":
         ax.text(-0.1, 1.1, panel_labels[i], transform=ax.transAxes,
                 fontsize=16, fontweight='heavy', va='top', ha='left')
 
+    # Draw the arrows
+    pos = axE_left.get_position()
+    delta_y = 0.06
+    pos_x_left = pos.x0 + pos.width - 0.025
+    pos_y_up = pos.y0 + pos.height / 2
+    pos_y_down = pos.y0 + pos.height / 2 - delta_y
+    arrow_length = 0.2
+
+    annotation_ax = big_fig.add_axes((0.0, 0.0, 1.0, 1.0), facecolor='none')
+    annotation_ax.set_xticks([])
+    annotation_ax.set_yticks([])
+    annotation_ax.axis('off')
+    annotation_ax.annotate("",
+                           xy=(pos_x_left + arrow_length, pos_y_up), xycoords='figure fraction',
+                           xytext=(pos_x_left, pos_y_up), textcoords='figure fraction',
+                           arrowprops=dict(arrowstyle="->", color=color[1], lw=3, alpha=0.8, mutation_scale=30))
+    annotation_ax.annotate("",
+                           xy=(pos_x_left, pos_y_down), xycoords='figure fraction',
+                           xytext=(pos_x_left + arrow_length, pos_y_down), textcoords='figure fraction',
+                           arrowprops=dict(arrowstyle="->", color=color[2], lw=3, alpha=0.8, mutation_scale=30))
+
     big_fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
     # Save the figure
     output_dir = '../Plots/paper_figs'
     os.makedirs(output_dir, exist_ok=True)
-    big_fig.savefig(os.path.join(output_dir, "sim_results_modified.png"), dpi=600)
+    big_fig.savefig(os.path.join(output_dir, "sim_results_modified.svg"), format="svg", bbox_inches='tight')

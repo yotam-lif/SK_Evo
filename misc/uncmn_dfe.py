@@ -1,9 +1,5 @@
-# Import the Funcs module
-from misc import cmn_sk
+from misc import cmn, cmn_sk
 import numpy as np
-import matplotlib.pyplot as plt
-import os
-
 
 def gen_final_dfe(N, beta, rho, num_repeats):
     """
@@ -27,16 +23,16 @@ def gen_final_dfe(N, beta, rho, num_repeats):
     """
     final_dfe = np.array([])
     for _ in range(num_repeats):
-        alpha_initial = cmn.init_alpha(N)
-        h = cmn.init_h(N, beta=beta)
-        J = cmn.init_J(N, beta=beta, rho=rho)
-        flip_seq = cmn.relax_sk(alpha_initial.copy(), h, J, sswm=True)
-        final_alpha = cmn.compute_alpha_from_hist(alpha_initial, flip_seq)
-        dfe = cmn.calc_DFE(final_alpha, h, J)
+        alpha_initial = cmn.init_sigma(N)
+        h = cmn_sk.init_h(N, beta=beta)
+        J = cmn_sk.init_J(N, beta=beta, rho=rho)
+        flip_seq = cmn_sk.relax_sk(alpha_initial.copy(), h, J, sswm=True)
+        final_alpha = cmn.compute_sigma_from_hist(alpha_initial, flip_seq)
+        dfe = cmn_sk.calc_DFE(final_alpha, h, J)
         final_dfe = np.concatenate((final_dfe, dfe))
     return final_dfe.flatten()
 
-def gen_bdfes(N, beta, rho, num_points, num_repeats):
+def gen_bdfes(N, beta, rho, flip_list, num_repeats):
     """
     Generate BDFE histograms.
     Parameters
@@ -44,32 +40,32 @@ def gen_bdfes(N, beta, rho, num_points, num_repeats):
     N: int
     beta: float
     rho: float
-    num_points: int
+    flip_list: list(int)
     num_repeats: int
 
     Returns
     -------
     bdfes: list
     """
-    bdfes = [[] for _ in range(num_points)]
+    bdfes = [[] for _ in range(flip_list)]
 
     for repeat in range(num_repeats):
         print(f"\nStarting repeat {repeat + 1} of {num_repeats}...")
         # Initialize spin configuration
-        alpha_initial = cmn.init_alpha(N)
+        alpha_initial = cmn.init_sigma(N)
 
         # Initialize external fields
-        h = cmn.init_h(N, beta=beta)
+        h = cmn_sk.init_h(N, beta=beta)
 
         # Initialize coupling matrix with sparsity
-        J = cmn.init_J(N, beta=beta, rho=rho)
+        J = cmn_sk.init_J(N, beta=beta, rho=rho)
 
         # Relax the system using sswm_flip (sswm=True)
-        flip_seq = cmn.relax_sk(alpha_initial.copy(), h, J, sswm=True)
-        alphas, _ = cmn.curate_alpha_list(alpha_initial, flip_seq, num_points)
+        flip_seq = cmn_sk.relax_sk(alpha_initial.copy(), h, J, sswm=True)
+        alphas, _ = cmn.curate_sigma_list(alpha_initial, flip_seq, flip_list)
         for i, alpha in enumerate(alphas):
             # Calculate the BDFE for the current rank
-            BDFE, _ = cmn.calc_BDFE(alpha, h, J)
+            BDFE, _ = cmn_sk.calc_BDFE(alpha, h, J)
             bdfes[i].extend(BDFE)
 
     return bdfes
