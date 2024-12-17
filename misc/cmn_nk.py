@@ -1,4 +1,6 @@
 import numpy as np
+from collections import defaultdict
+
 
 class NK:
     """
@@ -35,7 +37,11 @@ class NK:
         # contributions[i] is a dictionary where:
         # key: tuple of states (S_i, S_j1, ..., S_jK)
         # value: fitness value drawn from Gaussian
-        self.fis = [dict() for _ in range(N)]
+        self.fis = [defaultdict(lambda: np.random.normal(self.mean, self.std)) for _ in range(N)]
+        # Precompute neighbor indices (circular)
+        self.neighbor_indices = [
+            [(i + offset) % self.N for offset in range(self.K + 1)] for i in range(self.N)
+        ]
 
     def compute_fitness(self, sigma, f_off=0.0):
         """
@@ -55,19 +61,13 @@ class NK:
             The total fitness of the configuration.
         """
         fit_sum = 0.0
-
         for i in range(self.N):
             # Identify the pattern: locus i and its K neighbors (circular)
             # We'll consider the next K loci in a circular fashion.
-            indices = [(i + offset) % self.N for offset in range(self.K + 1)]
+            indices = self.neighbor_indices[i]
             kclique_i = tuple(sigma[idx] for idx in indices)
-            # Check if we already have a fitness value for this pattern
-            if kclique_i not in self.fis[i]:
-                # Draw from a Gaussian distribution and store
-                self.fis[i][kclique_i] = np.random.normal(self.mean, self.std)
-            # Add the contribution for this pattern
+            # defaultdict takes care of the case where kclique_i is not in contributions[i]
             fit_sum += self.fis[i][kclique_i]
-
         # The total fitness is the average of all f_i
         return fit_sum / self.N - f_off
 
@@ -92,11 +92,14 @@ def compute_dfe(sigma, nk, f_off=0.0):
     """
     dfe = np.zeros(nk.N)
     curr_fit = nk.compute_fitness(sigma, f_off)
+    sigma_prime = np.copy(sigma)
     for i in range(nk.N):
-        sigma_prime = sigma.copy()
+        # avoid excess copying of sigma prime by switching back each flip
         sigma_prime[i] = -sigma_prime[i]
         dfe[i] = nk.compute_fitness(sigma_prime, f_off) - curr_fit
+        sigma_prime[i] = -sigma_prime[i]
     return dfe
+
 
 def compute_bdfe(sigma, nk, f_off=0.0):
     """
@@ -123,6 +126,7 @@ def compute_bdfe(sigma, nk, f_off=0.0):
     b_ind = np.where(dfe >= 0)[0]
     return bdfe, b_ind
 
+
 def compute_rank(sigma, nk, f_off=0.0):
     """
     Compute the rank of a given configuration.
@@ -144,6 +148,7 @@ def compute_rank(sigma, nk, f_off=0.0):
     """
     dfe = compute_dfe(sigma, nk, f_off)
     return np.sum(dfe >= 0)
+
 
 def sswm_choice(sigma, nk, f_off=0.0):
     """
@@ -167,6 +172,7 @@ def sswm_choice(sigma, nk, f_off=0.0):
     bdfe /= np.sum(bdfe)
     return np.random.choice(b_ind, p=bdfe)
 
+
 def relax_nk(sigma_init, nk, f_off=0.0):
     """
     Relax a given configuration using the NK model.
@@ -185,7 +191,7 @@ def relax_nk(sigma_init, nk, f_off=0.0):
     numpy.ndarray
         The relaxed configuration.
     """
-    sigma = sigma_init.copy()
+    sigma = np.copy(sigma_init)
     rank = compute_rank(sigma, nk, f_off)
     flip_hist = []
     while rank > 0:
@@ -193,4 +199,4 @@ def relax_nk(sigma_init, nk, f_off=0.0):
         flip_hist.append(i)
         sigma[i] = -sigma[i]
         rank = compute_rank(sigma, nk, f_off)
-    return flip_hist
+    return flip_hist, nk
