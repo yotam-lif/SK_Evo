@@ -2,7 +2,6 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from misc.cmn_sk import (
-    init_alpha,
     init_h,
     init_J,
     relax_sk_ranks,
@@ -10,6 +9,7 @@ from misc.cmn_sk import (
     calc_rank,
     calc_BDFE
 )
+from misc.cmn import init_sigma
 
 def main():
     # Parameters
@@ -24,7 +24,7 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
 
     # Initialize the model
-    alpha = init_alpha(N)
+    alpha = init_sigma(N)
     h = init_h(N, random_state=random_state, beta=beta)
     J = init_J(N, random_state=random_state, beta=beta, rho=rho)
 

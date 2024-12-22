@@ -86,9 +86,8 @@ def calc_basic_lfs(sigma, h, J):
     -------
     numpy.ndarray
         The local fields.
-        Divide by 2 because every term appears twice in symmetric case.
     """
-    return h + 0.5 * J @ sigma
+    return h + J @ sigma
 
 
 def calc_energies(sigma, h, J):
@@ -130,7 +129,7 @@ def calc_DFE(sigma, h, J):
     numpy.ndarray
         The normalized distribution of fitness effects.
     """
-    return -2 * calc_energies(sigma, h, J)
+    return -2 * sigma * calc_basic_lfs(sigma, h, J)
 
 
 def calc_BDFE(sigma, h, J):
@@ -281,7 +280,7 @@ def compute_fitness_delta_mutant(sigma, his, Jijs, k):
     Divide by 2 because every term appears twice in symmetric case.
     """
 
-    return -2 * sigma[k] * (his[k] + 0.5 * Jijs[k] @ sigma)
+    return -2 * sigma[k] * (his[k] + Jijs[k] @ sigma)
 
 
 def relax_sk_flips(sigma, his, Jijs, flips, sswm=True):

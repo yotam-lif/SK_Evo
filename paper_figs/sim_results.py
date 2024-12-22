@@ -42,7 +42,7 @@ def create_fig_ge(ax, num_points, repeat, N):
         dfe = cmn_sk.calc_DFE(alpha, h, J)
         bdfe = cmn_sk.calc_BDFE(alpha, h, J)[0]
         fits.append(cmn_sk.compute_fit_slow(alpha, h, J, F_off))
-        mean_dfe.append(np.mean(dfe) + 1)
+        mean_dfe.append(np.mean(dfe))
         var_dfe.append(np.var(dfe))
         mean_bdfe.append(np.mean(bdfe))
         var_bdfe.append(np.var(bdfe))
@@ -51,11 +51,11 @@ def create_fig_ge(ax, num_points, repeat, N):
     rank = [r / N for r in rank]
     max_fit = fits[-1]
     fits = [(fit / max_fit) * 100 for fit in fits]
-    sns.regplot(x=fits, y=mean_dfe, ax=ax, color=color[0], scatter=True, label=r'$\mathbb{E} [P(\Delta)] + 1$')
-    sns.regplot(x=fits, y=var_dfe, ax=ax, color=color[1], scatter=True, label=r'$\text{Var} [P(\Delta)]$')
-    sns.regplot(x=fits, y=mean_bdfe, ax=ax, color=color[2], scatter=True, label=r'$\mathbb{E} [P_+ (\Delta)]$')
-    sns.regplot(x=fits, y=var_bdfe, ax=ax, color=color[3], scatter=True, label=r'$\text{Var} [P_+ (\Delta)]$')
-    sns.regplot(x=fits, y=rank, ax=ax, color=color[4], scatter=True, label='$r(t) / N$')
+    sns.regplot(x=fits, y=mean_dfe, ax=ax, color=color[0], scatter=True, label=r'$\mathbb{E} [P(\Delta)]$')
+    # sns.regplot(x=fits, y=var_dfe, ax=ax, color=color[1], scatter=True, label=r'$\text{Var} [P(\Delta)]$')
+    # sns.regplot(x=fits, y=mean_bdfe, ax=ax, color=color[2], scatter=True, label=r'$\mathbb{E} [P_+ (\Delta)]$')
+    # sns.regplot(x=fits, y=var_bdfe, ax=ax, color=color[3], scatter=True, label=r'$\text{Var} [P_+ (\Delta)]$')
+    # sns.regplot(x=fits, y=rank, ax=ax, color=color[4], scatter=True, label='$r(t) / N$')
     ax.set_xlabel('Fitness (\\% from maximum reached)', fontsize=14)
     ax.set_ylabel('Value', fontsize=14)
     ax.legend(fontsize=10, title_fontsize=12, loc='lower left', frameon=True)
@@ -251,9 +251,9 @@ if __name__ == "__main__":
             spine.set_linewidth(2)
 
     create_fig_ge(axA, num_points=50, repeat=10, N=N)
-    # create_fig_dfe_fin(axB, N=2000, beta_arr=[0.0001, 0.5, 1.0], rho=1.0, num_repeats=3, num_bins=100)
-    # create_fig_bdfe_hists(axC, points_lst=flip_list, num_bins=50, num_flips=num_flips)
-    # create_fig_crossings(axD, crossings_flip_anc, crossings_flip_evo, crossings_repeat)
+    create_fig_dfe_fin(axB, N=2000, beta_arr=[0.0001, 0.5, 1.0], rho=1.0, num_repeats=3, num_bins=100)
+    create_fig_bdfe_hists(axC, points_lst=flip_list, num_bins=50, num_flips=num_flips)
+    create_fig_crossings(axD, crossings_flip_anc, crossings_flip_evo, crossings_repeat)
     create_fig_e(axE_left, axE_right, flip1=crossings_flip_anc, flip2=crossings_flip_evo, repeat=crossings_repeat, color=color)
 
     # Remove the x=0 label from subplots:
