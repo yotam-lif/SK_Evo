@@ -2,14 +2,13 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from cmn_sk import (
-    init_alpha,
     init_h,
     init_J,
-    relax_SK,
+    relax_sk,
     compute_fit_slow,
-    calc_rank,
     calc_F_off
 )
+from cmn import (init_sigma, curate_sigma_list)
 
 def main():
     """
@@ -20,8 +19,8 @@ def main():
     random_state = 42  # Seed for reproducibility
     beta = 1.0  # Inverse temperature
     rho = 1.0  # Sparsity of the coupling matrix
-    N_values = np.linspace(start=1000, stop=5000, num=9, dtype=int)  # Different values of N
-
+    N_values = np.linspace(start=1000, stop=1500, num=5, dtype=int)  # Different values of N
+    num_points = 100
     max_fitnesses = []
 
     # Create directory for saving plots
@@ -32,29 +31,26 @@ def main():
     plt.figure(figsize=(10, 6))
     for N in N_values:
         # Initialize the model
-        alpha = init_alpha(N)
+        sigma = init_sigma(N)
         h = init_h(N, random_state=random_state, beta=beta)
         J = init_J(N, random_state=random_state, beta=beta, rho=rho)
-        flips = np.linspace(start=0, stop=N*0.75, num=50, dtype=int)  # Flip intervals
-        F_off = calc_F_off(alpha, h, J)  # Compute the offset
+        F_off = calc_F_off(sigma, h, J)  # Compute the offset
 
         # Perform relaxation
-        final_alpha, saved_alphas, saved_flips, saved_ranks = relax_SK(
-            alpha=alpha.copy(),
-            his=h,
-            Jijs=J,
-            flips=flips,
-            sswm=True  # Change to False to use Glauber flip
-        )
+        flip_seq = relax_sk(sigma, h, J)
+        num_flips = len(flip_seq)
+        ts = list(np.linspace(0, num_flips, num_points, dtype=int))
+        sigmas = curate_sigma_list(sigma, flip_seq, ts)
 
         # Compute fitness over flips
-        F_t = [compute_fit_slow(saved_alpha, h, J, F_off) for saved_alpha in saved_alphas if saved_alpha is not None]
+        F_t = [compute_fit_slow(sigma, h, J, F_off) for sigma in sigmas if sigma is not None]
+        F_t = F_t[::-1]  # Reverse the list
         max_fitness = F_t[-1]
         max_fitnesses.append(max_fitness)
 
         # Plot fitness trajectory
-        plt.plot(saved_flips, F_t, label=f'N={N}')
-        plt.scatter(saved_flips, F_t, s=5)
+        plt.plot(ts, F_t, label=f'N={N}')
+        plt.scatter(ts, F_t, s=5)
 
     plt.xlabel('Number of Flips')
     plt.ylabel('Fitness')

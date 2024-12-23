@@ -69,7 +69,7 @@ def init_J(N, random_state=None, beta=1.0, rho=1.0):
     return Jij
 
 
-def calc_basic_lfs(sigma, h, J):
+def compute_lfs(sigma, h, J):
     """
     Calculate the local fields for the Sherrington-Kirkpatrick model.
 
@@ -87,10 +87,10 @@ def calc_basic_lfs(sigma, h, J):
     numpy.ndarray
         The local fields.
     """
-    return h + J @ sigma
+    return h + 0.5 * J @ sigma
 
 
-def calc_energies(sigma, h, J):
+def compute_energies(sigma, h, J):
     """
     Calculate the energy delta of the system.
 
@@ -108,10 +108,10 @@ def calc_energies(sigma, h, J):
     numpy.ndarray
         The kis of the system.
     """
-    return sigma * calc_basic_lfs(sigma, h, J)
+    return sigma * compute_lfs(sigma, h, J)
 
 
-def calc_DFE(sigma, h, J):
+def compute_dfe(sigma, h, J):
     """
     Calculate the distribution of fitness effects.
 
@@ -129,10 +129,10 @@ def calc_DFE(sigma, h, J):
     numpy.ndarray
         The normalized distribution of fitness effects.
     """
-    return -2 * sigma * calc_basic_lfs(sigma, h, J)
+    return -2 * sigma * compute_lfs(sigma, h, J)
 
 
-def calc_BDFE(sigma, h, J):
+def compute_bdfe(sigma, h, J):
     """
     Calculate the Beneficial distribution of fitness effects.
 
@@ -150,14 +150,14 @@ def calc_BDFE(sigma, h, J):
     (numpy.ndarray, numpy.ndarray)
         The beneficial fitness effects and the indices of the beneficial mutations.
     """
-    DFE = calc_DFE(sigma, h, J)
+    DFE = compute_dfe(sigma, h, J)
     BDFE, b_ind = DFE[DFE >= 0], np.where(DFE > 0)[0]
     # Normalize the beneficial effects
     # BDFE /= np.sum(BDFE)
     return BDFE, b_ind
 
 
-def calc_rank(sigma, h, J):
+def compute_rank(sigma, h, J):
     """
     Calculate the rank of the spin configuration.
 
@@ -175,7 +175,7 @@ def calc_rank(sigma, h, J):
     int
         The rank of the spin configuration.
     """
-    DFE = calc_DFE(sigma, h, J)
+    DFE = compute_dfe(sigma, h, J)
     return np.sum(DFE > 0)
 
 
@@ -195,7 +195,7 @@ def sswm_flip(sigma, his, Jijs):
     -------
     int : The index of the spin to flip.
     """
-    effects, indices = calc_BDFE(sigma, his, Jijs)
+    effects, indices = compute_bdfe(sigma, his, Jijs)
     effects /= np.sum(effects)
     return np.random.choice(indices, p=effects)
 
@@ -220,7 +220,7 @@ def glauber_flip(sigma, hi, Jij, beta=10):
     numpy.ndarray
         The probability of flipping a spin.
     """
-    eis = calc_energies(sigma, hi, Jij)
+    eis = compute_energies(sigma, hi, Jij)
     ps = (1 - np.tanh(eis * beta)) / 2
     ps /= np.sum(ps)
     indices = range(len(sigma))
@@ -301,7 +301,7 @@ def relax_sk_flips(sigma, his, Jijs, flips, sswm=True):
     """
     saved_sigmas = []
     total_flips = 0
-    rank = calc_rank(sigma, his, Jijs)
+    rank = compute_rank(sigma, his, Jijs)
 
     while total_flips < flips[-1] and rank > 0:
 
@@ -311,7 +311,7 @@ def relax_sk_flips(sigma, his, Jijs, flips, sswm=True):
         flip_idx = sswm_flip(sigma, his, Jijs) if sswm else glauber_flip(sigma, his, Jijs, beta=10)
         sigma[flip_idx] *= -1
         total_flips += 1
-        rank = calc_rank(sigma, his, Jijs)
+        rank = compute_rank(sigma, his, Jijs)
 
     if rank == 0:
         saved_sigmas.append(sigma.copy())
@@ -338,7 +338,7 @@ def relax_sk_ranks(sigma, his, Jijs, num_ranks, fin_rank=0, sswm=True):
         The final spin configuration, saved sigmas.
     """
     saved_sigmas = []
-    rank = calc_rank(sigma, his, Jijs)
+    rank = compute_rank(sigma, his, Jijs)
     ranks = sorted(np.linspace(rank, fin_rank, num_ranks, dtype=int), reverse=True)
 
     while rank > fin_rank:
@@ -348,7 +348,7 @@ def relax_sk_ranks(sigma, his, Jijs, num_ranks, fin_rank=0, sswm=True):
 
         flip_idx = sswm_flip(sigma, his, Jijs) if sswm else glauber_flip(sigma, his, Jijs, beta=10)
         sigma[flip_idx] *= -1
-        rank = calc_rank(sigma, his, Jijs)
+        rank = compute_rank(sigma, his, Jijs)
 
     # Save the final sigma
     saved_sigmas.append(sigma.copy())
@@ -371,13 +371,13 @@ def relax_sk(sigma, his, Jijs, sswm=True):
         The mutation sequence.
     """
     flip_sequence = []
-    rank = calc_rank(sigma, his, Jijs)
+    rank = compute_rank(sigma, his, Jijs)
 
     while rank > 0:
         flip_idx = sswm_flip(sigma, his, Jijs) if sswm else glauber_flip(sigma, his, Jijs, beta=10)
         sigma[flip_idx] *= -1
         flip_sequence.append(flip_idx)
-        rank = calc_rank(sigma, his, Jijs)
+        rank = compute_rank(sigma, his, Jijs)
 
     return flip_sequence
 

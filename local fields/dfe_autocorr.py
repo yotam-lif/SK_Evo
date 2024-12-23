@@ -9,7 +9,7 @@ from misc.cmn_sk import (
     init_h,
     init_J,
     relax_sk,
-    calc_DFE,
+    compute_dfe,
     compute_alpha_from_hist
 )
 
@@ -47,9 +47,9 @@ def main():
         alpha_i1 = saved_alphas[i + 1]
 
         # Calculate energies
-        deltas_i = calc_DFE(alpha_i, h, J)
-        deltas_i1 = calc_DFE(alpha_i1, h, J)
-        deltas_0 = calc_DFE(alpha_0, h, J)
+        deltas_i = compute_dfe(alpha_i, h, J)
+        deltas_i1 = compute_dfe(alpha_i1, h, J)
+        deltas_0 = compute_dfe(alpha_0, h, J)
 
         # Calculate Pearson correlation
         corr_i_i1, _ = pearsonr(deltas_i, deltas_i1)

@@ -6,8 +6,8 @@ from misc.cmn_sk import (
     init_J,
     relax_sk_ranks,
     compute_fit_slow,
-    calc_rank,
-    calc_BDFE
+    compute_rank,
+    compute_bdfe
 )
 from misc.cmn import init_sigma
 
@@ -29,7 +29,7 @@ def main():
     J = init_J(N, random_state=random_state, beta=beta, rho=rho)
 
     # Define ranks at which to save the configurations
-    initial_rank = calc_rank(alpha, h, J)
+    initial_rank = compute_rank(alpha, h, J)
     ranks_to_save = np.linspace(int(N/8), initial_rank, num_saves, dtype=int)
     # make sure it is sorted in descending order
     ranks_to_save = sorted(list(set(ranks_to_save)), reverse=True)
@@ -50,7 +50,7 @@ def main():
     # Iterate over saved alphas and compute metrics
     for saved_alpha in saved_alphas:
         if saved_alpha is not None:
-            BDFE, _ = calc_BDFE(saved_alpha, h, J)
+            BDFE, _ = compute_bdfe(saved_alpha, h, J)
             average_BDFE = np.mean(BDFE) if len(BDFE) > 0 else np.nan
             average_BDFE_list.append(average_BDFE)
             fitness_list.append(compute_fit_slow(saved_alpha, h, J))

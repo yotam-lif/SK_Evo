@@ -32,7 +32,7 @@ def main():
 
     # Define desired ranks using linear spacing
     num_points = 200  # Adjust this number as needed
-    start_rank = Fs.calc_rank(alpha_initial, h, J)
+    start_rank = Fs.compute_rank(alpha_initial, h, J)
     max_rank = start_rank
     min_rank = 200
 
@@ -47,10 +47,10 @@ def main():
     final_alpha, saved_alphas, saved_flips, saved_ranks = Fs.relax_SK(alpha_initial.copy(), h, J, ranks, sswm=True)
 
     # Calculate initial kis values
-    ki_initial = Fs.calc_energies(alpha_initial, h, J)
+    ki_initial = Fs.compute_energies(alpha_initial, h, J)
 
     # Calculate initial basic local fields
-    basic_local_fields_initial = Fs.calc_basic_lfs(alpha_initial, h, J)
+    basic_local_fields_initial = Fs.compute_lfs(alpha_initial, h, J)
 
     # Calculate absolute basic local fields
     abs_basic_local_fields_initial = np.abs(basic_local_fields_initial)
@@ -96,10 +96,10 @@ def main():
             # -------------------------------
 
             # Calculate current kis values
-            ki_current = Fs.calc_energies(alpha, h, J)
+            ki_current = Fs.compute_energies(alpha, h, J)
 
             # Calculate current basic local fields
-            basic_local_fields_current = Fs.calc_basic_lfs(alpha, h, J)
+            basic_local_fields_current = Fs.compute_lfs(alpha, h, J)
 
             # Calculate current absolute basic local fields
             abs_basic_local_fields_current = np.abs(basic_local_fields_current)

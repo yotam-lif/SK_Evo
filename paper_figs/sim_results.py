@@ -39,14 +39,14 @@ def create_fig_ge(ax, num_points, repeat, N):
     rank = []
     fits = []
     for alpha in alphas:
-        dfe = cmn_sk.calc_DFE(alpha, h, J)
-        bdfe = cmn_sk.calc_BDFE(alpha, h, J)[0]
+        dfe = cmn_sk.compute_dfe(alpha, h, J)
+        bdfe = cmn_sk.compute_bdfe(alpha, h, J)[0]
         fits.append(cmn_sk.compute_fit_slow(alpha, h, J, F_off))
         mean_dfe.append(np.mean(dfe))
         var_dfe.append(np.var(dfe))
         mean_bdfe.append(np.mean(bdfe))
         var_bdfe.append(np.var(bdfe))
-        rank.append(cmn_sk.calc_rank(alpha, h, J))
+        rank.append(cmn_sk.compute_rank(alpha, h, J))
 
     rank = [r / N for r in rank]
     max_fit = fits[-1]
@@ -99,7 +99,7 @@ def create_fig_bdfe_hists(ax, points_lst, num_bins, num_flips):
         h = repeat['h']
         J = repeat['J']
         for j in range(num):
-            bdfe = cmn_sk.calc_BDFE(alphas[j], h, J)[0]
+            bdfe = cmn_sk.compute_bdfe(alphas[j], h, J)[0]
             bdfes[j].extend(bdfe[bdfe < del_max])
 
     flip_percent = (points_lst / num_flips) * 100

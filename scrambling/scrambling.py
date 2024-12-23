@@ -73,7 +73,7 @@ def main():
     print("--------------------------\n")
 
     # Collect DFEs and times
-    dfes = [Fs.calc_DFE(alpha, h, J) if alpha is not None else None for alpha in saved_alphas]
+    dfes = [Fs.compute_dfe(alpha, h, J) if alpha is not None else None for alpha in saved_alphas]
     times = flips  # Number of mutations up to each saved rank
 
     # Identify dfe at max_rank (assuming it's the first one)

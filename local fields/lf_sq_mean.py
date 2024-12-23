@@ -57,7 +57,7 @@ def main():
             fitness_list = np.zeros(n_times)
             for n_time in range(n_times):
                 alpha_i = saved_alphas[n_time]
-                lfs = Funcs.calc_basic_lfs(alpha_i, h, J)
+                lfs = Funcs.compute_lfs(alpha_i, h, J)
                 mean_lf_sq[n_time] = np.mean(lfs ** 2)
                 fitness_list[n_time] = compute_fit_slow(alpha_i, h, J, F_off)
 

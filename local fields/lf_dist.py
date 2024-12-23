@@ -7,8 +7,8 @@ from misc.cmn_sk import (
     init_J,
     relax_sk_ranks,
     compute_fit_slow,
-    calc_rank,
-    calc_basic_lfs, calc_energies
+    compute_rank,
+    compute_lfs, compute_energies
 )
 
 def main():
@@ -30,7 +30,7 @@ def main():
     print(f'Initial fitness = {initial_fitness:.4f}')
 
     # Define ranks at which to save the configurations
-    initial_rank = calc_rank(alpha, h, J)
+    initial_rank = compute_rank(alpha, h, J)
     ranks_to_save = np.linspace(0, initial_rank, num_saves, dtype=int)
     # Reverse the order of the ranks to save
     ranks_to_save = ranks_to_save[::-1]
@@ -55,8 +55,8 @@ def main():
 
     # Plot histograms for all local fields and non-aligned local fields
     for rank, alpha_i in zip(ranks_to_plot, saved_alphas[-n:]):
-        lfs = calc_basic_lfs(alpha_i, h, J)
-        eis = calc_energies(alpha_i, h, J)
+        lfs = compute_lfs(alpha_i, h, J)
+        eis = compute_energies(alpha_i, h, J)
         # Now take only the lfs of index i where eis[i] < 0
         aa_lfs = [lfs[i] for i in range(len(eis)) if eis[i] < 0]
 

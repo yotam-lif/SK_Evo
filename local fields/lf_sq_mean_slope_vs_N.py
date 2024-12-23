@@ -10,7 +10,7 @@ from misc.cmn_sk import (
     compute_fit_slow,
     calc_F_off,
     compute_alpha_from_hist,
-    calc_basic_lfs
+    compute_lfs
 )
 
 def main():
@@ -53,7 +53,7 @@ def main():
             flips = np.linspace(int(num_flips/2), num_flips, n_times, dtype=int)
             saved_alphas = [compute_alpha_from_hist(alpha, flip_seq, flip) for flip in flips]
             fitness_list = [compute_fit_slow(alpha_i, h, J, F_off) for alpha_i in saved_alphas]
-            lf_sq_mean = [np.mean(calc_basic_lfs(alpha_i, h, J) ** 2) for alpha_i in saved_alphas]
+            lf_sq_mean = [np.mean(compute_lfs(alpha_i, h, J) ** 2) for alpha_i in saved_alphas]
             lf_sq_mean = np.log(np.array(lf_sq_mean))
             slope, _ = np.polyfit(fitness_list, lf_sq_mean, 1)
             slopes[i, n_ind] = slope

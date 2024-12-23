@@ -28,7 +28,7 @@ def gen_final_dfe(N, beta, rho, num_repeats):
         J = cmn_sk.init_J(N, beta=beta, rho=rho)
         flip_seq = cmn_sk.relax_sk(alpha_initial.copy(), h, J, sswm=True)
         final_alpha = cmn.compute_sigma_from_hist(alpha_initial, flip_seq)
-        dfe = cmn_sk.calc_DFE(final_alpha, h, J)
+        dfe = cmn_sk.compute_dfe(final_alpha, h, J)
         final_dfe = np.concatenate((final_dfe, dfe))
     return final_dfe.flatten()
 
@@ -65,7 +65,7 @@ def gen_bdfes(N, beta, rho, flip_list, num_repeats):
         alphas, _ = cmn.curate_sigma_list(alpha_initial, flip_seq, flip_list)
         for i, alpha in enumerate(alphas):
             # Calculate the BDFE for the current rank
-            BDFE, _ = cmn_sk.calc_BDFE(alpha, h, J)
+            BDFE, _ = cmn_sk.compute_bdfe(alpha, h, J)
             bdfes[i].extend(BDFE)
 
     return bdfes

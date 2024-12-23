@@ -24,8 +24,8 @@ def propagate_forward(alpha_init, h, J, flip_seq, anc_flip, evo_flip):
     alpha_evo = cmn.compute_sigma_from_hist(alpha_init, flip_seq, evo_flip)
 
     # Compute DFEs and BDFEs at the ancestor and evolved flips
-    bdfe_anc, bdfe_anc_ind = cmn_sk.calc_BDFE(alpha_anc, h, J)
-    dfe_evo = cmn_sk.calc_DFE(alpha_evo, h, J)
+    bdfe_anc, bdfe_anc_ind = cmn_sk.compute_bdfe(alpha_anc, h, J)
+    dfe_evo = cmn_sk.compute_dfe(alpha_evo, h, J)
     prop_bdfe = dfe_evo[bdfe_anc_ind]
 
     return bdfe_anc, prop_bdfe, dfe_evo
@@ -51,8 +51,8 @@ def propagate_backward(alpha_init, h, J, flip_seq, anc_flip, evo_flip):
     alpha_evo = cmn.compute_sigma_from_hist(alpha_init, flip_seq, evo_flip)
 
     # Compute DFEs and BDFEs at the ancestor and evolved flips
-    bdfe_evo, bdfe_evo_ind = cmn_sk.calc_BDFE(alpha_evo, h, J)
-    dfe_anc = cmn_sk.calc_DFE(alpha_anc, h, J)
+    bdfe_evo, bdfe_evo_ind = cmn_sk.compute_bdfe(alpha_evo, h, J)
+    dfe_anc = cmn_sk.compute_dfe(alpha_anc, h, J)
     prop_bdfe = dfe_anc[bdfe_evo_ind]
 
     return bdfe_evo, prop_bdfe, dfe_anc

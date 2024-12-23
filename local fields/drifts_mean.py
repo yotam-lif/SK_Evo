@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from misc.cmn_sk import init_alpha, init_h, init_J, relax_sk_ranks, calc_BDFE
+from misc.cmn_sk import init_alpha, init_h, init_J, relax_sk_ranks, compute_bdfe
 import scienceplots
 
 def main():
@@ -58,7 +58,7 @@ def main():
             if alpha_i is not None:
                 Delta_ij = np.outer(alpha_i, alpha_i)
                 Delta_ij = -2 * np.multiply(Delta_ij, J)
-                bdfe, bdfe_ind = calc_BDFE(alpha_i, h, J)
+                bdfe, bdfe_ind = compute_bdfe(alpha_i, h, J)
                 # Get Delta_ij with rows only corresponding to indexes in bdfe_ind
                 Delta_ij = Delta_ij[bdfe_ind]
                 # Get the mean of all terms

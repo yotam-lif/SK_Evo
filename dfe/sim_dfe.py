@@ -65,7 +65,7 @@ def main():
     for rank, alpha in zip(ranks, saved_alphas):
         if alpha is not None:
             # Calculate dfe
-            DFE = Fs.calc_DFE(alpha, h, J)
+            DFE = Fs.compute_dfe(alpha, h, J)
 
             # Set up the plot
             plt.figure(figsize=(8, 6))

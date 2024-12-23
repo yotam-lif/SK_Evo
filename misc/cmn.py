@@ -17,35 +17,35 @@ def init_sigma(N):
     return np.random.choice([-1, 1], N)
 
 
-def compute_sigma_from_hist(sigma_0, hist, num_muts=None):
+def compute_sigma_from_hist(sigma_0, hist, t=None):
     """
-    Compute sigma from the initial sigma and the flip history up to num_muts mutations.
+    Compute sigma from the initial sigma and the flip history up to flip number 't'.
 
     Parameters
     ----------
     sigma_0 : numpy.ndarray
         The initial spin configuration.
     hist : list of int
-        The flip history.
-    num_muts : int
-        The number of mutations to consider.
+        The flip history - the indices of spins flipped, in order.
+    t : int
+        The flip number up to which to compute the spin configuration. The default is None.
 
     Returns
     -------
     numpy.ndarray
-        The spin configuration after num_muts mutations.
+        The spin configuration after t mutations.
     """
     sigma = sigma_0.copy()
-    if num_muts is None:
+    if t is None:
         rel_hist = hist
     else:
-        rel_hist = hist[:num_muts]
+        rel_hist = hist[:t]
     for flip in rel_hist:
         sigma[flip] *= -1
     return sigma
 
 
-def curate_sigma_list(sigma_0, hist, flips):
+def curate_sigma_list(sigma_0, hist, ts):
     """
     Curate the sigma list to have num_points elements.
 
@@ -54,9 +54,9 @@ def curate_sigma_list(sigma_0, hist, flips):
     sigma_0 : numpy.ndarray
         The initial spin configuration.
     hist : list of int
-        The flip history.
-    flips : list of int
-        The points to curate.
+        The flip history - the indices of spins flipped, in order.
+    ts : list of int
+        The indices of flips in 'hist' to recreate sigma at.
 
     Returns
     -------
@@ -64,8 +64,8 @@ def curate_sigma_list(sigma_0, hist, flips):
         The curated list of spin configurations.
     """
     sigma_list = []
-    for flip in flips:
-        sigma_t = compute_sigma_from_hist(sigma_0, hist, flip)
+    for t in ts:
+        sigma_t = compute_sigma_from_hist(sigma_0, hist, t)
         sigma_list.append(sigma_t)
     return sigma_list
 

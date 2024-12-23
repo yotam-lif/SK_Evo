@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from misc.cmn_sk import init_alpha, init_h, init_J, relax_sk, calc_DFE, curate_alpha_list, calc_rank, compute_fit_slow, calc_F_off
+from misc.cmn_sk import init_alpha, init_h, init_J, relax_sk, compute_dfe, curate_alpha_list, compute_rank, compute_fit_slow, calc_F_off
 import scienceplots
 
 # Parameters
@@ -37,7 +37,7 @@ bin_sizes = []
 for alpha_i in alpha_list:
     if alpha_i is not None:
         # Calculate BDFE
-        DFE = calc_DFE(alpha_i, h, J)
+        DFE = compute_dfe(alpha_i, h, J)
         # Create histogram
         hist, bin_edges = np.histogram(DFE, bins=75, density=True)
         bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
