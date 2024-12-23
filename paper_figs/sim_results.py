@@ -28,7 +28,7 @@ def create_fig_ge(ax, num_points, repeat, N):
     alpha_initial = data_entry['init_alpha']
     h = data_entry['h']
     J = data_entry['J']
-    F_off = cmn_sk.calc_F_off(alpha_initial, h, J)
+    F_off = cmn_sk.compute_fit_off(alpha_initial, h, J)
     flip_seq = data_entry['flip_seq']
     flip_numbs = np.linspace(0, len(flip_seq)-1, num_points, dtype=int)
     alphas = cmn.curate_sigma_list(alpha_initial, flip_seq, flip_numbs)

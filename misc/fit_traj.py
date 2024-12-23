@@ -6,7 +6,7 @@ from cmn_sk import (
     init_J,
     relax_sk,
     compute_fit_slow,
-    calc_F_off
+    compute_fit_off
 )
 from cmn import (init_sigma, curate_sigma_list)
 
@@ -34,7 +34,7 @@ def main():
         sigma = init_sigma(N)
         h = init_h(N, random_state=random_state, beta=beta)
         J = init_J(N, random_state=random_state, beta=beta, rho=rho)
-        F_off = calc_F_off(sigma, h, J)  # Compute the offset
+        F_off = compute_fit_off(sigma, h, J)  # Compute the offset
 
         # Perform relaxation
         flip_seq = relax_sk(sigma, h, J)

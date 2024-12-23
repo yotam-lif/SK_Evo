@@ -35,7 +35,7 @@ def compute_sigma_from_hist(sigma_0, hist, t=None):
     numpy.ndarray
         The spin configuration after t mutations.
     """
-    sigma = sigma_0.copy()
+    sigma = np.copy(sigma_0)
     if t is None:
         rel_hist = hist
     else:

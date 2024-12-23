@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from misc.cmn_sk import init_alpha, init_h, init_J, relax_sk, compute_dfe, curate_alpha_list, compute_rank, compute_fit_slow, calc_F_off
+from misc.cmn_sk import init_alpha, init_h, init_J, relax_sk, compute_dfe, curate_alpha_list, compute_rank, compute_fit_slow, compute_fit_off
 import scienceplots
 
 # Parameters
@@ -19,7 +19,7 @@ plt.gca().invert_xaxis()
 alpha = init_alpha(N)
 h = init_h(N, random_state=random_state, beta=beta)
 J = init_J(N, random_state=random_state, beta=beta, rho=rho)
-F_off = calc_F_off(alpha, h, J)
+F_off = compute_fit_off(alpha, h, J)
 
 # Perform relaxation and save alphas at different time points
 flip_seq = relax_sk(alpha.copy(), h, J, sswm=True)

@@ -9,7 +9,7 @@ from misc.cmn_sk import (
     init_J,
     relax_sk,
     compute_fit_slow,
-    calc_F_off,
+    compute_fit_off,
     compute_alpha_from_hist
 )
 
@@ -40,7 +40,7 @@ def main():
             alpha = init_alpha(N)
             h = init_h(N, random_state=random_state, beta=beta)
             J = init_J(N, random_state=random_state, beta=beta, rho=rho)
-            F_off = calc_F_off(alpha, h, J)
+            F_off = compute_fit_off(alpha, h, J)
 
             flip_seq = relax_sk(
                 alpha=alpha.copy(),

@@ -68,6 +68,26 @@ def init_J(N, random_state=None, beta=1.0, rho=1.0):
 
     return Jij
 
+def compute_fis(sigma, h, J):
+    """
+    Calculate the fis for the Sherrington-Kirkpatrick model.
+
+    Parameters
+    ----------
+    sigma : numpy.ndarray
+        The spin configuration.
+    h : numpy.ndarray
+        The external fields.
+    J : numpy.ndarray
+        The coupling matrix.
+
+    Returns
+    -------
+    numpy.ndarray
+        The fis.
+    """
+    return h + 0.5 * np.matmul(J, sigma)
+
 
 def compute_lfs(sigma, h, J):
     """
@@ -87,7 +107,7 @@ def compute_lfs(sigma, h, J):
     numpy.ndarray
         The local fields.
     """
-    return h + 0.5 * J @ sigma
+    return h + np.matmul(J, sigma)
 
 
 def compute_energies(sigma, h, J):
@@ -150,11 +170,35 @@ def compute_bdfe(sigma, h, J):
     (numpy.ndarray, numpy.ndarray)
         The beneficial fitness effects and the indices of the beneficial mutations.
     """
-    DFE = compute_dfe(sigma, h, J)
-    BDFE, b_ind = DFE[DFE >= 0], np.where(DFE > 0)[0]
-    # Normalize the beneficial effects
-    # BDFE /= np.sum(BDFE)
-    return BDFE, b_ind
+    dfe = compute_dfe(sigma, h, J)
+    bdfe, b_ind = dfe[dfe >= 0], np.where(dfe > 0)[0]
+    return bdfe, b_ind
+
+def compute_normalized_bdfe(sigma, h, J):
+    """
+    Calculate the normalized beneficial distribution of fitness effects.
+
+    Parameters
+    ----------
+    sigma : numpy.ndarray
+        The spin configuration.
+    h : numpy.ndarray
+        The external fields.
+    J : numpy.ndarray
+        The coupling matrix.
+
+    Returns
+    -------
+    (numpy.ndarray, numpy.ndarray)
+        The normalized beneficial fitness effects and the indices of the beneficial mutations.
+    """
+    dfe = compute_dfe(sigma, h, J)
+    bdfe = dfe[dfe >= 0]
+    norm = np.sum(bdfe)
+    if norm > 0:
+        bdfe = bdfe / norm
+    b_ind = np.where(dfe > 0)[0]
+    return bdfe, b_ind
 
 
 def compute_rank(sigma, h, J):
@@ -175,8 +219,8 @@ def compute_rank(sigma, h, J):
     int
         The rank of the spin configuration.
     """
-    DFE = compute_dfe(sigma, h, J)
-    return np.sum(DFE > 0)
+    dfe = compute_dfe(sigma, h, J)
+    return np.sum(dfe > 0)
 
 
 def sswm_flip(sigma, his, Jijs):
@@ -227,7 +271,7 @@ def glauber_flip(sigma, hi, Jij, beta=10):
     return np.random.choice(indices, p=ps)
 
 
-def calc_F_off(sigma_init, his, Jijs):
+def compute_fit_off(sigma_init, his, Jijs):
     """
     Calculate the fitness offset for the given configuration.
 
@@ -248,7 +292,7 @@ def calc_F_off(sigma_init, his, Jijs):
     return compute_fit_slow(sigma_init, his, Jijs) - 1
 
 
-def compute_fit_slow(sigma, his, Jijs, F_off=0.0):
+def compute_fit_slow(sigma, his, Jijs, f_off=0.0):
     """
     Compute the fitness of the genome configuration sigma using full slow computation.
 
@@ -256,13 +300,13 @@ def compute_fit_slow(sigma, his, Jijs, F_off=0.0):
     sigma (np.ndarray): The genome configuration (vector of -1 or 1).
     his (np.ndarray): The vector of site-specific contributions to fitness.
     Jijs (np.ndarray): The interaction matrix between genome sites.
-    F_off (float): The fitness offset, defaults to 0.
+    f_off (float): The fitness offset, defaults to 0.
 
     Returns:
     float: The fitness value for the configuration sigma.
     Divide by 2 because every term appears twice in symmetric case.
     """
-    return sigma @ (his + 0.5 * Jijs @ sigma) - F_off
+    return np.dot(sigma, his + 0.5 * Jijs @ sigma) - f_off
 
 
 def compute_fitness_delta_mutant(sigma, his, Jijs, k):
@@ -306,7 +350,7 @@ def relax_sk_flips(sigma, his, Jijs, flips, sswm=True):
     while total_flips < flips[-1] and rank > 0:
 
         if total_flips in flips:
-            saved_sigmas.append(sigma.copy())
+            saved_sigmas.append(np.copy(sigma))
 
         flip_idx = sswm_flip(sigma, his, Jijs) if sswm else glauber_flip(sigma, his, Jijs, beta=10)
         sigma[flip_idx] *= -1
@@ -314,7 +358,7 @@ def relax_sk_flips(sigma, his, Jijs, flips, sswm=True):
         rank = compute_rank(sigma, his, Jijs)
 
     if rank == 0:
-        saved_sigmas.append(sigma.copy())
+        saved_sigmas.append(np.copy(sigma))
         print("Not all flips reached, rank is 0")
 
     return sigma, saved_sigmas
@@ -344,23 +388,23 @@ def relax_sk_ranks(sigma, his, Jijs, num_ranks, fin_rank=0, sswm=True):
     while rank > fin_rank:
 
         if rank in ranks:
-            saved_sigmas.append(sigma.copy())
+            saved_sigmas.append(np.copy(sigma))
 
         flip_idx = sswm_flip(sigma, his, Jijs) if sswm else glauber_flip(sigma, his, Jijs, beta=10)
         sigma[flip_idx] *= -1
         rank = compute_rank(sigma, his, Jijs)
 
     # Save the final sigma
-    saved_sigmas.append(sigma.copy())
+    saved_sigmas.append(np.copy(sigma))
     return sigma, saved_sigmas, ranks
 
 
-def relax_sk(sigma, his, Jijs, sswm=True):
+def relax_sk(sigma0, his, Jijs, sswm=True):
     """
     Relax the Sherrington-Kirkpatrick model with given parameters.
     Parameters
     ----------
-    sigma: numpy.ndarray
+    sigma0: numpy.ndarray
     his: numpy.ndarray
     Jijs: numpy.ndarray
     sswm: bool, optional
@@ -371,7 +415,8 @@ def relax_sk(sigma, his, Jijs, sswm=True):
         The mutation sequence.
     """
     flip_sequence = []
-    rank = compute_rank(sigma, his, Jijs)
+    rank = compute_rank(sigma0, his, Jijs)
+    sigma = np.copy(sigma0)
 
     while rank > 0:
         flip_idx = sswm_flip(sigma, his, Jijs) if sswm else glauber_flip(sigma, his, Jijs, beta=10)
