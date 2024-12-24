@@ -19,22 +19,23 @@ import scienceplots
 plt.style.use('science')
 betas = np.array([0.25, 0.5, 1.0], dtype=float)
 num_betas = len(betas)
-colors = sns.color_palette('CMRmap', num_betas+2)
+colors = sns.color_palette('CMRmap', num_betas+3)
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = ['Helvetica Neue']
 
 # Create a larger figure
 plt.figure(figsize=(6, 4))
 
-def approx_r_over_N(fit, N, beta):
-    return 0.5 - fit * np.sqrt(2 * np.pi) / (4 - 3 * beta) / N
+def approx_r_over_N(fit, N, beta, delta):
+    return 0.5 * (1 - (fit * np.sqrt(np.pi / 2) / (N * delta * np.sqrt(1 - 1 * beta / 4))))
 
 def main():
     # Parameters
-    N = 3000
+    N = 2000
     random_state = 42
     rho = 1.0
     num_points = 50
+    delta = 0.05
 
     # Create directory for saving plots
     output_dir = '../Plots/global_epi'
@@ -45,8 +46,8 @@ def main():
         beta = betas[i]
         color = colors[i]
         sigma_0 = init_sigma(N)
-        h = init_h(N, random_state=random_state, beta=beta)
-        J = init_J(N, random_state=random_state, beta=beta, rho=rho)
+        h = init_h(N, random_state=random_state, beta=beta, delta=delta)
+        J = init_J(N, random_state=random_state, beta=beta, rho=rho, delta=delta)
         F_off = compute_fit_off(sigma_0, h, J)
         flip_seq = relax_sk(sigma_0, h, J)
         num_flips = len(flip_seq)
@@ -64,9 +65,12 @@ def main():
         # slope, intercept, r_value, p_value, std_err = linregress(fits, mean_bdfes)
         # plt.text(x, y - delta - 0.07*i , f'$m \\times N = {N*slope:.2f}$', fontsize=14, color=color, ha='center', rotation=-17-8*i)
 
-    ys_beta0 = [approx_r_over_N(x, N, 0) for x in fits]
-    ys_beta1 = [approx_r_over_N(x, N, 1) for x in fits]
-    sns.regplot(x=fits, y=ys_beta0, marker='o', color=colors[-2], label=f'approx; $\\beta={0}$', scatter_kws={'s': 50})
+    ys_beta0 = [approx_r_over_N(x, N, 0, delta) for x in fits]
+    ys_beta_half = [approx_r_over_N(x, N, 0.5, delta) for x in fits]
+    ys_beta1 = [approx_r_over_N(x, N, 1, delta) for x in fits]
+    sns.regplot(x=fits, y=ys_beta0, marker='o', color=colors[-3], label=f'approx; $\\beta={0}$', scatter_kws={'s': 50})
+    sns.regplot(x=fits, y=ys_beta_half, marker='o', color=colors[-2], label=f'approx; $\\beta={0.5}$',
+                scatter_kws={'s': 50})
     # sns.regplot(x=fits, y=ys_beta1, marker='o', color=colors[-1], label=f'approx; $\\beta={1}$', scatter_kws={'s': 50})
     plt.xlabel('Fitness', fontsize=16)
     plt.ylabel(r'$r(t)/N$', fontsize=16)

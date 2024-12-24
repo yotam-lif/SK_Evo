@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def init_h(N, random_state=None, beta=1.0):
+def init_h(N, random_state=None, beta=1.0, delta=1.0):
     """
     Initialize the external fields for the Sherrington-Kirkpatrick model.
 
@@ -11,6 +11,11 @@ def init_h(N, random_state=None, beta=1.0):
         The number of spins.
     random_state : int or numpy.random.Generator, optional
         Seed or generator for reproducibility.
+    beta : float, optional
+        Relative epistatic strength.
+    delta : float, optional
+        Magnitude.
+
 
     Returns
     -------
@@ -18,11 +23,11 @@ def init_h(N, random_state=None, beta=1.0):
         The external fields.
     """
     rng = np.random.default_rng(random_state)
-    sig_h = np.sqrt(1 - beta)
+    sig_h = np.sqrt(1 - beta) * delta
     return rng.normal(0.0, sig_h, N)
 
 
-def init_J(N, random_state=None, beta=1.0, rho=1.0):
+def init_J(N, random_state=None, beta=1.0, rho=1.0, delta=1.0):
     """
     Initialize the coupling matrix for the Sherrington-Kirkpatrick model with sparsity.
 
@@ -36,6 +41,8 @@ def init_J(N, random_state=None, beta=1.0, rho=1.0):
         Inverse temperature parameter.
     rho : float
         Fraction of non-zero elements in the coupling matrix (0 < rho ≤ 1).
+    delta : float, optional
+        Magnitude.
 
     Returns
     -------
@@ -45,7 +52,7 @@ def init_J(N, random_state=None, beta=1.0, rho=1.0):
     if not (0 < rho <= 1):
         raise ValueError("rho must be between 0 (exclusive) and 1 (inclusive).")
     rng = np.random.default_rng(random_state)
-    sig_J = np.sqrt(beta / (N * rho))  # Adjusted standard deviation for sparsity
+    sig_J = np.sqrt(beta / (N * rho)) * delta # Adjusted standard deviation for sparsity
     # Initialize an empty upper triangular matrix (excluding diagonal)
     J_upper = np.zeros((N, N))
     # Total number of upper triangular elements excluding diagonal
