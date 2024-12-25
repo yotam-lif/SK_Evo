@@ -13,7 +13,7 @@ from matplotlib.gridspec import GridSpec
 # Define a consistent style
 plt.style.use('science')
 plt.rcParams['font.family'] = 'Helvetica Neue'
-file_path = '../misc/run_data/N4000_rho100_beta100_repeats50.pkl'
+file_path = '../misc/run_data/N2000_rho100_beta100_repeats200.pkl'
 color = sns.color_palette('CMRmap', 5)
 
 with open(file_path, 'rb') as f:
