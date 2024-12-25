@@ -1,8 +1,20 @@
 import argparse
-import cmn_sk
+import cmn, cmn_sk
 import os
 import pickle
-import numpy as np
+from concurrent.futures import ProcessPoolExecutor
+
+def generate_single_data(N, beta, rho):
+    init_sigma = cmn.init_sigma(N)
+    h = cmn_sk.init_h(N, beta=beta)
+    J = cmn_sk.init_J(N, beta=beta, rho=rho)
+    flip_seq = cmn_sk.relax_sk(init_sigma, h, J, sswm=True)
+    return {
+        'init_alpha': init_sigma,
+        'h': h,
+        'J': J,
+        'flip_seq': flip_seq
+    }
 
 def generate_data(N, beta, rho, n_repeats, output_dir):
     """
@@ -17,18 +29,10 @@ def generate_data(N, beta, rho, n_repeats, output_dir):
     """
     data = []
 
-    for i in range(n_repeats):
-        init_alpha = cmn.init_alpha(N)
-        h = cmn.init_h(N, beta=beta)
-        J = cmn.init_J(N, beta=beta, rho=rho)
-        flip_seq = cmn.relax_sk(init_alpha.copy(), h, J, sswm=True)
-
-        data.append({
-            'init_alpha': init_alpha,
-            'h': h,
-            'J': J,
-            'flip_seq': flip_seq
-        })
+    with ProcessPoolExecutor() as executor:
+        futures = [executor.submit(generate_single_data, N, beta, rho) for _ in range(n_repeats)]
+        for future in futures:
+            data.append(future.result())
 
     # Create the directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
@@ -39,7 +43,6 @@ def generate_data(N, beta, rho, n_repeats, output_dir):
         pickle.dump(data, f)
 
     print(f"Data saved to {output_file}")
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Generate data for spins, epistasis strength, and coupling elements.')
