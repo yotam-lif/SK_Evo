@@ -10,7 +10,7 @@ def generate_single_data(N, beta, rho):
     J = cmn_sk.init_J(N, beta=beta, rho=rho)
     flip_seq = cmn_sk.relax_sk(init_sigma, h, J, sswm=True)
     return {
-        'init_alpha': init_sigma,
+        'init_sigma': init_sigma,
         'h': h,
         'J': J,
         'flip_seq': flip_seq

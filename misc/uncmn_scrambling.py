@@ -100,6 +100,9 @@ def gen_crossings(ax, alpha_init, h, J, flip_seq, anc_flip, evo_flip, color1, co
     ax.scatter([flips_labels[0]] * len(prop_bdfe2), prop_bdfe2, color=color_evo, edgecolor=color_evo, s=20, facecolors='none', label='Backwards')
     ax.scatter([flips_labels[1]] * len(bdfe2), bdfe2, color=color_evo, edgecolor=color_evo, s=20, facecolors='none')
 
+    ax.annotate(f"{flip_anc_percent} \\%", xy=(0.0 + 0.05, -0.025), xycoords='axes fraction', ha='center', va='top', fontsize=14)
+    ax.annotate(f"{flip_evo_percent} \\%", xy=(1.0 - 0.035, -0.025), xycoords='axes fraction', ha='center', va='top', fontsize=14)
+
     # Customize plot
     ax.axhline(0, color="black", linestyle="--", linewidth=1)
     ax.set_xlabel("\\% of walk completed", fontsize=14)
