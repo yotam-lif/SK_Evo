@@ -9,16 +9,26 @@ import misc.uncmn_scrambling as scr
 from misc import cmn, cmn_sk
 import scienceplots
 from matplotlib.gridspec import GridSpec
+from scipy.special import airy
+from scipy.optimize import curve_fit
 
 # Define a consistent style
 plt.style.use('science')
 plt.rcParams['font.family'] = 'Helvetica Neue'
-file_path = '../misc/run_data/N2000_rho100_beta100_repeats200.pkl'
+file_path = '../misc/run_data/N4000_rho100_beta100_repeats50.pkl'
 color = sns.color_palette('CMRmap', 5)
 
 with open(file_path, 'rb') as f:
     data = pickle.load(f)
 
+def sol_airy(x, D, P_0):
+    ai_0 = airy(0)[0]
+    c = P_0 / ai_0
+    Ai = airy(x / np.sqrt(c * D))[0]
+    return (P_0 / ai_0) * Ai
+
+def sol_exp(x, D, P_0):
+    return P_0 * np.exp(-x / (P_0 * D))
 
 def create_fig_ge(ax, num_points, repeat, N):
     # same as before
@@ -74,9 +84,9 @@ def create_fig_dfe_fin(ax, N, beta_arr, rho, num_repeats, num_bins):
         # ax.plot(bin_centers, hist, color=color[i % len(color)], lw=2, alpha=0.6)
         sns.histplot(dfe, ax=ax, kde=False, bins=num_bins, label=f'$\\beta={beta_arr[i]:.1f}$', stat='density', element="step", edgecolor=color[i % len(color)], alpha=0.0)
     ax.set_xlabel('$\\Delta$', fontsize=14)
-    ax.set_ylabel('$P(\\Delta)$', fontsize=14)
+    ax.set_ylabel('$P(\\Delta, \\infty)$', fontsize=14)
     ax.set_xlim(None, 0)
-    ax.legend(fontsize=12, title_fontsize=12, loc='upper left', bbox_to_anchor=(0.075, 0.925), frameon=True, markerscale=3)
+    ax.legend(fontsize=12, title_fontsize=12, loc='upper left', frameon=True, markerscale=3)
 
     # Make tick lines
     ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True, prune='both', nbins=5))
@@ -93,7 +103,7 @@ def create_fig_bdfe_hists(ax, points_lst, num_bins, num_flips):
     # same as before
     num = len(points_lst)
     bdfes = [[] for _ in range(num)]
-    del_max = 0.3
+    del_max = 0.6
     for repeat in data:
         alphas = cmn.curate_sigma_list(repeat['init_alpha'], repeat['flip_seq'], points_lst)
         h = repeat['h']
@@ -104,18 +114,39 @@ def create_fig_bdfe_hists(ax, points_lst, num_bins, num_flips):
 
     flip_percent = (points_lst / num_flips) * 100
     for i, bdfe in enumerate(bdfes):
-        hist, bin_edges = np.histogram(bdfe, bins=num_bins, density=True)
-        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+        # hist, bin_edges = np.histogram(bdfe, bins=num_bins, density=True)
+        # hist = np.log(hist + 1e-10)
+        # bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
         label = f'{flip_percent[i]:.0f}$\\%$'
-        sns.regplot(x=bin_centers, y=hist, ax=ax, label=label, color=color[i % len(color)], scatter=True, line_kws={"lw": 2, "alpha": 0.6}, order=1)
+        # sns.regplot(x=bin_centers, y=hist, ax=ax, label=label, color=color[i % len(color)], scatter=True, line_kws={"lw": 2, "alpha": 0.6}, order=1)
+        # ax.plot(bin_centers, hist, label=label, color=color[i % len(color)], lw=2, alpha=0.6)
+        sns.histplot(bdfe, ax=ax, kde=False, bins=num_bins, label=label, stat='density', color=color[i % len(color)],
+                     element="step", edgecolor=color[i % len(color)], alpha=0.0)
+
+    # Fit sol_exp and sol_airy to the last bdfe
+    # last_bdfe = bdfes[-1]
+    # hist, bin_edges = np.histogram(last_bdfe, bins=num_bins, density=True)
+    # bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+    # P_0 = hist[0]
+    #
+    # # Fit sol_exp
+    # popt_exp, _ = curve_fit(lambda x, D: sol_exp(x, D, P_0), bin_centers, hist, bounds=(0, np.inf))
+    # D_exp = popt_exp[0]
+    # ax.plot(bin_centers, sol_exp(bin_centers, D_exp, P_0), 'r--', label=f'sol_exp fit: D={D_exp:.4f}')
+    #
+    # # Fit sol_airy
+    # popt_airy, _ = curve_fit(lambda x, D: sol_airy(x, D, P_0), bin_centers, hist, bounds=(0, np.inf))
+    # D_airy = popt_airy[0]
+    # ax.plot(bin_centers, sol_airy(bin_centers, D_airy, P_0), 'b--', label=f'sol_airy fit: D={D_airy:.4f}')
 
     ax.set_xlabel('$\\Delta$', fontsize=14)
-    ax.set_ylabel('$log \\left( P_+ (\\Delta) \\right)$', fontsize=14)
+    # ax.set_ylabel('$log \\left( P_+ (\\Delta) \\right)$', fontsize=14)
+    ax.set_ylabel('$P_+ (\\Delta, t)$', fontsize=14)
     ax.set_xlim(0, None)
-    ax.set_yscale('log')
+    # ax.set_yscale('log')
 
     # Adjust legend
-    ax.legend(title='$\\%$ of walk \ncompleted', fontsize=12, title_fontsize=12, loc='lower left',
+    ax.legend(title='$\\%$ of walk \ncompleted', fontsize=12, title_fontsize=12, loc='upper right',
               frameon=True)
 
     # Set major and minor x-ticks automatically
@@ -123,8 +154,10 @@ def create_fig_bdfe_hists(ax, points_lst, num_bins, num_flips):
     ax.xaxis.set_minor_locator(ticker.AutoMinorLocator())
 
     # Set major and minor y-ticks automatically with pruning
-    ax.yaxis.set_major_locator(plt.LogLocator(base=10.0, numticks=2))
-    ax.yaxis.set_minor_locator(ticker.NullLocator())
+    # ax.yaxis.set_major_locator(plt.LogLocator(base=10.0, numticks=2))
+    # ax.yaxis.set_minor_locator(ticker.NullLocator())
+    ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=False, prune='both', nbins=4))
+    ax.yaxis.set_minor_locator(ticker.AutoMinorLocator())
 
     current_ticks = ax.get_xticks()
     xlim = ax.get_xlim()
@@ -221,12 +254,12 @@ def create_fig_e(ax_left, ax_right, flip1, flip2, repeat, color):
 if __name__ == "__main__":
     N = 4000
     num_flips = int(N * 0.64)
-    high = int(num_flips * 0.8)
-    low = int(num_flips * 0.6)
-    flip_list = np.linspace(low, high, 4, dtype=int)
+    high = int(num_flips * 0.9)
+    low = int(num_flips * 0.7)
+    flip_list = np.linspace(low, high, 3, dtype=int)
     crossings_repeat = 10
     crossings_flip_anc = 400
-    crossings_flip_evo = 1200
+    crossings_flip_evo = 800
 
     big_fig = plt.figure(figsize=(12, 10))
     gs = GridSpec(2, 3, figure=big_fig)
@@ -250,7 +283,7 @@ if __name__ == "__main__":
             spine.set_linewidth(2)
 
     create_fig_ge(axA, num_points=50, repeat=10, N=N)
-    create_fig_dfe_fin(axB, N=2000, beta_arr=[0.0001, 0.5, 1.0], rho=1.0, num_repeats=3, num_bins=50)
+    create_fig_dfe_fin(axB, N=2000, beta_arr=[0.0, 0.5, 1.0], rho=1.0, num_repeats=3, num_bins=50)
     create_fig_bdfe_hists(axC, points_lst=flip_list, num_bins=40, num_flips=num_flips)
     create_fig_crossings(axD, crossings_flip_anc, crossings_flip_evo, crossings_repeat)
     create_fig_e(axE_left, axE_right, flip1=crossings_flip_anc, flip2=crossings_flip_evo, repeat=crossings_repeat, color=color)
