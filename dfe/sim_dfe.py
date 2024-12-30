@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit  # Import curve_fit
 
 # Import the Funcs module
-from misc import cmn_sk as Fs
+from cmn import cmn_sk as Fs
 
 
 def parameterized_function(x, a):

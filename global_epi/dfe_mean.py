@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.stats import linregress
-from misc.cmn_sk import (
+from cmn.cmn_sk import (
     init_h,
     init_J,
     relax_sk,
@@ -11,9 +11,8 @@ from misc.cmn_sk import (
     compute_dfe,
     compute_fit_off
 )
-from misc.cmn import curate_sigma_list
-from misc.cmn import init_sigma
-import scienceplots
+from cmn.cmn import curate_sigma_list
+from cmn.cmn import init_sigma
 
 # Use science plots for better plot aesthetics
 plt.style.use('science')

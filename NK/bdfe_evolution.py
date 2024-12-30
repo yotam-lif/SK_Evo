@@ -4,11 +4,11 @@ import seaborn as sns
 import os
 from concurrent.futures import ProcessPoolExecutor
 
-N = 700
-K = [1, 2, 4, 8, 16]
-times = [0.2, 0.4, 0.6, 0.8, 1.0]
+N = 1200
+K = [2, 4, 8, 16, 32]
+times = [0.4, 0.6, 0.8, 0.9]
 
-output_dir = '../Plots/NK/dfe_evolution'
+output_dir = '../Plots/NK/bdfe_evolution'
 os.makedirs(output_dir, exist_ok=True)
 
 def process_k(k):
@@ -19,15 +19,16 @@ def process_k(k):
     num_flips = len(flip_seq)
     flip_indices = [int(t * num_flips) for t in times]
     sigmas = cmn.curate_sigma_list(init_sigma, flip_seq, flip_indices)
-    dfes = [cmn_nk.compute_dfe(sigma, NK, f_off) for sigma in sigmas]
+    bdfes = [cmn_nk.compute_bdfe(sigma, NK, f_off)[0] for sigma in sigmas]
     for i in range(len(times)):
         plt.figure()
-        sns.histplot(dfes[i], bins=50, stat='density', color='grey', alpha=0.5, element='step', edgecolor='black')
+        sns.histplot(bdfes[i], bins=50, stat='density', color='grey', alpha=0.5, element='step', edgecolor='black')
         plt.title(f'Sigma at flip {flip_indices[i]}; N = {N}, K = {k}')
         plt.xlabel(r'$\Delta$')
         plt.ylabel(r'$P(\Delta)$')
-        plt.savefig(os.path.join(output_dir, f'N_{N}_K_{k}_flip_{flip_indices[i]}.png'), dpi=300)
+        plt.savefig(os.path.join(output_dir, f'N_{N}_K_{k}_flip_{flip_indices[i]}.png'), dpi=500)
         plt.close()
 
-with ProcessPoolExecutor() as executor:
-    executor.map(process_k, K)
+if __name__ == "__main__":
+    with ProcessPoolExecutor() as executor:
+        executor.map(process_k, K)

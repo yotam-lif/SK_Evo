@@ -1,4 +1,4 @@
-from misc import cmn, cmn_sk
+from cmn import cmn, cmn_sk
 import numpy as np
 
 def gen_final_dfe(N, beta, rho, num_repeats):

@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from misc import cmn, cmn_sk
+from cmn import cmn, cmn_sk
 import numpy as np
 import seaborn as sns
 

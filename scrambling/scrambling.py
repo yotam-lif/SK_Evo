@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
-from misc import cmn_sk as Fs
+from cmn import cmn_sk as Fs
 
 
 def plot_dfe_comparison(ax: plt.Axes, dfe_current, dfe_propagated, bins, title):

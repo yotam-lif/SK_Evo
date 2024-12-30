@@ -1,14 +1,14 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from cmn_sk import (
+from cmn.cmn_sk import (
     init_h,
     init_J,
     relax_sk,
     compute_fit_slow,
     compute_fit_off
 )
-from cmn import (init_sigma, curate_sigma_list)
+from cmn.cmn import (init_sigma, curate_sigma_list)
 
 def main():
     """

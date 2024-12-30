@@ -12,7 +12,7 @@ module load miniconda/24.9.2_environmentally
 conda activate my_env
 
 # Run the Python script
-python misc/generate_data.py --N 2000 --beta 1.0 --rho 0.05 --n_repeats 100 --output_dir './run_data'
+python misc/gen_dat_sk.py --N 2000 --beta 1.0 --rho 0.05 --n_repeats 100 --output_dir './run_data'
 
 # Deactivate the environment after the script finishes
 conda deactivate

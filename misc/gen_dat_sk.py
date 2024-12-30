@@ -1,5 +1,5 @@
 import argparse
-import cmn, cmn_sk
+from cmn import cmn, cmn_sk
 import os
 import pickle
 from concurrent.futures import ProcessPoolExecutor

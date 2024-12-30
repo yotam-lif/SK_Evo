@@ -2,8 +2,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-from misc import cmn_sk
-from misc.cmn_sk import (
+from cmn.cmn_sk import (
     init_alpha,
     init_h,
     init_J,

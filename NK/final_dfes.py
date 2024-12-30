@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
-from misc import cmn, cmn_nk
+from cmn import cmn, cmn_nk
 import seaborn as sns
-import os
 
 N = 500
 K = [2, 4, 6, 8, 10]

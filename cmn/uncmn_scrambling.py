@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from misc import cmn, cmn_sk
+from cmn import cmn, cmn_sk
+
+
 # import os
 
 def propagate_forward(alpha_init, h, J, flip_seq, anc_flip, evo_flip):

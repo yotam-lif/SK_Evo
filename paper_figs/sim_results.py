@@ -3,14 +3,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pickle
-from misc.uncmn_dfe import gen_final_dfe
+from cmn.uncmn_dfe import gen_final_dfe
 import matplotlib.ticker as ticker
-import misc.uncmn_scrambling as scr
-from misc import cmn, cmn_sk
-import scienceplots
+import cmn.uncmn_scrambling as scr
+from cmn import cmn, cmn_sk
 from matplotlib.gridspec import GridSpec
 from scipy.special import airy
-from scipy.optimize import curve_fit
 
 # Define a consistent style
 plt.style.use('science')
