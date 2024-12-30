@@ -21,7 +21,7 @@ axA = fig.add_subplot(gs[0, 0])
 axA.set_title('A', loc='left', fontweight='heavy', fontsize=20)
 
 # Display the formula inside the subplot area
-formula = r'$F(\vec{\sigma}) = \sum\limits_{i=1}^{N} \sigma_i h_i + \frac{1}{2} \sum\limits_{i,j}^{N} \sigma_i J_{ij} \sigma_j$'
+formula = r'\[ F(\vec{\sigma}) = \sum \limits_{i=1}^{N} \sigma_i h_i + \frac{1}{2} \displaystyle\sum \limits_{i,j}^{N} \sigma_i J_{ij} \sigma_j \]'
 axA.text(0.5, 0.95, formula, ha='center', va='top', transform=axA.transAxes, fontsize=24)
 
 # Add the text \alpha_i \in {\pm 1 }
@@ -177,4 +177,4 @@ axC.tick_params(axis='both', which='both', length=0)
 
 output_dir = '../Plots/paper_figs'
 os.makedirs(output_dir, exist_ok=True)
-fig.savefig(os.path.join(output_dir, "model_exp.png"), dpi=800, bbox_inches='tight')
+fig.savefig(os.path.join(output_dir, "model_exp.svg"), format='svg', bbox_inches='tight')
