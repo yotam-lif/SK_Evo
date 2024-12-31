@@ -9,6 +9,7 @@ import cmn.uncmn_scrambling as scr
 from cmn import cmn, cmn_sk
 from matplotlib.gridspec import GridSpec
 from scipy.special import airy
+import scienceplots
 
 # Define a consistent style
 plt.style.use('science')
@@ -184,24 +185,44 @@ def create_fig_e(ax_left, ax_right, flip1, flip2, repeat, color):
     flip_seq = data_entry['flip_seq']
 
     # Forward and backward propagation
-    bdfe1, prop_bdfe1, dfe_evo = scr.propagate_forward(alpha_initial, h, J, flip_seq, flip1, flip2)
-    bdfe2, prop_bdfe2, dfe_anc = scr.propagate_backward(alpha_initial, h, J, flip_seq, flip1, flip2)
+    _, prop_bdfe1, dfe_evo = scr.propagate_forward(alpha_initial, h, J, flip_seq, flip1, flip2)
+    _, prop_bdfe2, dfe_anc = scr.propagate_backward(alpha_initial, h, J, flip_seq, flip1, flip2)
 
     ax_left.clear()
     ax_right.clear()
     stat = 'density'
+    bins = 30
 
-    # Left subplot:
-    sns.histplot(dfe_anc, ax=ax_left, color='grey', kde=False, bins=30, label='DFE', alpha=0.6, stat=stat, element="step", edgecolor="black")
-    sns.histplot(prop_bdfe2, ax=ax_left, color=color[2], kde=False, bins=30, label='Backwards BDFE', alpha=0.5, stat=stat, element="step", edgecolor="black")
+    sns.histplot(prop_bdfe2, ax=ax_left, color=color[2], kde=False, bins=30, label='Backwards BDFE', alpha=0.2, stat=stat, element="step", edgecolor=color[2])
+    sns.histplot(prop_bdfe1, ax=ax_right, color=color[1], kde=False, bins=bins, label='Forwards BDFE', alpha=0.2, stat=stat, element="step", edgecolor=color[1])
+    sns.histplot(dfe_evo, ax=ax_right, color='grey', kde=False, bins=bins, alpha=0.15, stat=stat, element="step",
+                 edgecolor="black")
+    sns.histplot(dfe_anc, ax=ax_left, color='grey', kde=False, bins=bins, label='DFE', alpha=0.15, stat=stat,
+                 element="step", edgecolor="black")
 
-    # Right subplot:
-    sns.histplot(dfe_evo, ax=ax_right, color='grey', kde=False, bins=30, alpha=0.6, stat=stat, element="step", edgecolor="black")
-    sns.histplot(prop_bdfe1, ax=ax_right, color=color[1], kde=False, bins=30, label='Forwards BDFE', alpha=0.5, stat=stat, element="step", edgecolor="black")
+    anc_hist, anc_bins = np.histogram(dfe_anc, bins=bins, density=True)
+    evo_hist, evo_bins = np.histogram(dfe_evo, bins=bins, density=True)
+
+    # Filter bins and histograms to include only bins >= 0
+    anc_bins_filt = anc_bins[anc_bins >= 0]
+    anc_bin_zero = anc_bins[np.digitize(0, anc_bins) - 1]
+    anc_bins_filt = np.append(anc_bins_filt, anc_bin_zero)
+    evo_bins_filt = evo_bins[evo_bins >= 0]
+    evo_bin_zero = evo_bins[np.digitize(0, evo_bins) - 1]
+    evo_bins_filt = np.append(evo_bins_filt, evo_bin_zero)
+
+    # Use boolean indexing to filter histograms
+    anc_hist_pos = anc_hist[np.isin(anc_bins[:-1], anc_bins_filt)]
+    anc_bins_pos = anc_bins[np.isin(anc_bins, anc_bins_filt)]
+    evo_hist_pos = evo_hist[np.isin(evo_bins[:-1], evo_bins_filt)]
+    evo_bins_pos = evo_bins[np.isin(evo_bins, evo_bins_filt)]
+
+    ax_left.fill_between(anc_bins_pos[:-1], anc_hist_pos, step='post', color=color[1], alpha=0.5)
+    ax_right.fill_between(evo_bins_pos[:-1], evo_hist_pos, step='post', color=color[2], alpha=0.5)
 
     # Vertical dotted lines at x=0
-    ax_left.axvline(x=0, color='black', linestyle='--', linewidth=1)
-    ax_right.axvline(x=0, color='black', linestyle='--', linewidth=1)
+    # ax_left.axvline(x=0, color='black', linestyle='--', linewidth=1)
+    # ax_right.axvline(x=0, color='black', linestyle='--', linewidth=1)
 
     # Only show a tick at 0 for x
     ax_left.set_xticks([0])
@@ -232,11 +253,11 @@ def create_fig_e(ax_left, ax_right, flip1, flip2, repeat, color):
 
     # Annotate text above to the left of each vertical line
     flip_percent = f'{int(flip1 * 100 / num_flips)}\\% of walk\ncompleted'
-    ax_left.annotate(flip_percent, xy=(0.5, 0.5), xycoords='axes fraction', xytext=(0, 0),
+    ax_left.annotate(flip_percent, xy=(0.5, 0.5), xycoords='axes fraction', xytext=(-25, 10),
                      textcoords='offset points', ha='right', va='bottom', fontsize=12, color='black')
 
     flip_percent = f'{int(flip2 * 100 / num_flips)}\\% of walk\ncompleted'
-    ax_right.annotate(flip_percent, xy=(0.5, 0.5), xycoords='axes fraction', xytext=(60, 70),
+    ax_right.annotate(flip_percent, xy=(0.5, 0.5), xycoords='axes fraction', xytext=(20, 70),
                       textcoords='offset points', ha='right', va='bottom', fontsize=12, color='black')
 
     # Get handles and labels from both subplots
@@ -257,7 +278,7 @@ if __name__ == "__main__":
     flip_list = np.linspace(low, high, 3, dtype=int)
     crossings_repeat = 10
     crossings_flip_anc = 400
-    crossings_flip_evo = 800
+    crossings_flip_evo = 1200
 
     big_fig = plt.figure(figsize=(12, 10))
     gs = GridSpec(2, 3, figure=big_fig)
@@ -312,20 +333,28 @@ if __name__ == "__main__":
     pos_x_left = pos.x0 + pos.width - 0.025
     pos_y_up = pos.y0 + pos.height / 2
     pos_y_down = pos.y0 + pos.height / 2 - delta_y
-    arrow_length = 0.2
+    arrow_length = 0.15
 
     annotation_ax = big_fig.add_axes((0.0, 0.0, 1.0, 1.0), facecolor='none')
     annotation_ax.set_xticks([])
     annotation_ax.set_yticks([])
     annotation_ax.axis('off')
+    # annotation_ax.annotate("",
+    #                        xy=(pos_x_left + arrow_length, pos_y_up), xycoords='figure fraction',
+    #                        xytext=(pos_x_left, pos_y_up), textcoords='figure fraction',
+    #                        arrowprops=dict(arrowstyle="->", color=color[1], lw=3, alpha=0.8, mutation_scale=30))
+    # annotation_ax.annotate("",
+    #                        xy=(pos_x_left, pos_y_down), xycoords='figure fraction',
+    #                        xytext=(pos_x_left + arrow_length, pos_y_down), textcoords='figure fraction',
+    #                        arrowprops=dict(arrowstyle="->", color=color[2], lw=3, alpha=0.8, mutation_scale=30))
     annotation_ax.annotate("",
-                           xy=(pos_x_left + arrow_length, pos_y_up), xycoords='figure fraction',
-                           xytext=(pos_x_left, pos_y_up), textcoords='figure fraction',
-                           arrowprops=dict(arrowstyle="->", color=color[1], lw=3, alpha=0.8, mutation_scale=30))
+                           xy=(pos.x0 + pos.width + 0.17, pos.y0 + 0.27), xycoords='figure fraction',
+                           xytext=(pos.x0 + pos.width - 0.1, pos.y0 + 0.07), textcoords='figure fraction',
+                           arrowprops=dict(arrowstyle="fancy", color=color[1], lw=1, alpha=0.5, mutation_scale=35))
     annotation_ax.annotate("",
-                           xy=(pos_x_left, pos_y_down), xycoords='figure fraction',
-                           xytext=(pos_x_left + arrow_length, pos_y_down), textcoords='figure fraction',
-                           arrowprops=dict(arrowstyle="->", color=color[2], lw=3, alpha=0.8, mutation_scale=30))
+                           xy=(pos.x0 + pos.width - 0.09, pos.y0 + 0.27), xycoords='figure fraction',
+                           xytext=(pos.x0 + pos.width + 0.25, pos.y0 + 0.05), textcoords='figure fraction',
+                           arrowprops=dict(arrowstyle="fancy", color=color[2], lw=1, alpha=0.5, mutation_scale=35))
 
     big_fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 

@@ -4,12 +4,11 @@ import networkx as nx
 import numpy as np
 import os
 
-# Set some matplotlib parameters for a publication-like style
 mpl.rcParams['font.family'] = 'Helvetica Neue'
 mpl.rcParams['font.size'] = 10
 mpl.rcParams['axes.linewidth'] = 1.0
 mpl.rcParams['text.usetex'] = True
-mpl.rcParams['text.latex.preamble'] = r'\usepackage{amsmath}'
+# mpl.rcParams['text.latex.preamble'] = r'\usepackage{amsmath}'
 
 fig = plt.figure(figsize=(21, 6))
 gs = fig.add_gridspec(1, 3, wspace=0.1)
@@ -21,11 +20,11 @@ axA = fig.add_subplot(gs[0, 0])
 axA.set_title('A', loc='left', fontweight='heavy', fontsize=20)
 
 # Display the formula inside the subplot area
-formula = r'\[ F(\vec{\sigma}) = \sum \limits_{i=1}^{N} \sigma_i h_i + \frac{1}{2} \displaystyle\sum \limits_{i,j}^{N} \sigma_i J_{ij} \sigma_j \]'
-axA.text(0.5, 0.95, formula, ha='center', va='top', transform=axA.transAxes, fontsize=24)
+formula = r'$ \displaystyle F(\vec{\sigma}) = \sum_{i=1}^{N} \sigma_i h_i + \frac{1}{2} \sum_{i,j=1}^{N} \sigma_i J_{ij} \sigma_j $'
+axA.text(0.5, 0.95, formula, ha='center', va='top', transform=axA.transAxes, fontsize=26)
 
 # Add the text \alpha_i \in {\pm 1 }
-axA.text(0.5, 0.7, r'$\sigma_i \in \{\pm 1\}$', ha='center', va='top', transform=axA.transAxes, fontsize=24)
+axA.text(0.5, 0.65, r'$\sigma_i \in \{\pm 1\}$', ha='center', va='top', transform=axA.transAxes, fontsize=26)
 
 # Draw a series of spins as squares with arrows
 L = 11
@@ -72,7 +71,7 @@ axB = fig.add_subplot(gs[0, 1])
 axB.set_title('B', loc='left', fontweight='heavy', fontsize=20)
 
 # Create a fully connected random regular graph (from your original code)
-N = 100
+N = 70
 rho = 0.05
 d = int(N * rho)
 G = nx.generators.random_graphs.random_regular_graph(d, N, seed=42)
@@ -83,9 +82,10 @@ h_values = np.random.choice([0, 1], size=N)
 G_plus = [n for n in G.nodes() if h_values[n] == 1]
 G_minus = [n for n in G.nodes() if h_values[n] == 0]
 
+node_size = 75
 # Draw nodes
-nx.draw_networkx_nodes(G, pos, nodelist=G_plus, node_size=20, node_color='white', edgecolors='black', linewidths=0.5, ax=axB, label=r'$\sigma_i = +1$')
-nx.draw_networkx_nodes(G, pos, nodelist=G_minus, node_size=20, node_color='black', edgecolors='black', linewidths=0.5, ax=axB, label=r'$\sigma_i = -1$')
+nx.draw_networkx_nodes(G, pos, nodelist=G_plus, node_size=node_size, node_color='white', edgecolors='black', linewidths=1.0, ax=axB, label=r'$\sigma_i = +1$')
+nx.draw_networkx_nodes(G, pos, nodelist=G_minus, node_size=node_size, node_color='black', edgecolors='black', linewidths=1.0, ax=axB, label=r'$\sigma_i = -1$')
 
 # Generate J_ij values for edges from a Gaussian distribution
 edges = list(G.edges())
@@ -107,15 +107,17 @@ neg_edges = [(e, j) for e, j in zip(edges, J_values) if j < 0]
 pos_legend_edge = [(0,1)]  # dummy edge for legend
 neg_legend_edge = [(1,2)]  # dummy edge for legend
 
+edge_width = 2.7
+
 # Plot positive edges
 for (u, v), j in pos_edges:
     alpha_val = min(1.0, abs(j) / max_abs_J)
-    nx.draw_networkx_edges(G, pos, edgelist=[(u, v)], width=0.7, alpha=alpha_val, edge_color=pos_color, ax=axB)
+    nx.draw_networkx_edges(G, pos, edgelist=[(u, v)], width=edge_width, alpha=alpha_val, edge_color=pos_color, ax=axB)
 
 # Plot negative edges
 for (u, v), j in neg_edges:
     alpha_val = min(1.0, abs(j) / max_abs_J)
-    nx.draw_networkx_edges(G, pos, edgelist=[(u, v)], width=0.7, alpha=alpha_val, edge_color=neg_color, ax=axB)
+    nx.draw_networkx_edges(G, pos, edgelist=[(u, v)], width=edge_width, alpha=alpha_val, edge_color=neg_color, ax=axB)
 
 # Create legend entries for positive and negative edges
 pos_line = plt.Line2D([0], [0], color=pos_color, alpha=0.8, lw=2, label=r'$J_{ij} > 0$')
@@ -123,7 +125,7 @@ neg_line = plt.Line2D([0], [0], color=neg_color, alpha=0.8, lw=2, label=r'$J_{ij
 plus_node = plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='white', markeredgecolor='black', markersize=5, label=r'$\sigma_i = +1$')
 minus_node = plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='black', markeredgecolor='black', markersize=5, label=r'$\sigma_i = -1$')
 
-axB.legend(handles=[plus_node, minus_node, pos_line, neg_line], loc='lower right', fontsize=16, markerscale=2, frameon=True)
+axB.legend(handles=[plus_node, minus_node, pos_line, neg_line], loc='upper right', fontsize=16, markerscale=2, frameon=True)
 
 axB.axis('off')
 
