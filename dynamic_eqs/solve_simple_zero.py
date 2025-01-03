@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
 import os
+from cmn.cmn_eqs import rhs, normalize
 
 # Parameters
 s_max = 100.0  # Maximum s value
@@ -23,62 +24,8 @@ os.makedirs(output_dir, exist_ok=True)
 s = np.linspace(s_min, s_max, N_s)
 ds = s[1] - s[0]
 
-def theta(_s):
-    """Heaviside step function."""
-    return 0.5 * (np.sign(_s) + 1)
-
-def negative_integral(_s, _p):
-    """Compute the integral of p(s) over negative part of s."""
-    integrand = _p
-    integral = np.sum(integrand[_s < 0]) * ds
-    return integral if integral > eps else eps  # Prevent division by zero
-
-def flip_term(_s: np.ndarray, _p: np.ndarray) -> np.ndarray:
-    dp_neg = theta(-_s) * _p
-    dp_neg *= np.abs(_s)
-    dp_pos = np.flip(dp_neg)
-    flip_term = dp_pos - dp_neg
-    flip_term /= negative_integral(_s, _p)
-    return flip_term
-
-# Function to compute the advection term using the upwind scheme
-def drift_term(_c, _p, _s, _ds):
-    dpdx = np.zeros_like(_p)
-    if _c > 0:
-        # Backward difference for c > 0
-        dpdx[1:] = (_p[1:] - _p[:-1]) / _ds
-    elif _c < 0:
-        # Forward difference for c < 0
-        dpdx[:-1] = (_p[1:] - _p[:-1]) / _ds
-    else:
-        dpdx[:] = 0.0
-    return _c * dpdx
-
-def diff_term(_sig, _p, _ds):
-    dpdx2 = np.zeros_like(_p)
-    dpdx2[1:-1] = (_p[2:] - 2 * _p[1:-1] + _p[:-2]) / _ds ** 2
-    return D * dpdx2
-
-# Function to compute the RHS of the ODE system
-def rhs(t, p):
-    """Compute the RHS of the ODE system."""
-    dpdt = np.zeros_like(p)
-    dpdt -= drift_term(c, p, s, ds)
-    dpdt += flip_term(s, p)
-    dpdt += diff_term(sig, p, ds)
-    # Apply boundary conditions (Dirichlet: p = 0 at boundaries)
-    dpdt[0] = 0.0
-    dpdt[-1] = 0.0
-    return dpdt
-
 # Time points where the solution is computed
 t_eval = np.linspace(t_min, t_max, T_num)
-
-# Callback function to normalize the solution at each time step
-def normalize(p):
-    """Ensure the solution remains normalized at each time step."""
-    p /= np.sum(p) * ds  # Normalize the solution
-    return p
 
 # Initial condition: Gaussian centered at s = s0
 s0 = 0.0  # Center of the Gaussian
