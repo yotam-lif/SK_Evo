@@ -4,7 +4,7 @@ from scipy.integrate import solve_ivp
 from scipy.optimize import curve_fit
 import os
 
-from cmn.cmn_eqs import theta, rhs, normalize, msd_fit_func
+from cmn.uncmn_eqs import theta, normalize, msd_fit_func
 
 # Parameters
 s_max = 100.0  # Maximum s value
