@@ -10,12 +10,13 @@ import pickle
 from cmn import cmn, cmn_sk
 from scipy.special import airy
 from scipy.optimize import curve_fit
+import matplotlib.ticker as ticker
 
 
 
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = ['Helvetica Neue']
-plt.rcParams['font.size'] = 14
+plt.rcParams['font.size'] = 16
 plt.style.use('science')
 
 def create_subfig_a(ax):
@@ -86,10 +87,11 @@ def create_subfig_a(ax):
     x = np.linspace(x_min, x_max, N_x)
 
     time_indices = [0, len(t_eval) // 3, -1]
-    colors = sns.color_palette('CMRmap', n_colors=5)
-    labels = [r'$P(\Delta, 0) \propto e^{-\frac{\Delta^2}{2\sigma^2}}$',
-              r'$P(\Delta, 0) \propto e^{-\frac{\Delta^2}{2\sigma^2}} \cdot \theta(-\Delta)$',
-              r'$P(\Delta, 0) \propto e^{-\frac{(\Delta - \Delta_0)^2}{2\sigma^2}}$']
+    colors = sns.color_palette('CMRmap', n_colors=4)
+    # labels = [r'$P(\Delta, 0) \propto e^{-\frac{\Delta^2}{2\sigma^2}}$',
+    #           r'$P(\Delta, 0) \propto e^{-\frac{\Delta^2}{2\sigma^2}} \cdot \theta(-\Delta)$',
+    #           r'$P(\Delta, 0) \propto e^{-\frac{(\Delta - \Delta_0)^2}{2\sigma^2}}$']
+    labels = ['Gaussian', 'Half Gaussian', 'Shifted Gaussian']
     linestyles = ['-', '--', ':']
 
     for idx in time_indices:
@@ -103,16 +105,16 @@ def create_subfig_a(ax):
             sol_g_shifted_on_x = np.interp(x, s, sol_g_shifted)
 
             ax.plot(x, sol_g_on_x, color=colors[0], linestyle=linestyles[0],
-                    label=f'{labels[0]}' if idx == time_indices[0] else "", linewidth=1.5)
-            ax.plot(x, sol_neg_on_x, color=colors[3], linestyle=linestyles[1],
-                    label=f'{labels[1]}' if idx == time_indices[0] else "", linewidth=1.5)
+                    label=f'{labels[0]}' if idx == time_indices[0] else "", linewidth=3)
+            ax.plot(x, sol_neg_on_x, color=colors[1], linestyle=linestyles[1],
+                    label=f'{labels[1]}' if idx == time_indices[0] else "", linewidth=3)
             ax.plot(x, sol_g_shifted_on_x, color=colors[2], linestyle=linestyles[2],
-                    label=f'{labels[2]}' if idx == time_indices[0] else "", linewidth=1.5)
+                    label=f'{labels[2]}' if idx == time_indices[0] else "", linewidth=3)
 
     # ax.set_title(r'$P(\Delta, t)$ for different initial conditions')
-    ax.set_xlabel(r'$\Delta$')
-    ax.set_ylabel(r'$P(\Delta, t)$')
-    ax.legend(fontsize=12, loc='upper left', frameon=True)
+    ax.set_xlabel(r'$\Delta$', fontsize=14)
+    ax.set_ylabel(r'$P(\Delta, t)$', fontsize=14)
+    ax.legend(fontsize=14, loc='upper left', frameon=True)
     # ax.grid(True)
 
 def create_subfig_b(ax):
@@ -132,8 +134,11 @@ def create_subfig_b(ax):
     t_eval = np.linspace(t_min, t_max, T_num)
 
     # Initial conditions with different variances
-    sigmas = [1.0, 0.1, 0.05]
+    sigmas = [1.0]
     p0_gaussians = [np.exp(-(s ** 2) / (2 * sigma ** 2)) for sigma in sigmas]
+    delta_func = np.zeros_like(s)
+    delta_func[len(s) // 2] = 1.0
+    p0_gaussians.append(delta_func)
 
     def rhs(t, p):
         """Compute the RHS of the ODE system."""
@@ -163,27 +168,25 @@ def create_subfig_b(ax):
     x = np.linspace(x_min, x_max, N_x)
 
     time_indices = [len(t_eval) // 2, -1]
-    colors = sns.color_palette('CMRmap', n_colors=5)
-    labels = [r'$\sigma = 10^{0}$',
-              r'$\sigma = 10^{-1}$',
-              r'$\sigma = 5 \times 10^{-2}$']
-    linestyles = ['-', '--', ':']
+    colors = sns.color_palette('CMRmap', n_colors=3)
+    labels = ['Gaussian', 'delta function']
+    linestyles = ['-', '--']
 
     for idx in time_indices:
         for i, p_all_i in enumerate(p_all):
             if idx < p_all_i.shape[1]:  # Ensure the index is within bounds
                 sol_on_x = np.interp(x, s, p_all_i[:, idx])
                 ax.plot(x, sol_on_x, color=colors[i], linestyle=linestyles[i],
-                        label=f'{labels[i]}' if idx == time_indices[0] else "", linewidth=1.5)
+                        label=f'{labels[i]}' if idx == time_indices[0] else "", linewidth=3)
 
     # ax.set_title(r'Evolution of $P(\Delta, t)$ with different variances')
     ax.set_xlabel(r'$\Delta$')
     ax.set_ylabel(r'$P(\Delta, t)$')
-    ax.legend(fontsize=12, loc='upper left', frameon=True)
+    ax.legend(fontsize=14, loc='upper left', frameon=True)
 
 def create_subfig_c(ax):
     N = 4000
-    color = sns.color_palette('CMRmap', n_colors=3)
+    color = sns.color_palette('CMRmap', n_colors=5)
     file_path = '../misc/run_data/N4000_rho100_beta100_repeats50.pkl'
     with open(file_path, 'rb') as f:
         data = pickle.load(f)
@@ -201,7 +204,7 @@ def create_subfig_c(ax):
         bdfes.extend(bdfe[bdfe < del_max])
 
     sns.histplot(bdfes, ax=ax, kde=False, bins=num_bins, label='Simulation data', stat='density', color=color[2],
-                 element="step", edgecolor='black', alpha=1.0)
+                 element="step", edgecolor='black', alpha=0.8)
 
     def sol_airy(x, D, P_0):
         ai_0 = airy(0)[0]
@@ -219,11 +222,11 @@ def create_subfig_c(ax):
     # Fit sol_exp
     popt_exp, _ = curve_fit(lambda x, D: sol_exp(x, D, P_0), bin_centers, hist, bounds=(0, np.inf))
     D_exp = popt_exp[0]
-    ax.plot(bin_centers, sol_exp(bin_centers, D_exp, P_0), color=color[0], label='Exponential fit', linestyle='--', linewidth=1.5)
+    ax.plot(bin_centers, sol_exp(bin_centers, D_exp, P_0), color=color[0], label='Exponential fit', linestyle='--', linewidth=3)
     # Fit sol_airy
     popt_airy, _ = curve_fit(lambda x, D: sol_airy(x, D, P_0), bin_centers, hist, bounds=(0, np.inf))
     D_airy = popt_airy[0]
-    ax.plot(bin_centers, sol_airy(bin_centers, D_airy, P_0), color=color[1], label=f'Airy fit', linestyle='--', linewidth=1.5)
+    ax.plot(bin_centers, sol_airy(bin_centers, D_airy, P_0), color=color[1], label=f'Airy fit', linestyle='--', linewidth=3)
 
     # Calculate chi-squared values
     chi_squared_exp = np.sum(((hist - sol_exp(bin_centers, D_exp, P_0)) ** 2) / sol_exp(bin_centers, D_exp, P_0))
@@ -242,7 +245,7 @@ def create_subfig_c(ax):
     ax.set_xlabel(r'$\Delta$', fontsize=14)
     ax.set_ylabel(r'$P_+ (\Delta, t)$', fontsize=14)
     ax.set_xlim(0, None)
-    ax.legend(fontsize=12, loc='upper right', frameon=True)
+    ax.legend(fontsize=14, loc='upper right', frameon=True)
 
     # Set y-ticks excluding 0
     y_ticks = ax.get_yticks()
@@ -260,9 +263,16 @@ def main():
     create_subfig_b(axs[1])
     create_subfig_c(axs[2])
 
-    for ax in axs.flat:
+    labels = ['A', 'B', 'C']
+    for i, ax in enumerate(axs.flat):
+        ax.text(-0.1, 1.1, labels[i], transform=ax.transAxes,
+                fontsize=20, fontweight='bold', va='top', ha='right')
         ax.tick_params(axis='both', which='major', length=10, width=1, labelsize=14)
         ax.tick_params(axis='both', which='minor', length=5, width=1, labelsize=14)
+        ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=False, prune='both', nbins=4))
+        ax.yaxis.set_minor_locator(ticker.AutoMinorLocator())
+        ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=False, prune='both', nbins=4))
+        ax.xaxis.set_minor_locator(ticker.AutoMinorLocator())
         for spine in ax.spines.values():
             spine.set_linewidth(2)
 
