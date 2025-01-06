@@ -169,7 +169,7 @@ def create_subfig_b(ax):
 
     time_indices = [len(t_eval) // 2, -1]
     colors = sns.color_palette('CMRmap', n_colors=3)
-    labels = ['Gaussian', 'delta function']
+    labels = ['Gaussian', 'Dirac Delta']
     linestyles = ['-', '--']
 
     for idx in time_indices:
@@ -248,9 +248,9 @@ def create_subfig_c(ax):
     ax.legend(fontsize=14, loc='upper right', frameon=True)
 
     # Set y-ticks excluding 0
-    y_ticks = ax.get_yticks()
-    y_ticks = y_ticks[y_ticks != 0]
-    ax.set_yticks(y_ticks)
+    # y_ticks = ax.get_yticks()
+    # y_ticks = y_ticks[y_ticks != 0]
+    # ax.set_yticks(y_ticks)
 
 
 def main():
