@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
-from scipy.optimize import curve_fit
 import seaborn as sns
 import os
 import scienceplots
@@ -9,10 +8,10 @@ from cmn.uncmn_eqs import theta, flip_term, drift_term, diff_term
 import pickle
 from cmn import cmn, cmn_sk
 from scipy.special import airy
-from scipy.optimize import curve_fit
 import matplotlib.ticker as ticker
-
-
+from scipy.stats import kstest, expon
+from scipy.integrate import cumulative_trapezoid
+from scipy.optimize import minimize
 
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = ['Helvetica Neue']
@@ -20,6 +19,70 @@ plt.rcParams['font.size'] = 16
 plt.style.use('science')
 
 def create_subfig_a(ax):
+    # Parameters
+    s_max = 60.0  # Maximum s value
+    s_min = -s_max  # Minimum s value
+    N_s = 400  # Number of spatial grid points
+    t_min = 0.0  # Start time
+    t_max = 2.0  # End time
+    c = 2.0  # Speed of the drift term
+    D = 16.0
+    sig = 2.0  # Standard deviation
+    T_num = 200  # Number of time points
+    num_points = 5
+
+    # Spatial grid
+    s = np.linspace(s_min, s_max, N_s)
+    ds = s[1] - s[0]
+    t_eval = np.linspace(t_min, t_max, T_num)
+
+    # Initial condition: Gaussian
+    p0_gauss = np.exp(-(s ** 2) / (2 * sig ** 2))
+    p0_gauss /= np.sum(p0_gauss) * ds  # Normalize
+
+    def rhs(t, p):
+        """Compute the RHS of the ODE system."""
+        dpdt = np.zeros_like(p)
+        dpdt += drift_term(p, ds, c)
+        dpdt += flip_term(s, p)
+        dpdt += diff_term(p, ds, D)
+        # Apply boundary conditions (Dirichlet: p = 0 at boundaries)
+        dpdt[0] = 0.0
+        dpdt[-1] = 0.0
+        return dpdt
+
+    def normalize(p):
+        """Ensure the solution remains normalized at each time step."""
+        p /= np.sum(p) * ds  # Normalize the solution
+        return p
+
+    # Solve the PDE using solve_ivp with normalization after each step
+    solution_gaussian = solve_ivp(
+        rhs, [t_min, t_max], p0_gauss, t_eval=t_eval, method='RK45',
+        vectorized=False, events=None
+    )
+    p_all_g = np.apply_along_axis(normalize, 0, solution_gaussian.y)
+
+    x_min = -25
+    x_max = 10
+    N_x = int((x_max - x_min) / ds)
+    x = np.linspace(x_min, x_max, N_x)
+
+    time_indices = np.linspace(0, len(t_eval) - 1, num_points, dtype=int)
+    colors = sns.color_palette('CMRmap', n_colors=num_points)
+    labels = [f't = {t_eval[idx]:.1f}' for idx in time_indices]
+
+    for idx, color, label in zip(time_indices, colors, labels):
+        if idx < p_all_g.shape[1]:  # Ensure the index is within bounds
+            sol_g = p_all_g[:, idx]
+            sol_g_on_x = np.interp(x, s, sol_g)
+            ax.plot(x, sol_g_on_x, color=color, label=label, linewidth=3)
+
+    ax.set_xlabel(r'$\Delta$', fontsize=14)
+    ax.set_ylabel(r'$P(\Delta, t)$', fontsize=14)
+    ax.legend(fontsize=14, loc='upper left', frameon=True)
+
+def create_subfig_b(ax):
     # Parameters
     s_max = 60.0  # Maximum s value
     s_min = -s_max  # Minimum s value
@@ -114,10 +177,10 @@ def create_subfig_a(ax):
     # ax.set_title(r'$P(\Delta, t)$ for different initial conditions')
     ax.set_xlabel(r'$\Delta$', fontsize=14)
     ax.set_ylabel(r'$P(\Delta, t)$', fontsize=14)
-    ax.legend(fontsize=14, loc='upper left', frameon=True)
+    ax.legend(fontsize=14, loc='upper left', frameon=True, title='Initial condition')
     # ax.grid(True)
 
-def create_subfig_b(ax):
+def create_subfig_c(ax):
     # Parameters
     s_max = 30.0  # Maximum s value
     s_min = -s_max  # Minimum s value
@@ -182,88 +245,166 @@ def create_subfig_b(ax):
     # ax.set_title(r'Evolution of $P(\Delta, t)$ with different variances')
     ax.set_xlabel(r'$\Delta$')
     ax.set_ylabel(r'$P(\Delta, t)$')
-    ax.legend(fontsize=14, loc='upper left', frameon=True)
+    ax.legend(fontsize=14, loc='upper left', frameon=True, title='Initial condition')
 
-def create_subfig_c(ax):
-    N = 4000
-    color = sns.color_palette('CMRmap', n_colors=5)
+def create_subfig_d(ax):
+    from scipy.interpolate import interp1d
+
+    # Load data
     file_path = '../misc/run_data/N4000_rho100_beta100_repeats50.pkl'
     with open(file_path, 'rb') as f:
         data = pickle.load(f)
-    del_max = 0.7
+
+    # Extract and filter bdfes
+    del_max = 0.8
     bdfes = []
-    num_bins = 30
     for repeat in data:
-        h = repeat['h']
-        J = repeat['J']
-        flip_seq = repeat['flip_seq']
-        sig_init = repeat['init_alpha']
-        t = int(0.8 * len(flip_seq))
-        alpha = cmn.compute_sigma_from_hist(sig_init, flip_seq, t)
-        bdfe = cmn_sk.compute_bdfe(alpha, h, J)[0]
-        bdfes.extend(bdfe[bdfe < del_max])
+        h, J = repeat['h'], repeat['J']
+        alpha = cmn.compute_sigma_from_hist(
+            repeat['init_alpha'], repeat['flip_seq'],
+            int(0.8 * len(repeat['flip_seq']))
+        )
+        vals = cmn_sk.compute_bdfe(alpha, h, J)[0]
+        bdfes.extend(vals[vals < del_max])
 
-    sns.histplot(bdfes, ax=ax, kde=False, bins=num_bins, label='Simulation data', stat='density', color=color[2],
-                 element="step", edgecolor='black', alpha=0.8)
+    color = sns.color_palette('CMRmap', n_colors=5)
+    # Plot histogram
+    num_bins = 50
+    sns.histplot(
+        bdfes, ax=ax, bins=num_bins, stat='density', color=color[2],
+        element="step", edgecolor='black', alpha=0.8, label='Simulation data'
+    )
 
-    def sol_airy(x, D, P_0):
-        ai_0 = airy(0)[0]
-        c = P_0 / ai_0
-        Ai = airy(x / np.sqrt(c * D))[0]
-        return (P_0 / ai_0) * Ai
+    def exp_pdf(x: np.ndarray, D, P0):
+        return P0 * np.exp(-x / (P0 * D / 2))
 
-    def sol_exp(x, D, P_0):
-        return P_0 * np.exp(-x / (P_0 * D))
+    def neg_loglike_exp(params, data):
+        D, P0 = params
+        if D <= 0 or P0 <= 0:
+            return np.inf
+        x_grid = np.linspace(0, max(data) * 1.1, 2000)
+        pdf_grid = exp_pdf(x_grid, D, P0)
+        norm = cumulative_trapezoid(pdf_grid, x_grid, initial=0)[-1]
+        if norm <= 0:
+            return np.inf
+        pdf_vals = exp_pdf(data, D, P0) / norm
+        pdf_vals = np.maximum(pdf_vals, 1e-12)  # to avoid log(0)
+        return -np.sum(np.log(pdf_vals))
 
-    # Fit sol_exp and sol_airy to the bdfe
-    hist, bin_edges = np.histogram(bdfes, bins=num_bins, density=True)
-    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-    P_0 = hist[0]
-    # Fit sol_exp
-    popt_exp, _ = curve_fit(lambda x, D: sol_exp(x, D, P_0), bin_centers, hist, bounds=(0, np.inf))
-    D_exp = popt_exp[0]
-    ax.plot(bin_centers, sol_exp(bin_centers, D_exp, P_0), color=color[0], label='Exponential fit', linestyle='--', linewidth=3)
-    # Fit sol_airy
-    popt_airy, _ = curve_fit(lambda x, D: sol_airy(x, D, P_0), bin_centers, hist, bounds=(0, np.inf))
-    D_airy = popt_airy[0]
-    ax.plot(bin_centers, sol_airy(bin_centers, D_airy, P_0), color=color[1], label=f'Airy fit', linestyle='--', linewidth=3)
 
-    # Calculate chi-squared values
-    chi_squared_exp = np.sum(((hist - sol_exp(bin_centers, D_exp, P_0)) ** 2) / sol_exp(bin_centers, D_exp, P_0))
-    chi_squared_airy = np.sum(((hist - sol_airy(bin_centers, D_airy, P_0)) ** 2) / sol_airy(bin_centers, D_airy, P_0))
+    # Airy PDF (unnormalized)
+    def airy_pdf(x: np.ndarray, D, P0):
+        #  Ai(0), scaling c = P0/Ai(0), argument = x / sqrt(c*D)
+        a0 = airy(0)[0]
+        c = P0 / a0
+        arg = x / np.sqrt(c * D/2)
+        return np.where(x < 0, 0.0, c * airy(arg)[0])
 
-    # Add text annotations for D_exp, D_airy, and chi-squared values
-    ax.text(0.40, 0.66, f'$D_{{exp}} \\times N = {int(D_exp * N)}$', transform=ax.transAxes,
-            verticalalignment='top', color=color[0])
-    ax.text(0.40, 0.59, f'$D_{{airy}} \\times N = {int(D_airy * N)}$', transform=ax.transAxes,
-            verticalalignment='top', color=color[1])
-    ax.text(0.40, 0.52, f'$\\chi^2_{{exp}} = {chi_squared_exp:.2f}$', transform=ax.transAxes,
-            verticalalignment='top', color=color[0])
-    ax.text(0.40, 0.45, f'$\\chi^2_{{airy}} = {chi_squared_airy:.2f}$', transform=ax.transAxes,
-            verticalalignment='top', color=color[1])
+    # Negative log-likelihood for Airy
+    def neg_loglike_airy(params, data):
+        D, P0 = params
+        if D <= 0 or P0 <= 0:
+            return np.inf
+        x_grid = np.linspace(0, max(data) * 1.1, 2000)
+        pdf_grid = airy_pdf(x_grid, D, P0)
+        norm = cumulative_trapezoid(pdf_grid, x_grid, initial=0)[-1]
+        if norm <= 0:
+            return np.inf
+        pdf_vals = airy_pdf(data, D, P0) / norm
+        pdf_vals = np.maximum(pdf_vals, 1e-12)  # to avoid log(0)
+        return -np.sum(np.log(pdf_vals))
 
+    # MLE for Exp
+    init_guess_exp = [100.0, 5.0]
+    opt = minimize(
+        neg_loglike_exp, init_guess_exp, args=(np.array(bdfes),),
+        method='L-BFGS-B', bounds=[(1e-9, None), (1e-9, None)]
+    )
+    if opt.success:
+        D_exp, P0_exp = opt.x
+    else:
+        D_exp, P0_exp = 1.0, 1.0
+
+    # Normalize for plotting
+    x_full = np.linspace(0, max(bdfes), 1000)
+    exp_grid = exp_pdf(x_full, D_exp, P0_exp)
+    norm_factor = cumulative_trapezoid(exp_grid, x_full, initial=0)[-1] or 1.0
+    exp_plot = exp_grid / norm_factor
+    ax.plot(x_full, exp_plot, color=color[0], linestyle='--', linewidth=3, label='Exp fit')
+
+    # Build exp CDF for KS test
+    x_cdf = np.linspace(0, max(bdfes), 1000)
+    pdf_cdf = exp_pdf(x_cdf, D_exp, P0_exp)
+    pdf_cdf /= cumulative_trapezoid(pdf_cdf, x_cdf, initial=0)[-1] or 1.0
+    cdf_cumsum = cumulative_trapezoid(pdf_cdf, x_cdf, initial=0)
+    exp_cdf = interp1d(x_cdf, cdf_cumsum, bounds_error=False, fill_value=(0.0, 1.0))
+
+    # MLE for Airy
+    init_guess_airy = [100.0, 5.0]
+    opt = minimize(
+        neg_loglike_airy, init_guess_airy, args=(np.array(bdfes),),
+        method='L-BFGS-B', bounds=[(1e-9, None), (1e-9, None)]
+    )
+    if opt.success:
+        D_airy, P0_airy = opt.x
+    else:
+        D_airy, P0_airy = 1.0, 1.0
+
+    # Normalize for plotting
+    x_full = np.linspace(0, max(bdfes), 1000)
+    airy_grid = airy_pdf(x_full, D_airy, P0_airy)
+    norm_factor = cumulative_trapezoid(airy_grid, x_full, initial=0)[-1] or 1.0
+    airy_plot = airy_grid / norm_factor
+    ax.plot(x_full, airy_plot, color=color[1], linestyle='--', linewidth=3, label='Airy fit')
+
+    # Build Airy CDF for KS test
+    x_cdf = np.linspace(0, max(bdfes), 1000)
+    pdf_cdf = airy_pdf(x_cdf, D_airy, P0_airy)
+    pdf_cdf /= cumulative_trapezoid(pdf_cdf, x_cdf, initial=0)[-1] or 1.0
+    cdf_cumsum = cumulative_trapezoid(pdf_cdf, x_cdf, initial=0)
+    airy_cdf = interp1d(x_cdf, cdf_cumsum, bounds_error=False, fill_value=(0.0, 1.0))
+
+    # Perform K-S tests
+    ks_exp = kstest(bdfes, exp_cdf)
+    ks_airy = kstest(bdfes, airy_cdf)
+
+    # Annotate plot
+    ax.text(
+        0.40, 0.66, rf'$D_{{exp}} = {D_exp:.2e}$',
+        transform=ax.transAxes, color=color[0], va='top'
+    )
+    ax.text(
+        0.40, 0.59, rf'$D_{{airy}} = {D_airy:.2e}$',
+        transform=ax.transAxes, color=color[1], va='top'
+    )
+    ax.text(
+        0.40, 0.52, rf'$p_{{exp}} = {ks_exp.pvalue:.2e}$',
+        transform=ax.transAxes, color=color[0], va='top'
+    )
+    ax.text(
+        0.40, 0.45, rf'$p_{{airy}} = {ks_airy.pvalue:.2e}$',
+        transform=ax.transAxes, color=color[1], va='top'
+    )
+
+    # Final plot settings
     ax.set_xlabel(r'$\Delta$', fontsize=14)
-    ax.set_ylabel(r'$P_+ (\Delta, t)$', fontsize=14)
-    ax.set_xlim(0, None)
+    ax.set_ylabel(r'$P_+(\Delta,t)$', fontsize=14)
+    ax.set_xlim(0, del_max)
     ax.legend(fontsize=14, loc='upper right', frameon=True)
-
-    # Set y-ticks excluding 0
-    # y_ticks = ax.get_yticks()
-    # y_ticks = y_ticks[y_ticks != 0]
-    # ax.set_yticks(y_ticks)
 
 
 def main():
-    fig, axs = plt.subplots(1, 3, figsize=(18, 6))
+    fig, axs = plt.subplots(2, 2, figsize=(18, 12))
     # Create directory if it doesn't exist
     output_dir = '../Plots/paper_figs'
     os.makedirs(output_dir, exist_ok=True)
 
-    create_subfig_a(axs[0])
-    create_subfig_b(axs[1])
-    create_subfig_c(axs[2])
+    create_subfig_a(axs[0, 0])
+    create_subfig_b(axs[0, 1])
+    create_subfig_c(axs[1, 0])
+    create_subfig_d(axs[1, 1])
 
-    labels = ['A', 'B', 'C']
+    labels = ['A', 'B', 'C', 'D']
     for i, ax in enumerate(axs.flat):
         ax.text(-0.1, 1.1, labels[i], transform=ax.transAxes,
                 fontsize=20, fontweight='bold', va='top', ha='right')

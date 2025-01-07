@@ -37,7 +37,7 @@ def drift_term(p, ds, c):
 def diff_term(p, ds, D):
     dpdx2 = np.zeros_like(p)
     dpdx2[1:-1] = (p[2:] - 2 * p[1:-1] + p[:-2]) / ds ** 2
-    return D * dpdx2
+    return (D/2) * dpdx2
 
 def msd_fit_func(t, m, a):
     return m * t**a
