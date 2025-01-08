@@ -315,7 +315,7 @@ def create_subfig_d(ax):
         return -np.sum(np.log(pdf_vals))
 
     # MLE for Exp
-    init_guess_exp = [100.0, 5.0]
+    init_guess_exp = [20.0, 5.0]
     opt = minimize(
         neg_loglike_exp, init_guess_exp, args=(np.array(bdfes),),
         method='L-BFGS-B', bounds=[(1e-9, None), (1e-9, None)]
@@ -340,7 +340,7 @@ def create_subfig_d(ax):
     exp_cdf = interp1d(x_cdf, cdf_cumsum, bounds_error=False, fill_value=(0.0, 1.0))
 
     # MLE for Airy
-    init_guess_airy = [100.0, 5.0]
+    init_guess_airy = [20.0, 5.0]
     opt = minimize(
         neg_loglike_airy, init_guess_airy, args=(np.array(bdfes),),
         method='L-BFGS-B', bounds=[(1e-9, None), (1e-9, None)]
@@ -370,19 +370,19 @@ def create_subfig_d(ax):
 
     # Annotate plot
     ax.text(
-        0.40, 0.66, rf'$D_{{exp}} = {D_exp:.2e}$',
+        0.40, 0.66, rf'$D_{{exp}} = {D_exp:.2f}$',
         transform=ax.transAxes, color=color[0], va='top'
     )
     ax.text(
-        0.40, 0.59, rf'$D_{{airy}} = {D_airy:.2e}$',
+        0.40, 0.59, rf'$D_{{airy}} = {D_airy:.2f}$',
         transform=ax.transAxes, color=color[1], va='top'
     )
     ax.text(
-        0.40, 0.52, rf'$p_{{exp}} = {ks_exp.pvalue:.2e}$',
+        0.40, 0.52, rf'$p_{{exp}} = {ks_exp.pvalue:.2f}$',
         transform=ax.transAxes, color=color[0], va='top'
     )
     ax.text(
-        0.40, 0.45, rf'$p_{{airy}} = {ks_airy.pvalue:.2e}$',
+        0.40, 0.45, rf'$p_{{airy}} = {ks_airy.pvalue:.2f}$',
         transform=ax.transAxes, color=color[1], va='top'
     )
 
