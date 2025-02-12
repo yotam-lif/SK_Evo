@@ -37,11 +37,17 @@ class NK:
         # contributions[i] is a dictionary where:
         # key: tuple of states (S_i, S_j1, ..., S_jK)
         # value: fitness value drawn from Gaussian
+        # defaultdict takes care of sampling a new RV if the key is not in contributions[i]
         self.fis = [defaultdict(lambda: np.random.normal(self.mean, self.std)) for _ in range(N)]
         # Precompute neighbor indices (circular)
         self.neighbor_indices = [
             [(i + offset) % self.N for offset in range(self.K + 1)] for i in range(self.N)
         ]
+        # Precompute dependents for each locus, where dependents are the indices which fitness is affected by locus i
+        self.dependents = [[] for _ in range(self.N)]
+        for j in range(self.N):
+            for i in self.neighbor_indices[j]:
+                self.dependents[i].append(j)
 
     def compute_fitness(self, sigma, f_off=0.0):
         """
@@ -70,6 +76,25 @@ class NK:
             fit_sum += self.fis[i][kclique_i]
         # The total fitness is the average of all f_i
         return fit_sum / self.N - f_off
+
+    def compute_fitness_delta(self, sigma, flip_ind, f_off=0.0):
+        """
+        Compute the fitness delta of a given configuration.
+        The fitness delta is the difference between the total fitness of sigma_k and sigma.
+
+        Parameters
+        ----------
+        sigma_k : numpy.ndarray
+            Array of locus states, typically -1 or +1.
+        f_off : float, optional
+            Fitness offset to be subtracted from the total fitness. Default is 0.0.
+
+        Returns
+        -------
+        float
+            The fitness delta of the configuration.
+        """
+
 
 
 def compute_dfe(sigma, nk, f_off=0.0):

@@ -2,7 +2,7 @@ import argparse
 import os
 import pickle
 from concurrent.futures import ProcessPoolExecutor
-from code.cmn import cmn_nk, cmn
+from code_sim.cmn import cmn_nk, cmn
 
 output_dir = '../misc/run_data/NK'
 os.makedirs(output_dir, exist_ok=True)

@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from code.cmn import cmn_nk, cmn
+from code_sim.cmn import cmn_nk, cmn
 import seaborn as sns
 import os
 from concurrent.futures import ProcessPoolExecutor
