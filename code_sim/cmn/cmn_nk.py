@@ -34,10 +34,10 @@ class NK:
         if seed is not None:
             np.random.seed(seed)
 
-        # contributions[i] is a dictionary where:
+        # fis[i] is a dictionary where:
         # key: tuple of states (S_i, S_j1, ..., S_jK)
         # value: fitness value drawn from Gaussian
-        # defaultdict takes care of sampling a new RV if the key is not in contributions[i]
+        # defaultdict takes care of sampling a new RV if the key is not in dictionary i
         self.fis = [defaultdict(lambda: np.random.normal(self.mean, self.std)) for _ in range(N)]
         # Precompute neighbor indices (circular)
         self.neighbor_indices = [
@@ -77,25 +77,16 @@ class NK:
         # The total fitness is the average of all f_i
         return fit_sum / self.N - f_off
 
-    def compute_fitness_delta(self, sigma, flip_ind, f_off=0.0):
+    def get_fis(self):
         """
-        Compute the fitness delta of a given configuration.
-        The fitness delta is the difference between the total fitness of sigma_k and sigma.
-
-        Parameters
-        ----------
-        sigma_k : numpy.ndarray
-            Array of locus states, typically -1 or +1.
-        f_off : float, optional
-            Fitness offset to be subtracted from the total fitness. Default is 0.0.
+        Get the fitness values for all loci and patterns.
 
         Returns
         -------
-        float
-            The fitness delta of the configuration.
+        list:
+            List of dictionaries where each dictionary contains the fitness values for a locus.
         """
-
-
+        return self.fis
 
 def compute_dfe(sigma, nk, f_off=0.0):
     """
@@ -117,12 +108,11 @@ def compute_dfe(sigma, nk, f_off=0.0):
     """
     dfe = np.zeros(nk.N)
     curr_fit = nk.compute_fitness(sigma, f_off)
-    sigma_prime = np.copy(sigma)
     for i in range(nk.N):
         # avoid excess copying of sigma prime by switching back each flip
-        sigma_prime[i] = -sigma_prime[i]
-        dfe[i] = nk.compute_fitness(sigma_prime, f_off) - curr_fit
-        sigma_prime[i] = -sigma_prime[i]
+        sigma[i] = -sigma[i]
+        dfe[i] = nk.compute_fitness(sigma, f_off) - curr_fit
+        sigma[i] = -sigma[i]
     return dfe
 
 
