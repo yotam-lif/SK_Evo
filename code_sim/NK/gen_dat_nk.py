@@ -1,5 +1,7 @@
 import argparse
 import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 import pickle
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import logging
