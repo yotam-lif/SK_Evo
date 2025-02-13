@@ -27,7 +27,7 @@ def process(N, k):
         init_sigma = cmn.init_sigma(N)
         NK_init = cmn_nk.NK(N, k)
         flip_seq, NK = cmn_nk.relax_nk(init_sigma, NK_init)
-        return {'flip_seq': flip_seq, 'NK': NK}
+        return {'init_sigma': init_sigma, 'flip_seq': flip_seq, 'NK': NK}
     except Exception as e:
         logging.error(f"Error in process(N={N}, k={k}): {e}")
         return None
