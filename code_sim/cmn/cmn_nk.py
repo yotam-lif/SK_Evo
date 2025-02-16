@@ -38,7 +38,7 @@ class NK:
         # key: tuple of states (S_i, S_j1, ..., S_jK)
         # value: fitness value drawn from Gaussian
         # defaultdict takes care of sampling a new RV if the key is not in dictionary i
-        self.fis = [defaultdict(lambda: np.random.normal(self.mean, self.std)) for _ in range(N)]
+        self.fis = [defaultdict(lambda: np.float16(np.random.normal(self.mean, self.std))) for _ in range(N)]
         # Precompute neighbor indices (circular)
         self.neighbor_indices = [
             [(i + offset) % self.N for offset in range(self.K + 1)] for i in range(self.N)
@@ -63,10 +63,10 @@ class NK:
 
         Returns
         -------
-        float
-            The total fitness of the configuration.
+        numpy float16
+            The total fitness of the configuration
         """
-        fit_sum = 0.0
+        fit_sum = np.float16(0.0)
         for i in range(self.N):
             # Identify the pattern: locus i and its K neighbors (circular)
             # We'll consider the next K loci in a circular fashion.
@@ -75,7 +75,8 @@ class NK:
             # defaultdict takes care of the case where kclique_i is not in contributions[i]
             fit_sum += self.fis[i][kclique_i]
         # The total fitness is the average of all f_i
-        return fit_sum / self.N - f_off
+        f_off = np.float16(f_off)
+        return np.float16(fit_sum / self.N - f_off)
 
     def get_fis(self):
         """
@@ -103,10 +104,10 @@ def compute_dfe(sigma, nk, f_off=0.0):
 
     Returns
     -------
-    numpy.ndarray
+    numpy.ndarray(numpy.float16)
         The DFE for the given configuration.
     """
-    dfe = np.zeros(nk.N)
+    dfe = np.zeros(nk.N, dtype=np.float16)
     curr_fit = nk.compute_fitness(sigma, f_off)
     for i in range(nk.N):
         # avoid excess copying of sigma prime by switching back each flip
