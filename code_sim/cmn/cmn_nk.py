@@ -1,6 +1,11 @@
 import numpy as np
 from collections import defaultdict
 
+def fitness_draw_closure(mean, std):
+    """Factory function that returns a sampling function with fixed mean and std."""
+    def sample_fitness():
+        return np.float16(np.random.normal(mean, std))
+    return sample_fitness
 
 class NK:
     """
@@ -38,7 +43,8 @@ class NK:
         # key: tuple of states (S_i, S_j1, ..., S_jK)
         # value: fitness value drawn from Gaussian
         # defaultdict takes care of sampling a new RV if the key is not in dictionary i
-        self.fis = [defaultdict(lambda: np.float16(np.random.normal(self.mean, self.std))) for _ in range(N)]
+        draw_fitness = fitness_draw_closure(mean, std)
+        self.fis = [defaultdict(draw_fitness) for _ in range(N)]
         # Precompute neighbor indices (circular)
         self.neighbor_indices = [
             [(i + offset) % self.N for offset in range(self.K + 1)] for i in range(self.N)
