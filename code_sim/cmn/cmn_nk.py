@@ -1,11 +1,14 @@
 import numpy as np
 from collections import defaultdict
 
-def fitness_draw_closure(mean, std):
-    """Factory function that returns a sampling function with fixed mean and std."""
-    def sample_fitness():
-        return np.float16(np.random.normal(mean, std))
-    return sample_fitness
+class FitnessSampler:
+    """Callable class to sample fitness values with given mean and std."""
+    def __init__(self, mean=0.0, std=1.0):
+        self.mean = mean
+        self.std = std
+
+    def __call__(self):
+        return np.float32(np.random.normal(self.mean, self.std))
 
 class NK:
     """
@@ -43,7 +46,7 @@ class NK:
         # key: tuple of states (S_i, S_j1, ..., S_jK)
         # value: fitness value drawn from Gaussian
         # defaultdict takes care of sampling a new RV if the key is not in dictionary i
-        draw_fitness = fitness_draw_closure(mean, std)
+        draw_fitness = FitnessSampler(mean, std)
         self.fis = [defaultdict(draw_fitness) for _ in range(N)]
         # Precompute neighbor indices (circular)
         self.neighbor_indices = [
@@ -69,20 +72,20 @@ class NK:
 
         Returns
         -------
-        numpy float16
+        numpy.float32
             The total fitness of the configuration
         """
-        fit_sum = np.float16(0.0)
+        fit_sum = np.float32(0.0)
         for i in range(self.N):
             # Identify the pattern: locus i and its K neighbors (circular)
             # We'll consider the next K loci in a circular fashion.
             indices = self.neighbor_indices[i]
-            kclique_i = tuple(sigma[idx] for idx in indices)
+            kclique_i = tuple(int(sigma[idx]) for idx in indices)
             # defaultdict takes care of the case where kclique_i is not in contributions[i]
             fit_sum += self.fis[i][kclique_i]
         # The total fitness is the average of all f_i
-        f_off = np.float16(f_off)
-        return np.float16(fit_sum / self.N - f_off)
+        f_off = np.float32(f_off)
+        return np.float32(fit_sum / self.N - f_off)
 
     def get_fis(self):
         """
@@ -110,10 +113,10 @@ def compute_dfe(sigma, nk, f_off=0.0):
 
     Returns
     -------
-    numpy.ndarray(numpy.float16)
+    numpy.ndarray(numpy.float32)
         The DFE for the given configuration.
     """
-    dfe = np.zeros(nk.N, dtype=np.float16)
+    dfe = np.zeros(nk.N, dtype=np.float32)
     curr_fit = nk.compute_fitness(sigma, f_off)
     for i in range(nk.N):
         # avoid excess copying of sigma prime by switching back each flip
@@ -144,8 +147,8 @@ def compute_bdfe(sigma, nk, f_off=0.0):
         Indices of beneficial mutations.
     """
     dfe = compute_dfe(sigma, nk, f_off)
-    bdfe = dfe[dfe >= 0]
-    b_ind = np.where(dfe >= 0)[0]
+    bdfe = dfe[dfe > 0]
+    b_ind = np.where(dfe > 0)[0]
     return bdfe, b_ind
 
 
@@ -191,9 +194,11 @@ def sswm_choice(sigma, nk, f_off=0.0):
         The index of the selected site for mutation.
     """
     bdfe, b_ind = compute_bdfe(sigma, nk, f_off)
-    bdfe /= np.sum(bdfe)
-    return np.random.choice(b_ind, p=bdfe)
-
+    sum_bdfe = np.sum(bdfe)
+    if sum_bdfe != 0:
+        bdfe = bdfe / sum_bdfe
+    ind = np.random.choice(b_ind, p=bdfe)
+    return ind
 
 def relax_nk(sigma_init, nk, f_off=0.0):
     """

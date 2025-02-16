@@ -13,7 +13,7 @@ from scipy.special import airy
 # Define a consistent style
 plt.style.use('science')
 plt.rcParams['font.family'] = 'Helvetica Neue'
-file_path = '../code_sim/misc/run_data/N4000_rho100_beta100_repeats50.pkl'
+file_path = '../code_sim/data/SK/N4000_rho100_beta100_repeats50.pkl'
 color = sns.color_palette('CMRmap', 5)
 
 with open(file_path, 'rb') as f:
