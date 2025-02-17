@@ -3,10 +3,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pickle
-from code.cmn.uncmn_dfe import gen_final_dfe
+from code_sim.cmn.uncmn_dfe import gen_final_dfe
 import matplotlib.ticker as ticker
-import code.cmn.uncmn_scrambling as scr
-from code.cmn import cmn, cmn_sk
+import code_sim.cmn.uncmn_scrambling as scr
+from code_sim.cmn import cmn, cmn_sk
 from matplotlib.gridspec import GridSpec
 from scipy.special import airy
 

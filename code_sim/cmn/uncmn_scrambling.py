@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from cmn import cmn, cmn_sk
+from code_sim.cmn import cmn, cmn_sk
 
 
 # import os

@@ -126,74 +126,59 @@ def compute_dfe(sigma, nk, f_off=0.0):
     return dfe
 
 
-def compute_bdfe(sigma, nk, f_off=0.0):
+def compute_bdfe(dfe):
     """
     Compute the beneficial distribution of fitness effects (bDFE) for a given configuration.
 
     Parameters
     ----------
-    sigma : numpy.ndarray
-        Array of locus states, typically -1 or +1.
-    nk : NK
-        An instance of the NK model.
-    f_off : float, optional
-        Fitness offset to be subtracted from the total fitness. Default is 0.0.
+    dfe: numpy.ndarray
 
     Returns
     -------
     numpy.ndarray
-        The bDFE for the given configuration.
+        The bdfe for the given configuration.
     numpy.ndarray
         Indices of beneficial mutations.
     """
-    dfe = compute_dfe(sigma, nk, f_off)
     bdfe = dfe[dfe > 0]
     b_ind = np.where(dfe > 0)[0]
     return bdfe, b_ind
 
 
-def compute_rank(sigma, nk, f_off=0.0):
+def compute_rank(dfe):
     """
     Compute the rank of a given configuration.
     The rank is the number of beneficial mutations.
 
     Parameters
     ----------
-    sigma : numpy.ndarray
-        Array of locus states, typically -1 or +1.
-    nk : NK
-        An instance of the NK model.
-    f_off : float, optional
-        Fitness offset to be subtracted from the total fitness. Default is 0.0.
+    dfe: numpy.ndarray
 
     Returns
     -------
     int
         The rank of the configuration.
     """
-    dfe = compute_dfe(sigma, nk, f_off)
-    return np.sum(dfe >= 0)
+    return np.sum(dfe > 0)
 
 
-def sswm_choice(sigma, nk, f_off=0.0):
+def sswm_choice(bdfe, b_ind):
     """
     Select a site for mutation using the Strong Selection Weak Mutation (SSWM) model.
 
     Parameters
     ----------
-    sigma : numpy.ndarray
-        Array of locus states, typically -1 or +1.
-    nk : NK
-        An instance of the NK model.
-    f_off : float, optional
-        Fitness offset to be subtracted from the total fitness. Default is 0.0.
+    bdfe: numpy.ndarray
+        The beneficial distribution of fitness effects.
+    b_ind: numpy.ndarray
+        Indices of beneficial mutations.
 
     Returns
     -------
     int
         The index of the selected site for mutation.
     """
-    bdfe, b_ind = compute_bdfe(sigma, nk, f_off)
     sum_bdfe = np.sum(bdfe)
     if sum_bdfe != 0:
         bdfe = bdfe / sum_bdfe
@@ -219,11 +204,16 @@ def relax_nk(sigma_init, nk, f_off=0.0):
         The relaxed configuration.
     """
     sigma = np.copy(sigma_init)
-    rank = compute_rank(sigma, nk, f_off)
+    dfe = compute_dfe(sigma, nk, f_off)
+    rank = compute_rank(dfe)
     flip_hist = []
+    dfes = [dfe]
     while rank > 0:
-        i = sswm_choice(sigma, nk, f_off)
+        bdfe, b_ind = compute_bdfe(dfe)
+        i = sswm_choice(bdfe, b_ind)
         flip_hist.append(i)
         sigma[i] = -sigma[i]
-        rank = compute_rank(sigma, nk, f_off)
-    return flip_hist, nk
+        dfe = compute_dfe(sigma, nk, f_off)
+        dfes.append(dfe)
+        rank = compute_rank(dfe)
+    return flip_hist, dfes
