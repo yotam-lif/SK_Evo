@@ -49,18 +49,19 @@ for i in range(len(data_arr)):
     for entry in data:
         init_sigma = entry['init_sigma']
         flip_seq = entry['flip_seq']
-        NK_model = entry['NK']
+        dfes = entry['dfes']
 
         # Compute the final configuration and DFE
         sigma_fin = cmn.compute_sigma_from_hist(init_sigma, flip_seq)
-        dfe_fin = cmn_nk.compute_dfe(sigma_fin, NK_model)
+        dfe_fin = dfes[-1]
         combined_dfe.extend(dfe_fin)  # Concatenate DFEs from all repeats
 
     # Plot the histogram of the combined DFEs
-    sns.histplot(combined_dfe, bins=50, stat='density', element='step', edgecolor=color[i % len(color)], alpha=0.0, ax=axs[0, 0])
-    axs[0, 0].set_title('Histogram of Combined Final DFEs')
+    sns.histplot(combined_dfe, bins=50, stat='density', element='step', edgecolor=color[i % len(color)], alpha=0.0, ax=axs[0, 0], label=f'K={2**(i+2)}')
+    axs[0, 0].set_title('Final DFEs')
     axs[0, 0].set_xlabel(r'$\Delta$')
     axs[0, 0].set_ylabel(r'$P(\Delta)$')
+    axs[0, 0].legend()
     # --------------------------------------------
 
 # Subplot B: Histogram of bDFE at 80% of the adaptive walk
@@ -71,60 +72,63 @@ for i in range(len(data_arr)):
     for entry in data:
         init_sigma = entry['init_sigma']
         flip_seq = entry['flip_seq']
-        NK_model = entry['NK']
+        dfes = entry['dfes']
 
         # Determine the index corresponding to 80% of the flip sequence
         index_80_percent = int(0.8 * len(flip_seq))
-        sigma_80_percent = cmn.compute_sigma_from_hist(init_sigma, flip_seq, index_80_percent)
+        dfe_80_percent = dfes[index_80_percent]
 
         # Compute the bDFE for this configuration
-        bdfe, _ = cmn_nk.compute_bdfe(sigma_80_percent, NK_model)
-        bdfe_80_percent.extend(bdfe)  # Concatenate bDFEs from all repeats
+        bdfe, _ = cmn_nk.compute_bdfe(dfe_80_percent)
+        bdfe_80_percent.extend(list(bdfe))  # Concatenate bDFEs from all repeats
 
     # Plot the histogram of the bDFE at 80% completion
-    sns.histplot(bdfe_80_percent, bins=50, stat='density', alpha=0.0, element='step', edgecolor=color[i % len(color)], ax=axs[0, 1])
-    axs[0, 1].set_title('Histogram of bDFE at 80% of Adaptive Walk')
+    # sns.histplot(bdfe_80_percent, bins=50, stat='density', alpha=0.0, element='step', edgecolor=color[i % len(color)], ax=axs[0, 1], label=f'K={2**(i+2)}')
+
+    # Compute the histogram
+    counts, bin_edges = np.histogram(bdfe_80_percent, bins=50, density=True)
+    log_counts = np.log(counts)
+    # Plot the histogram of the log of the frequencies
+    bin_centers = 0.5 * (bin_edges[1:] + bin_edges[:-1])
+    good_indices = np.where(log_counts>1)
+    log_counts = log_counts[good_indices]
+    bin_centers = bin_centers[good_indices]
+    axs[0, 1].step(bin_centers, log_counts, where='mid', color=color[i % len(color)], label=f'K={2 ** (i + 2)}')
+
+    axs[0, 1].set_title('BDFE at $80\\%$ of Adaptive Walk')
     axs[0, 1].set_xlabel(r'$\Delta$')
-    axs[0, 1].set_ylabel(r'$P_+(\Delta)$')
+    axs[0, 1].set_ylabel(r'$ln(P_+ (\Delta))$')
+    axs[0, 1].legend()
 # --------------------------------------------
 
 # Subplot C: Plot the crossings between 15% and 45% for repeat 10
 # ============================================
-data_index = 2
-repeat_num = 10  # Choose repeat number 10
-data = data_arr[data_index]
-entry = data[repeat_num]
-
-init_sigma = entry['init_sigma']
-flip_seq = entry['flip_seq']
-NK_model = entry['NK']
-
-# Calculate indices for 15% and 45% of the adaptive walk
-index_15_percent = int(0.15 * len(flip_seq))
-index_45_percent = int(0.45 * len(flip_seq))
-
-# Plot the bDFE crossings
-color1 = sns.color_palette('CMRmap')[0]
-color2 = sns.color_palette('CMRmap')[2]
-scr.gen_crossings(axs[0, 2], init_sigma, NK_model, flip_seq, index_15_percent, index_45_percent, color1, color2)
-
-# Customize the subplot
-axs[0, 2].set_title('Crossings: 15% to 45% (Repeat 10)')
-axs[0, 2].set_xlabel(r'$\%$ of walk completed')
-axs[0, 2].set_ylabel(r'$\Delta$')
-
-# Save the figure
-output_dir = './figs_paper'
-os.makedirs(output_dir, exist_ok=True)
-fig_path = os.path.join(output_dir, 'nk_model_crossings.svg')
-plt.savefig(fig_path, format='svg', bbox_inches='tight')
-plt.show()
-# --------------------------------------------
-
+# data_index = 2
+# repeat_num = 10  # Choose repeat number 10
+# data = data_arr[data_index]
+# entry = data[repeat_num]
+#
+# init_sigma = entry['init_sigma']
+# flip_seq = entry['flip_seq']
+# dfes = entry['dfes']
+#
+# # Calculate indices for 15% and 45% of the adaptive walk
+# index_15_percent = int(0.15 * len(flip_seq))
+# index_45_percent = int(0.45 * len(flip_seq))
+#
+# # Plot the bDFE crossings
+# color1 = sns.color_palette('CMRmap')[0]
+# color2 = sns.color_palette('CMRmap')[2]
+# scr.gen_crossings(axs[0, 2], init_sigma, NK_model, flip_seq, index_15_percent, index_45_percent, color1, color2)
+#
+# # Customize the subplot
+# axs[0, 2].set_title('Crossings: 15% to 45% (Repeat 10)')
+# axs[0, 2].set_xlabel(r'$\%$ of walk completed')
+# axs[0, 2].set_ylabel(r'$\Delta$')
 
 # Save the figure
-output_dir = './figs_paper'
+output_dir = '../figs_paper'
 os.makedirs(output_dir, exist_ok=True)
-fig_path = os.path.join(output_dir, 'nk_model_combined_dfes.svg')
+fig_path = os.path.join(output_dir, 'nk_sim_results.svg')
 plt.savefig(fig_path, format='svg', bbox_inches='tight')
 plt.show()
