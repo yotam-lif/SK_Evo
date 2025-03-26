@@ -1,4 +1,4 @@
-import cmn, cmn_sk
+import code_sim.cmn.cmn as cmn, code_sim.cmn.cmn_sk as cmn_sk
 import numpy as np
 
 def gen_final_dfe(N, beta, rho, num_repeats):
