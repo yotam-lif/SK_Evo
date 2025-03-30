@@ -71,6 +71,62 @@ def gen_bdfes(N, beta, rho, flip_list, num_repeats):
     return bdfes
 
 
+def propagate_forward(alpha_init, h, J, flip_seq, anc_flip, evo_flip):
+    """
+    Propagate the DFE forward from the ancestor flip to the evolved flip.
+
+    Parameters:
+        alpha_init (np.ndarray): Initial alpha vector.
+        h (np.ndarray): External field vector.
+        J (np.ndarray): Coupling matrix.
+        flip_seq (np.ndarray): Sequence of flips.
+        anc_flip (int): Index of the ancestor flip.
+        evo_flip (int): Index of the evolved flip.
+
+    Returns:
+        bdfe_anc (np.ndarray): BDFE at the ancestor flip.
+        prop_bdfe (np.ndarray): Propagated BDFE at the evolved flip.
+    """
+    # Compute alpha vectors at the ancestor and evolved flips
+    alpha_anc = cmn.compute_sigma_from_hist(alpha_init, flip_seq, anc_flip)
+    alpha_evo = cmn.compute_sigma_from_hist(alpha_init, flip_seq, evo_flip)
+
+    # Compute DFEs and BDFEs at the ancestor and evolved flips
+    bdfe_anc, bdfe_anc_ind = cmn_sk.compute_bdfe(alpha_anc, h, J)
+    dfe_evo = cmn_sk.compute_dfe(alpha_evo, h, J)
+    prop_bdfe = dfe_evo[bdfe_anc_ind]
+
+    return bdfe_anc, prop_bdfe, dfe_evo
+
+
+def propagate_backward(alpha_init, h, J, flip_seq, anc_flip, evo_flip):
+    """
+    Propagate the DFE backward from the evolved flip to the ancestor flip.
+
+    Parameters:
+        alpha_init (np.ndarray): Initial alpha vector.
+        h (np.ndarray): External field vector.
+        J (np.ndarray): Coupling matrix.
+        flip_seq (np.ndarray): Sequence of flips.
+        anc_flip (int): Index of the ancestor flip.
+        evo_flip (int): Index of the evolved flip.
+
+    Returns:
+        bdfe_evo (np.ndarray): BDFE at the evolved flip.
+        prop_bdfe (np.ndarray): Propagated BDFE at the ancestor flip.
+    """
+    # Compute alpha vectors at the ancestor and evolved flips
+    alpha_anc = cmn.compute_sigma_from_hist(alpha_init, flip_seq, anc_flip)
+    alpha_evo = cmn.compute_sigma_from_hist(alpha_init, flip_seq, evo_flip)
+
+    # Compute DFEs and BDFEs at the ancestor and evolved flips
+    bdfe_evo, bdfe_evo_ind = cmn_sk.compute_bdfe(alpha_evo, h, J)
+    dfe_anc = cmn_sk.compute_dfe(alpha_anc, h, J)
+    prop_bdfe = dfe_anc[bdfe_evo_ind]
+
+    return bdfe_evo, prop_bdfe, dfe_anc
+
+
 
 
 
