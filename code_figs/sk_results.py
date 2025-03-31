@@ -9,9 +9,7 @@ from code_sim.cmn import cmn, cmn_sk
 from matplotlib.gridspec import GridSpec
 from scipy.special import airy
 import statsmodels.api as sm
-import scienceplots
-from matplotlib.patches import FancyArrowPatch
-from matplotlib.patches import Rectangle
+from matplotlib.patches import FancyArrowPatch, Rectangle
 
 
 def reflect_kde_neg(data, bw='scott', kernel='gau', gridsize=200):
@@ -67,74 +65,65 @@ color = sns.color_palette('CMRmap', 5)
 with open(file_path, 'rb') as f:
     data = pickle.load(f)
 
-def sol_airy(x, D, P_0):
-    ai_0 = airy(0)[0]
-    c = P_0 / ai_0
-    Ai = airy(x / np.sqrt(c * D))[0]
-    return (P_0 / ai_0) * Ai
-
-def sol_exp(x, D, P_0):
-    return P_0 * np.exp(-x / (P_0 * D))
-
-def create_fig_ge(ax, num_points, repeat, N):
-    # same as before
-    if num_points > 100:
-        raise ValueError("The number of points must be less than 100.")
+def create_fig_dfe_evol(ax, num_points, repeat):
+    # Pull out the relevant data
     data_entry = data[repeat]
     sigma_initial = data_entry['init_alpha']
     h = data_entry['h']
     J = data_entry['J']
-    F_off = cmn_sk.compute_fit_off(sigma_initial, h, J)
     flip_seq = data_entry['flip_seq']
-    flip_numbs = np.linspace(0, len(flip_seq)-1, num_points, dtype=int)
-    alphas = cmn.curate_sigma_list(sigma_initial, flip_seq, flip_numbs)
-    mean_dfe = []
-    var_dfe = []
-    mean_bdfe = []
-    var_bdfe = []
-    rank = []
-    fits = []
-    for alpha in alphas:
-        dfe = cmn_sk.compute_dfe(alpha, h, J)
-        bdfe = cmn_sk.compute_bdfe(alpha, h, J)[0]
-        fits.append(cmn_sk.compute_fit_slow(alpha, h, J, F_off))
-        mean_dfe.append(np.mean(dfe))
-        var_dfe.append(np.var(dfe))
-        mean_bdfe.append(np.mean(bdfe))
-        var_bdfe.append(np.var(bdfe))
-        rank.append(cmn_sk.compute_rank(alpha, h, J))
 
-    rank = [r / N for r in rank]
-    max_fit = fits[-1]
-    fits = [(fit / max_fit) * 100 for fit in fits]
-    sns.regplot(x=fits, y=mean_dfe, ax=ax, color=color[0], scatter=True, label=r'$\mathbb{E} [P(\Delta)]$')
-    sns.regplot(x=fits, y=var_dfe, ax=ax, color=color[1], scatter=True, label=r'$\text{Var} [P(\Delta)]$')
-    sns.regplot(x=fits, y=mean_bdfe, ax=ax, color=color[2], scatter=True, label=r'$\mathbb{E} [P_+ (\Delta)]$')
-    sns.regplot(x=fits, y=var_bdfe, ax=ax, color=color[3], scatter=True, label=r'$\text{Var} [P_+ (\Delta)]$')
-    sns.regplot(x=fits, y=rank, ax=ax, color=color[4], scatter=True, label='$r(t) / N$')
-    ax.set_xlabel('Fitness (\\% from maximum reached)', fontsize=14)
-    ax.set_ylabel('Value', fontsize=14)
-    ax.legend(fontsize=10, title_fontsize=12, loc='lower left', frameon=True)
-    # Set x-axis to display integer values
-    ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True, nbins=5))
+    # Timeslices (in percent) along the adaptive walk
+    percents = np.linspace(0, 100, num_points, dtype=int)
+    ts = [int(len(flip_seq) * pct / 100) for pct in percents]
+    sigma_list = cmn.curate_sigma_list(sigma_initial, flip_seq, ts)
 
+    # Compute DFEs at each time slice
+    dfes = [cmn_sk.compute_dfe(sigma, h, J) for sigma in sigma_list]
 
-def create_fig_dfe_fin(ax, N, beta_arr, rho, num_repeats, num_bins):
+    area_ref = 1.0  # Will hold total area of the first distribution (from histogram)
+    for i, dfe in enumerate(dfes):
+        # First, get the “raw” histogram area for the i-th DFE
+        counts, bin_edges = np.histogram(dfe, bins=40, density=False)
+        dx = bin_edges[1] - bin_edges[0]
+        area_i = counts.sum() * dx  # total area in the unnormalized histogram
+
+        # If this is the first distribution, store its area as our reference
+        if i == 0:
+            area_ref = area_i  # we’ll scale everything else to this
+
+        # Now, do a KDE on the same data. By default, the KDE integrates to 1.
+        kde = sm.nonparametric.KDEUnivariate(dfe)
+        kde.fit(kernel='gau', bw='scott', fft=False, gridsize=200, cut=3)
+        # The integral of kde.density over kde.support is 1.
+        # We want to scale it so that the *total area* becomes area_i/area_ref.
+        scale_factor = (area_i / area_ref)  # ensures we replicate the same ratio
+        scaled_density = kde.density * scale_factor
+
+        # Finally, plot
+        ax.plot(kde.support,
+                scaled_density + 0.003,
+                lw=2,
+                color=color[i % len(color)],
+                label=f'$t={percents[i]}\\%$'
+               )
+
+    ax.set_xlabel('Fitness($\\Delta$)', fontsize=14)
+    ax.set_ylabel('$P(\\Delta, t)$', fontsize=14)
+    ax.set_ylim(0, 0.35)
+    ax.axvline(x=0, color='black', linestyle=':', lw=1.5)
+    ax.legend(fontsize=12, title_fontsize=12, loc='upper left', frameon=False, markerscale=3)
+
+def create_fig_dfe_fin(ax, N, beta_arr, rho, num_repeats):
     # same as before
     for i, beta in enumerate(beta_arr):
         dfe = gen_final_dfe(N, beta, rho, num_repeats)
-        # hist, bin_edges = np.histogram(dfe, bins=num_bins, density=True)
-        # bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-        # ax.scatter(bin_centers, hist, label=f'$\\beta ={beta_arr[i]:.1f}$', color=color[i % len(color)],
-        #            edgecolor=color[i % len(color)], s=5, alpha=0.6)
-        # ax.plot(bin_centers, hist, color=color[i % len(color)], lw=2, alpha=0.6)
-        # sns.histplot(dfe, ax=ax, kde=False, bins=num_bins, label=f'$\\beta={beta_arr[i]:.1f}$', stat='density', element="step", edgecolor=color[i % len(color)], alpha=0.0)
         x_kde, y_kde = reflect_kde_neg(dfe, bw='scott', kernel='gau', gridsize=200)
-        ax.plot(x_kde, y_kde, label=f'$\\beta={beta_arr[i]:.1f}$', color=color[i % len(color)], lw=1.5)
-    ax.set_xlabel('$\\Delta$', fontsize=14)
-    ax.set_ylabel('$P(\\Delta, \\infty)$', fontsize=14)
+        ax.plot(x_kde, y_kde, label=f'$\\beta={beta_arr[i]:.1f}$', color=color[i % len(color)], lw=2.0)
+    ax.set_xlabel('Fitness($\\Delta$)', fontsize=14)
+    ax.set_ylabel('$P(\\Delta, t=\\infty)$', fontsize=14)
     ax.set_xlim(None, 0)
-    ax.legend(fontsize=12, title_fontsize=12, loc='upper left', frameon=True, markerscale=3)
+    ax.legend(fontsize=12, title_fontsize=12, loc='upper left', frameon=False, markerscale=3)
 
     # Make tick lines
     ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True, prune='both', nbins=5))
@@ -145,7 +134,6 @@ def create_fig_dfe_fin(ax, N, beta_arr, rho, num_repeats, num_bins):
     new_ticks = np.concatenate(([0.0], current_ticks))
     ax.set_xticks(new_ticks)
     ax.set_xticklabels(['0.0'] + [f'{tick:.1f}' for tick in current_ticks])
-
 
 def create_fig_bdfe_hists(ax, points_lst, num_bins, num_flips):
     """
@@ -169,7 +157,7 @@ def create_fig_bdfe_hists(ax, points_lst, num_bins, num_flips):
     x_min_all, x_max_all = np.inf, -np.inf  # to set a common x-range later
 
     for i, bdfe in enumerate(bdfes):
-        label = f'{flip_percent[i]:.0f}$\\%$'
+        label = f'$t={flip_percent[i]:.0f}\\%$'
         # Use a local variable for the bin count rather than updating num_bins directly.
         bins_i = num_bins + (num - i - 1) * 3
         hist, bin_edges = np.histogram(bdfe, bins=bins_i, density=True)
@@ -198,7 +186,7 @@ def create_fig_bdfe_hists(ax, points_lst, num_bins, num_flips):
             # If there aren't at least 3 bins, just draw a horizontal line at the first value.
             ax.axhline(y=hist_log[0], linestyle='--', color=color[i % len(color)])
 
-    ax.set_xlabel('$\\Delta$', fontsize=14)
+    ax.set_xlabel('Fitness($\\Delta$)', fontsize=14)
     ax.set_ylabel('$\\ln(P_+(\\Delta, t))$', fontsize=14)
     # Set the x-axis limits based on the collected range.
     ax.set_xlim(x_min_all, x_max_all)
@@ -216,8 +204,7 @@ def create_fig_bdfe_hists(ax, points_lst, num_bins, num_flips):
     ax.set_xticklabels([f'{xlim[0]:.1f}'] + [f'{tick:.1f}' for tick in current_xticks])
 
     # Adjust legend
-    ax.legend(title='$\\%$ of walk \ncompleted', fontsize=12, title_fontsize=12, loc='upper right', frameon=True)
-
+    ax.legend(title='$\\%$ of walk \ncompleted', fontsize=12, title_fontsize=12, loc='upper right', frameon=False)
 
 def create_fig_crossings(ax, flip1, flip2, repeat):
     data_entry = data[repeat]
@@ -236,189 +223,207 @@ def create_fig_crossings(ax, flip1, flip2, repeat):
     flip_anc_percent = int(flip1 * 100 / num_flips)
     flip_evo_percent = int(flip2 * 100 / num_flips)
 
-    # Set fixed x positions for left and right panels (similar to segben.py)
-    x_left = 1
-    x_right = 2
+    x_left = flip_anc_percent
+    x_right = flip_evo_percent
+    alpha = 0.175
 
     # Draw arrows for forward propagation: from left (ancestral) to right (proposed)
     for j in range(len(bdfe1)):
         start = (x_left, bdfe1[j])
         end = (x_right, prop_bdfe1[j])
         arrow = FancyArrowPatch(start, end, arrowstyle='-|>', mutation_scale=10,
-                                color=color1, lw=0.75, alpha=0.3)
+                                color=color1, lw=0.75, alpha=alpha)
         ax.add_patch(arrow)
     # Scatter plot the forward points
     ax.scatter(np.repeat(x_left, len(bdfe1)), bdfe1, color=color1, edgecolor=color1,
-               s=20, facecolors='none', label='Forwards', alpha=0.3)
+               s=20, facecolors='none', label='Forwards', alpha=alpha)
     ax.scatter(np.repeat(x_right, len(prop_bdfe1)), prop_bdfe1, color=color1, edgecolor=color1,
-               s=20, facecolors='none', alpha=0.3)
+               s=20, facecolors='none', alpha=alpha)
 
     # Draw arrows for backward propagation: from right (proposed) to left (evolved)
     for j in range(len(bdfe2)):
         start = (x_right, bdfe2[j])
         end = (x_left, prop_bdfe2[j])
         arrow = FancyArrowPatch(start, end, arrowstyle='-|>', mutation_scale=10,
-                                color=color2, lw=0.75, alpha=0.3)
+                                color=color2, lw=0.75, alpha=alpha)
         ax.add_patch(arrow)
     # Scatter plot the backward points
     ax.scatter(np.repeat(x_left, len(prop_bdfe2)), prop_bdfe2, color=color2, edgecolor=color2,
-               s=20, facecolors='none', label='Backwards', alpha=0.3)
+               s=20, facecolors='none', label='Backwards', alpha=alpha)
     ax.scatter(np.repeat(x_right, len(bdfe2)), bdfe2, color=color2, edgecolor=color2,
-               s=20, facecolors='none', alpha=0.3)
+               s=20, facecolors='none', alpha=alpha)
 
     # Set x-axis to show the flip percentages
     ax.set_xticks([x_left, x_right])
-    ax.set_xticklabels([f'{flip_anc_percent}\\%', f'{flip_evo_percent}\\%'])
-
-    ax.axhline(0, color="black", linestyle="--", linewidth=1)
-    ax.set_xlabel('\\% of walk completed', fontsize=14)
-    ax.set_ylabel('$\\Delta$', fontsize=14)
-    ax.legend(fontsize=12, frameon=True, loc='upper right')
-
+    ax.axhline(0, color="black", linestyle="--", linewidth=1.5)
+    ax.set_xlabel('$\\%$ of walk completed', fontsize=14)
+    ax.set_ylabel('Fitness ($\\Delta$)', fontsize=14)
+    ax.legend(fontsize=12, frameon=False, loc='upper right')
 
 def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
+    # Get simulation data parameters from the global data variable.
     data_entry = data[repeat]
     alpha_initial = data_entry['init_alpha']
     h = data_entry['h']
     J = data_entry['J']
     flip_seq = data_entry['flip_seq']
-    # Vertical shift for the "evolved" histograms
-    z = 30
+
+    # We'll compute z as a fraction of the unshifted maximum y (relative vertical shift).
+    fraction_z = 0.08  # for example, 5% of the unshifted max
     lw_main = 1.0
     label_fontsize = 16
     tick_fontsize = 14
 
-    # Forward and backward propagation using the current data
+    # Propagate forward/backward.
     bdfe_anc, prop_bdfe_anc, _ = propagate_forward(alpha_initial, h, J, flip_seq, flip1, flip2)
     bdfe_evo, prop_bdfe_evo, _ = propagate_backward(alpha_initial, h, J, flip_seq, flip1, flip2)
 
-    def draw_custom_segments(ax):
-        ax.plot([-0.09, 0.09], [z * 1.1, z * 1.1],
+    # --- Helper: scale x from reference range [-0.1, 0.1] to our fixed x–limits.
+    def scale_x(x_ref, X_min, X_max, ref_min=-0.1, ref_max=0.1):
+        return X_min + ((x_ref - ref_min) / (ref_max - ref_min)) * (X_max - X_min)
+
+    # --- Custom segments drawing function.
+    # The reference x–coordinates are in [-0.1, 0.1], and we now use z for the top.
+    def draw_custom_segments(ax, X_min, X_max, y_bottom, z_val, lw_main):
+        # Draw horizontal dashed line at z_val.
+        x_left_line = scale_x(-0.09, X_min, X_max)
+        x_right_line = scale_x(0.09, X_min, X_max)
+        ax.plot([x_left_line, x_right_line], [z_val, z_val],
                 linestyle="--", color="grey", lw=lw_main)
-        segs = [
-            ((-0.05, -0.75), (-0.05 * 0.9, z * 1.1)),
-            ((0.05, -0.75), (0.05 * 0.9, z * 1.1)),
-            ((-0.1, -0.75), (-0.09, z * 1.1)),
-            ((0.1, -0.75), (0.09, z * 1.1)),
-            ((0, -0.75), (0, z * 1.1))
+        # Define reference segments (using y_bottom for the bottom, and z_val for the top).
+        segs_ref = [
+            ((-0.05, y_bottom), ((-0.05 * 0.9), z_val)),
+            ((0.05, y_bottom), ((0.05 * 0.9), z_val)),
+            ((-0.1, y_bottom), (-0.09, z_val)),
+            ((0.1, y_bottom), (0.09, z_val)),
+            ((0, y_bottom), (0, z_val))
         ]
-        for (x0, y0), (x1, y1) in segs:
-            ax.plot([x0, x1], [y0, y1], linestyle="--", color="grey", lw=lw_main)
+        for (pt0, pt1) in segs_ref:
+            x0 = scale_x(pt0[0], X_min, X_max)
+            x1 = scale_x(pt1[0], X_min, X_max)
+            ax.plot([x0, x1], [pt0[1], pt1[1]], linestyle="--", color="grey", lw=lw_main)
 
-    PURPLE_FILL = (0.5, 0.0, 0.5, 0.4)  # "purple" but 40% opacity
-    GREY_FILL = (0.5, 0.5, 0.5, 0.4)  # "grey"   but 40% opacity
+    # Define fill colors.
+    EVO_FILL = (color[0][0], color[0][1], color[0][2], 0.75)
+    ANC_FILL   = (0.5, 0.5, 0.5, 0.4)
 
-    # --------------
-    # Left Panel
-    # --------------
-    counts, bin_edges = np.histogram(prop_bdfe_anc, bins=30)
-    bin_edges = bin_edges * 0.9
-    counts_shifted = counts + z
-
-    # ax_left.set_xlim(-0.1, 0.1)
-    # ax_left.set_ylim(0, 500)
+    # ========================
+    # LEFT PANEL
+    # ========================
+    ax_left.set_ylim(0, 1.2)
+    left_X_min, left_X_max = -10, 10
+    ax_left.set_xlim(left_X_min, left_X_max)
     ax_left.set_xlabel('Fitness $(\\Delta)$', fontsize=label_fontsize)
     ax_left.tick_params(labelsize=tick_fontsize)
-    draw_custom_segments(ax_left)
 
-    # Evolved histogram (purple fill w/ partial alpha, black edge fully opaque)
+    # Compute histogram (density) for the "Evolved" data without shift.
+    counts, bin_edges = np.histogram(prop_bdfe_anc, bins=20, density=True)
+    y_max_unshifted = ax_left.get_ylim()[1]
+    # Compute z as a fraction of the unshifted maximum.
+    z = fraction_z * y_max_unshifted
+    ax_left.set_xlim(left_X_min, left_X_max)
+    ax_left.set_xlabel('Fitness $(\\Delta)$', fontsize=label_fontsize)
+    ax_left.tick_params(labelsize=tick_fontsize)
     ax_left.stairs(
-        values=counts_shifted,
+        values=counts + z,
         edges=bin_edges,
         baseline=0,
         fill=True,
-        facecolor=PURPLE_FILL,  # partially transparent purple
-        edgecolor="black",  # fully opaque black
+        facecolor=EVO_FILL,
+        edgecolor="black",
         lw=1.1,
-        label="Evolved",
+        label="Evolved"
     )
+    ax_left.figure.canvas.draw()
+    # For the dashed segments, we set y_top = z (using z as the top value)
+    y_bottom_left = -0.01
 
-    # Mask bottom portion
-    x_min_left = bin_edges[0]
-    x_max_left = bin_edges[-1]
-    width_left = x_max_left - x_min_left
-    eps_height = 0.5
+    # Create a masking rectangle spanning the full x–axis range.
+    eps_height = 0.001
     eps_width = 0.1
-    rect = Rectangle((x_min_left - eps_width, -eps_height), width_left + 2 * eps_width, z + eps_height, facecolor="white", edgecolor="none")
-    ax_left.add_patch(rect)
-    draw_custom_segments(ax_left)
+    rect_left = Rectangle((left_X_min - eps_width, y_bottom_left - eps_height),
+                          (left_X_max - left_X_min) + 2 * eps_width,
+                          (z - y_bottom_left) + 2 * eps_height,
+                          facecolor="white", edgecolor="none")
+    ax_left.add_patch(rect_left)
 
-    # Ancestor histogram
-    anc_counts, anc_bin_edges = np.histogram(bdfe_anc, bins=15)
+
+    # Plot the "Ancestor" histogram.
+    anc_counts, anc_bin_edges = np.histogram(bdfe_anc, bins=10, density=True)
+    anc_bin_edges += 0.5
     ax_left.stairs(
         values=anc_counts,
         edges=anc_bin_edges,
         baseline=0,
         fill=True,
-        facecolor=GREY_FILL,
+        facecolor=ANC_FILL,
         edgecolor="black",
         lw=1.1,
         label="Ancestor"
     )
-
     ax_left.legend(frameon=False, loc='upper left')
+    draw_custom_segments(ax_left, left_X_min, left_X_max, y_bottom_left, z, lw_main)
 
-    # --------------
-    # Right Panel
-    # --------------
-    counts2, bin_edges2 = np.histogram(bdfe_evo, bins=10)
-    bin_edges2 = bin_edges2 * 0.9
-    counts2_shifted = counts2 + z
-
-    # ax_right.set_xlim(-0.1, 0.1)
-    # ax_right.set_ylim(0, 500)
+    # ========================
+    # RIGHT PANEL
+    # ========================
+    right_X_min, right_X_max = -10, 10
+    ax_right.set_xlim(right_X_min, right_X_max)
     ax_right.set_xlabel("Fitness $(\\Delta)$", fontsize=label_fontsize)
     ax_right.tick_params(labelsize=tick_fontsize)
 
-    draw_custom_segments(ax_right)
-
-    # Evolved histogram (purple fill, black edge)
+    counts2, bin_edges2 = np.histogram(bdfe_evo, bins=8, density=True)
+    bin_edges2 += 0.5
+    y_max_unshifted_right = ax_right.get_ylim()[1]
+    z_right = fraction_z * y_max_unshifted_right
+    ax_right.cla()
+    ax_right.set_xlim(right_X_min, right_X_max)
+    ax_right.set_xlabel("Fitness $(\\Delta)$", fontsize=label_fontsize)
+    ax_right.tick_params(labelsize=tick_fontsize)
     ax_right.stairs(
-        values=counts2_shifted,
+        values=counts2 + z_right,
         edges=bin_edges2,
         baseline=0,
         fill=True,
-        facecolor=GREY_FILL,
+        facecolor=EVO_FILL,
         edgecolor="black",
         lw=1.1,
         label="Evolved"
     )
+    ax_right.figure.canvas.draw()
+    # Use z_right as the top for dashed segments.
+    y_top_right = z_right
+    y_bottom_right = -0.01
+    rect_right = Rectangle((right_X_min - eps_width, y_bottom_right - eps_height),
+                           (right_X_max - right_X_min) + 2 * eps_width,
+                           (z_right - y_bottom_right) + 2 * eps_height,
+                           facecolor="white", edgecolor="none")
+    ax_right.add_patch(rect_right)
+    draw_custom_segments(ax_right, right_X_min, right_X_max, y_bottom_right, z_right, lw_main)
 
-    # Mask bottom portion
-    x_min_right = bin_edges2[0]
-    x_max_right = bin_edges2[-1]
-    width_right = x_max_right - x_min_right
-    eps_height = 0.5
-    eps_width = 0.1
-    rect2 = Rectangle((x_min_right - eps_width, -eps_height), width_right + 2 * eps_width, z + eps_height, facecolor="white", edgecolor="none")
-    ax_right.add_patch(rect2)
-    draw_custom_segments(ax_right)
-
-    anc2_counts, anc2_bin_edges = np.histogram(prop_bdfe_evo, bins=30)
+    anc2_counts, anc2_bin_edges = np.histogram(prop_bdfe_evo, bins=15, density=True)
     ax_right.stairs(
         values=anc2_counts,
         edges=anc2_bin_edges,
         baseline=0,
         fill=True,
-        facecolor=PURPLE_FILL,
+        facecolor=ANC_FILL,
         edgecolor="black",
         lw=1.1,
         label="Ancestor"
     )
-
     ax_right.legend(frameon=False, loc='upper left')
+    ax_right.set_ylim(0, None)
 
-    # Detach the axes from the plot region for each subplot
+    # Final styling: reduce tick/spine thickness to 1.5.
     for ax in [ax_left, ax_right]:
-        # Hide the top and right spines
+        for spine in ax.spines.values():
+            spine.set_linewidth(1.5)
+        ax.tick_params(width=1.5)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-
-        # Offset the bottom spine (x-axis) and left spine (y-axis) outward by 10 points
         ax.spines['bottom'].set_position(('outward', 10))
         ax.spines['left'].set_position(('outward', 10))
-
-        # Ensure ticks only appear on the bottom and left spines
         ax.xaxis.set_ticks_position('bottom')
         ax.yaxis.set_ticks_position('left')
 
@@ -433,56 +438,50 @@ if __name__ == "__main__":
     crossings_flip_anc = 400
     crossings_flip_evo = 1200
 
-    big_fig = plt.figure(figsize=(12, 10))
-    gs = GridSpec(2, 3, figure=big_fig)
+    # Increase figure size and adjust spacing to avoid overlap
+    big_fig = plt.figure(figsize=(14, 10))
+    gs = GridSpec(2, 3, figure=big_fig, wspace=0.4, hspace=0.4)
 
     # Top row: A, B, C
     axA = big_fig.add_subplot(gs[0, 0])
     axB = big_fig.add_subplot(gs[0, 1])
     axC = big_fig.add_subplot(gs[0, 2])
 
-    # Bottom row: D and E
+    # Bottom row: D and a subgrid for E and F
     axD = big_fig.add_subplot(gs[1, 0])
-    gs_e = gs[1, 1:].subgridspec(1, 2, wspace=0)
-    axE_left = big_fig.add_subplot(gs_e[0, 0])
-    axE_right = big_fig.add_subplot(gs_e[0, 1], sharey=axE_left)
+    gs_e = gs[1, 1:].subgridspec(1, 2, wspace=0.3)
+    axE = big_fig.add_subplot(gs_e[0, 0])
+    axF = big_fig.add_subplot(gs_e[0, 1], sharey=axE)
 
-    # Tweak tick params for consistency
-    for ax in [axA, axB, axC, axD, axE_left, axE_right]:
-        ax.tick_params(axis='both', which='major', length=10, width=1, labelsize=14)
-        ax.tick_params(axis='both', which='minor', length=5, width=1, labelsize=14)
+    # Tweak tick parameters and match tick width to spine width
+    for ax in [axA, axB, axC, axD, axE, axF]:
+        ax.tick_params(axis='both', which='major', length=10, width=1.5, labelsize=14)
+        ax.tick_params(axis='both', which='minor', length=5, width=1.6, labelsize=14)
         for spine in ax.spines.values():
-            spine.set_linewidth(2)
+            spine.set_linewidth(1.5)
 
-    # create_fig_ge(axA, num_points=50, repeat=10, N=N)
-    # create_fig_dfe_fin(axB, N=2000, beta_arr=[0.0, 0.5, 1.0], rho=1.0, num_repeats=3, num_bins=50)
-    # create_fig_bdfe_hists(axC, points_lst=flip_list, num_bins=10, num_flips=num_flips)
-    # create_fig_crossings(axD, crossings_flip_anc, crossings_flip_evo, crossings_repeat)
-    create_fig_dfes_overlap(axE_left, axE_right, flip1=crossings_flip_anc, flip2=crossings_flip_evo, repeat=crossings_repeat, color=color)
+    # Example calls (comment in/out as needed)
+    create_fig_dfe_evol(axA, num_points=5, repeat=crossings_repeat)
+    create_fig_dfe_fin(axB, N=2000, beta_arr=[0.0, 0.5, 1.0], rho=1.0, num_repeats=3)
+    create_fig_bdfe_hists(axC, points_lst=flip_list, num_bins=10, num_flips=num_flips)
+    create_fig_crossings(axD, crossings_flip_anc, crossings_flip_evo, crossings_repeat)
+    create_fig_dfes_overlap(axE, axF, flip1=crossings_flip_anc, flip2=crossings_flip_evo, repeat=crossings_repeat, color=color)
 
-    # Remove the x=0 label from subplots:
+    # Remove the x=0 label from subplots B, C, D as before
     for ax in [axB, axC, axD]:
         xticks = ax.get_xticks()
-        # Replace the label at 0 with an empty string
-        new_labels = []
-        for t in xticks:
-            if np.isclose(t, 0.0):
-                new_labels.append('')
-            else:
-                # Format other ticks normally
-                new_labels.append(f'{t:.1f}')
+        new_labels = [f'{t:.1f}' if not np.isclose(t, 0.0) else '' for t in xticks]
         ax.set_xticklabels(new_labels)
 
-    # Label the panels
-    panel_labels = ['A', 'B', 'C', 'D', 'E']
-    ax_list = [axA, axB, axC, axD, axE_left]
+    # Label the panels: now we have 6 panels (A, B, C, D, E, F)
+    panel_labels = ['A', 'B', 'C', 'D', 'E', 'F']
+    ax_list = [axA, axB, axC, axD, axE, axF]
     for i, ax in enumerate(ax_list):
         ax.text(-0.1, 1.1, panel_labels[i], transform=ax.transAxes,
                 fontsize=16, fontweight='heavy', va='top', ha='left')
 
     big_fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
-    # Save the figure
     output_dir = '../figs_paper'
     os.makedirs(output_dir, exist_ok=True)
     big_fig.savefig(os.path.join(output_dir, "sk_results.svg"), format="svg", bbox_inches='tight')
