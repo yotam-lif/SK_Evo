@@ -268,8 +268,12 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
     J = data_entry['J']
     flip_seq = data_entry['flip_seq']
 
-    # We'll compute z as a fraction of the unshifted maximum y (relative vertical shift).
-    fraction_z = 0.08  # for example, 5% of the unshifted max
+    # Calculate percentages of walk completed like in create_fig_crossings
+    num_flips = len(flip_seq)
+    flip_anc_percent = int(flip1 * 100 / num_flips)
+    flip_evo_percent = int(flip2 * 100 / num_flips)
+
+    fraction_z = 0.08  # change as needed
     lw_main = 1.0
     label_fontsize = 16
     tick_fontsize = 14
@@ -283,14 +287,11 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
         return X_min + ((x_ref - ref_min) / (ref_max - ref_min)) * (X_max - X_min)
 
     # --- Custom segments drawing function.
-    # The reference x–coordinates are in [-0.1, 0.1], and we now use z for the top.
     def draw_custom_segments(ax, X_min, X_max, y_bottom, z_val, lw_main):
-        # Draw horizontal dashed line at z_val.
         x_left_line = scale_x(-0.09, X_min, X_max)
         x_right_line = scale_x(0.09, X_min, X_max)
         ax.plot([x_left_line, x_right_line], [z_val, z_val],
                 linestyle="--", color="grey", lw=lw_main)
-        # Define reference segments (using y_bottom for the bottom, and z_val for the top).
         segs_ref = [
             ((-0.05, y_bottom), ((-0.05 * 0.9), z_val)),
             ((0.05, y_bottom), ((0.05 * 0.9), z_val)),
@@ -305,7 +306,7 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
 
     # Define fill colors.
     EVO_FILL = (color[0][0], color[0][1], color[0][2], 0.75)
-    ANC_FILL   = (0.5, 0.5, 0.5, 0.4)
+    ANC_FILL = (0.5, 0.5, 0.5, 0.4)
 
     # ========================
     # LEFT PANEL
@@ -316,14 +317,9 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
     ax_left.set_xlabel('Fitness $(\\Delta)$', fontsize=label_fontsize)
     ax_left.tick_params(labelsize=tick_fontsize)
 
-    # Compute histogram (density) for the "Evolved" data without shift.
     counts, bin_edges = np.histogram(prop_bdfe_anc, bins=20, density=True)
     y_max_unshifted = ax_left.get_ylim()[1]
-    # Compute z as a fraction of the unshifted maximum.
     z = fraction_z * y_max_unshifted
-    ax_left.set_xlim(left_X_min, left_X_max)
-    ax_left.set_xlabel('Fitness $(\\Delta)$', fontsize=label_fontsize)
-    ax_left.tick_params(labelsize=tick_fontsize)
     ax_left.stairs(
         values=counts + z,
         edges=bin_edges,
@@ -332,13 +328,11 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
         facecolor=EVO_FILL,
         edgecolor="black",
         lw=1.1,
-        label="Evolved"
+        label=f'Evolved(${flip_evo_percent}\\%$)'
     )
     ax_left.figure.canvas.draw()
-    # For the dashed segments, we set y_top = z (using z as the top value)
     y_bottom_left = -0.01
 
-    # Create a masking rectangle spanning the full x–axis range.
     eps_height = 0.001
     eps_width = 0.1
     rect_left = Rectangle((left_X_min - eps_width, y_bottom_left - eps_height),
@@ -347,8 +341,6 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
                           facecolor="white", edgecolor="none")
     ax_left.add_patch(rect_left)
 
-
-    # Plot the "Ancestor" histogram.
     anc_counts, anc_bin_edges = np.histogram(bdfe_anc, bins=10, density=True)
     anc_bin_edges += 0.5
     ax_left.stairs(
@@ -359,7 +351,7 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
         facecolor=ANC_FILL,
         edgecolor="black",
         lw=1.1,
-        label="Ancestor"
+        label=f'Ancestor(${flip_anc_percent}\\%$)'
     )
     ax_left.legend(frameon=False, loc='upper left')
     draw_custom_segments(ax_left, left_X_min, left_X_max, y_bottom_left, z, lw_main)
@@ -388,11 +380,9 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
         facecolor=EVO_FILL,
         edgecolor="black",
         lw=1.1,
-        label="Evolved"
+        label=f'Evolved(${flip_evo_percent}\\%$)'
     )
     ax_right.figure.canvas.draw()
-    # Use z_right as the top for dashed segments.
-    y_top_right = z_right
     y_bottom_right = -0.01
     rect_right = Rectangle((right_X_min - eps_width, y_bottom_right - eps_height),
                            (right_X_max - right_X_min) + 2 * eps_width,
@@ -410,12 +400,11 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
         facecolor=ANC_FILL,
         edgecolor="black",
         lw=1.1,
-        label="Ancestor"
+        label=f'Ancestor(${flip_anc_percent}\\%$)'
     )
     ax_right.legend(frameon=False, loc='upper left')
     ax_right.set_ylim(0, None)
 
-    # Final styling: reduce tick/spine thickness to 1.5.
     for ax in [ax_left, ax_right]:
         for spine in ax.spines.values():
             spine.set_linewidth(1.5)
@@ -460,7 +449,6 @@ if __name__ == "__main__":
         for spine in ax.spines.values():
             spine.set_linewidth(1.5)
 
-    # Example calls (comment in/out as needed)
     create_fig_dfe_evol(axA, num_points=5, repeat=crossings_repeat)
     create_fig_dfe_fin(axB, N=2000, beta_arr=[0.0, 0.5, 1.0], rho=1.0, num_repeats=3)
     create_fig_bdfe_hists(axC, points_lst=flip_list, num_bins=10, num_flips=num_flips)
