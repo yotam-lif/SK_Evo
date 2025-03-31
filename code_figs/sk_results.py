@@ -121,7 +121,7 @@ def create_fig_dfe_fin(ax, N, beta_arr, rho, num_repeats):
         x_kde, y_kde = reflect_kde_neg(dfe, bw='scott', kernel='gau', gridsize=200)
         ax.plot(x_kde, y_kde, label=f'$\\beta={beta_arr[i]:.1f}$', color=color[i % len(color)], lw=2.0)
     ax.set_xlabel('Fitness($\\Delta$)', fontsize=14)
-    ax.set_ylabel('$P(\\Delta, t=\\infty)$', fontsize=14)
+    ax.set_ylabel('$P(\\Delta, t=100\\%)$', fontsize=14)
     ax.set_xlim(None, 0)
     ax.legend(fontsize=12, title_fontsize=12, loc='upper left', frameon=False, markerscale=3)
 
