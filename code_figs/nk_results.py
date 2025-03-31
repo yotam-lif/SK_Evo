@@ -129,6 +129,6 @@ for i in range(len(data_arr)):
 # Save the figure
 output_dir = '../figs_paper'
 os.makedirs(output_dir, exist_ok=True)
-fig_path = os.path.join(output_dir, 'nk_sim_results.svg')
+fig_path = os.path.join(output_dir, 'nk_results.svg')
 plt.savefig(fig_path, format='svg', bbox_inches='tight')
 plt.show()
