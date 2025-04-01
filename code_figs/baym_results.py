@@ -2,29 +2,32 @@ import os, io
 import numpy as np
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
-from matplotlib.gridspec import GridSpec
+from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 import pandas as pd
-from scipy.stats import gaussian_kde
 import seaborn as sns
+import matplotlib.cm as cm
+
+# set font
+plt.rcParams['font.family'] = 'sans-serif'
 
 
-def create_dfe_comparison_ridgeplot(ax):
+def create_dfe_comparison_ridgeplot(ax_container):
     """
-    Creates the DFE comparison ridgeplot using the same FacetGrid-based
-    code as in the notebook. The output is saved to an in-memory image and
-    then drawn on the provided axis. The facet rows are reversed and no title
-    is added.
+    Creates a ridgeline plot with overlapping KDE curves.
+    Each population is plotted in a transparent subplot so that
+    only the KDEs overlap (not the white subplot backgrounds).
+    Every facet displays an x-axis line (thicker than before). Only the bottom facet shows numeric tick labels,
+    while all facets have the population label (e.g., "Anc", "Ara–1", etc.) added inside.
     """
-
-    # --- Load and process the data ---
-    datapath = os.path.join('..', 'data', 'anurag_data', 'Analysis', 'Part_3_TnSeq_analysis',
-                            'Processed_data_for_plotting')
+    # --- Data Loading & Processing ---
+    datapath = os.path.join('..', 'data', 'anurag_data', 'Analysis',
+                            'Part_3_TnSeq_analysis', 'Processed_data_for_plotting')
     dfe_data_csv = os.path.join(datapath, "dfe_data_pandas.csv")
     dfe_data = pd.read_csv(dfe_data_csv)
     if "Fitness estimate" in dfe_data.columns:
         dfe_data.rename(columns={'Fitness estimate': 'Fitness effect'}, inplace=True)
 
-    # Split into Ara- and Ara+ and then recombine.
+    # Combine Ara- and Ara+ data
     dfe_data_minus = dfe_data[dfe_data['Ara Phenotype'] == 'Ara-']
     dfe_data_plus = dfe_data[dfe_data['Ara Phenotype'] == 'Ara+']
     dfe_data = pd.concat([dfe_data_minus, dfe_data_plus])
@@ -44,67 +47,95 @@ def create_dfe_comparison_ridgeplot(ax):
     # Exclude unwanted populations.
     dfe_data = dfe_data[~dfe_data['Population'].isin(['Ara–2', 'Ara+4'])]
 
-    # Filter for near-neutral fitness effects.
+    # Filter near-neutral fitness effects.
     dfe_ridge_data = dfe_data[(dfe_data["Fitness effect"] < 0.05) &
                               (dfe_data["Fitness effect"] > -0.1)].copy()
 
-    # --- Reverse the plotting order ---
-    # Define the explicit order and then reverse it.
+    # --- Define Order ---
     k_reordered = [0, 2, 4, 5, 6, 7, 1, 8, 9, 10, 12, 13]
     pop_order = [libraries2[k] for k in k_reordered if libraries2[k] not in ['Ara–2', 'Ara+4']]
-    pop_order = pop_order[::-1]  # reverse the order
+    pop_order = pop_order[::-1]  # reverse order
 
-    # Set Population as an ordered categorical variable.
     dfe_ridge_data['Population'] = pd.Categorical(
         dfe_ridge_data['Population'],
         categories=pop_order,
         ordered=True
     )
 
-    # Define the color palette and reverse it.
-    ridgeplot_palette = []
-    for k in k_reordered:
-        if libraries2[k] in ['Ara–2', 'Ara+4']:
-            continue
-        if k < 2:
-            ridgeplot_palette.append('#c0bfbf')
+    # --- Define Colors using 'CMRmap' ---
+    cmap = cm.get_cmap("CMRmap")
+    color_anc = cmap(0.45)  # use a redder hue for Anc, Anc*
+    color_other = cmap(0.1)  # use a bluer hue for others
+
+    # --- Create Nested Grid with Negative Vertical Spacing ---
+    fig = ax_container.figure
+    container_spec = ax_container.get_subplotspec()
+    num_facets = len(pop_order)
+    # Use negative hspace to force overlapping
+    inner_gs = GridSpecFromSubplotSpec(nrows=num_facets, ncols=1,
+                                       subplot_spec=container_spec,
+                                       hspace=-0.5)
+
+    # Hide the container axis
+    ax_container.set_visible(False)
+
+    # --- Plot Each Facet ---
+    for i, pop in enumerate(pop_order):
+        ax_facet = fig.add_subplot(inner_gs[i])
+        # Make the subplot background transparent
+        ax_facet.set_facecolor("none")
+        # Set the zorder so that later subplots appear on top
+        ax_facet.set_zorder(i)
+
+        pop_data = dfe_ridge_data[dfe_ridge_data["Population"] == pop]
+
+        # Determine fill color based on population
+        if pop in ["Anc", "Anc*"]:
+            fill_color = color_anc
         else:
-            ridgeplot_palette.append('#08519c')
-    ridgeplot_palette = ridgeplot_palette[::-1]
+            fill_color = color_other
 
-    # --- Create the FacetGrid (exactly as in the notebook) ---
-    g = sns.FacetGrid(dfe_ridge_data, row="Population", hue="Population",
-                      aspect=7, height=0.3, palette=ridgeplot_palette, sharex=True)
-    sns.set_theme(context="paper", rc={"axes.facecolor": (0, 0, 0, 0)},
-                  style='white')
-    g.map(sns.kdeplot, "Fitness effect",
-          bw_adjust=0.5, clip_on=True,
-          fill=True, alpha=1, linewidth=1)
-    g.map(sns.kdeplot, "Fitness effect",
-          clip_on=False, color="white", lw=0.5, bw_adjust=0.25)
+        # Plot the filled KDE curve
+        sns.kdeplot(
+            data=pop_data, x="Fitness effect",
+            bw_adjust=0.5, clip=(-0.1, 0.05),
+            fill=True, alpha=1, linewidth=2,
+            color=fill_color, ax=ax_facet
+        )
+        # Plot the white outline for clarity
+        sns.kdeplot(
+            data=pop_data, x="Fitness effect",
+            bw_adjust=0.25, clip=(-0.1, 0.05),
+            color="white", lw=1.25, ax=ax_facet
+        )
 
-    # Add labels in axes coordinates.
-    def label(x, color, label_name):
-        ax_temp = plt.gca()
-        ax_temp.text(0.03, 0.2, label_name, color='black', size=8,
-                     ha="left", va="center", transform=ax_temp.transAxes)
+        # Remove y-axis ticks and labels
+        ax_facet.set_ylabel("")
+        ax_facet.set_yticks([])
+        for spine in ax_facet.spines.values():
+            spine.set_visible(False)
 
-    g.map(label, "Fitness effect")
+        # Ensure the bottom spine (x-axis line) is visible and thicker
+        ax_facet.spines['bottom'].set_visible(True)
+        ax_facet.spines['bottom'].set_linewidth(2)
 
-    # Remove facet titles.
-    g.set_titles("")
+        # Make the x-axis visible on every facet.
+        if i < num_facets - 1:
+            # For non-bottom facets: show the x-axis line without tick marks or labels.
+            ax_facet.tick_params(axis='x', which='both', length=0, labelbottom=False)
+            ax_facet.set_xlabel("")
+        else:
+            # For the bottom facet: show tick labels (numeric values) without tick marks.
+            ax_facet.set_xlim(-0.1, 0.05)
+            ax_facet.set_xticks([-0.1, -0.05, 0, 0.05])
+            ax_facet.tick_params(axis='x', which='both', length=0, labelbottom=True)
+            ax_facet.set_xlabel("Fitness effect", fontsize=16)
+            for tick in ax_facet.get_xticklabels():
+                tick.set_fontsize(16)
 
-    # --- Render the FacetGrid to an in-memory image and plot it ---
-    buf = io.BytesIO()
-    g.fig.savefig(buf, format='png', bbox_inches='tight')
-    buf.seek(0)
-    img = mpimg.imread(buf)
-    buf.close()
-
-    # Clear the provided axis and display the image.
-    ax.clear()
-    ax.imshow(img)
-    ax.axis('off')
+        # Add the population label inside each facet.
+        ax_facet.text(0.03, 0.2, pop, color='black', size=18,
+                      ha="left", va="center", transform=ax_facet.transAxes)
 
 
 def create_overlapping_dfes(ax):
@@ -117,9 +148,10 @@ def create_overlapping_dfes(ax):
     ax.plot(data['x'], data['y1'], label='DFE1', color='blue', lw=1.5)
     ax.plot(data['x'], data['y2'], label='DFE2', color='red', lw=1.5)
     ax.legend(frameon=False, fontsize=10)
-    ax.set_title("Overlapping DFEs", fontsize=14)
+    ax.set_title("B", loc="left", fontsize=16, fontweight="heavy")
     ax.set_xlabel("X-axis", fontsize=12)
     ax.set_ylabel("Y-axis", fontsize=12)
+
 
 def create_segben(ax):
     """
@@ -129,9 +161,10 @@ def create_segben(ax):
     data_path = os.path.join('data', 'alex_code', 'segben_data.csv')
     data = pd.read_csv(data_path)
     ax.scatter(data['x'], data['y'], color='green', s=25)
-    ax.set_title("Segben", fontsize=14)
+    ax.set_title("C", loc="left", fontsize=16, fontweight="heavy")
     ax.set_xlabel("X-axis", fontsize=12)
     ax.set_ylabel("Y-axis", fontsize=12)
+
 
 def main():
     # Create a figure with 2 rows and 3 columns.
@@ -147,16 +180,16 @@ def main():
     ax_bottom_middle = fig.add_subplot(gs[1, 1])
     ax_bottom_right = fig.add_subplot(gs[1, 2])
 
-    # Plot into each axis.
+    # Plot the ridgeline (subfigure A)
     create_dfe_comparison_ridgeplot(ax_ridge)
+
+    # Plot other subfigures with their titles (panel labels "B" and "C" will be added here)
     # create_overlapping_dfes(ax_top_middle)
     # create_segben(ax_top_right)
-    # # For demonstration, reusing the same functions in the bottom row.
     # create_overlapping_dfes(ax_bottom_middle)
     # create_segben(ax_bottom_right)
 
-    # Add panel labels.
-    # Here, we label the merged left axis as "A", then the remaining panels as "B", "C", "D", and "E".
+    # Panel labels are added here as before.
     labels = {
         ax_ridge: "A",
         ax_top_middle: "B",
@@ -165,7 +198,9 @@ def main():
         ax_bottom_right: "E"
     }
     for ax, label in labels.items():
-        ax.text(0.01, 0.95, label, transform=ax.transAxes,
+        ax.text(-0.01, 1.1, label, transform=ax.transAxes,
+                fontsize=16, fontweight='heavy', va='top', ha='left')
+    ax_top_middle.text(-1.4, 1.1, "A", transform=ax_top_middle.transAxes,
                 fontsize=16, fontweight='heavy', va='top', ha='left')
 
     # Save the figure.
@@ -174,6 +209,7 @@ def main():
     output_path = os.path.join(output_dir, "baym_results.svg")
     fig.savefig(output_path, format="svg", bbox_inches='tight')
     plt.close(fig)
+
 
 if __name__ == "__main__":
     main()
