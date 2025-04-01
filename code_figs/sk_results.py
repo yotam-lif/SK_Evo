@@ -279,8 +279,8 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
     tick_fontsize = 14
 
     # Propagate forward/backward.
-    bdfe_anc, prop_bdfe_anc, _ = propagate_forward(alpha_initial, h, J, flip_seq, flip1, flip2)
-    bdfe_evo, prop_bdfe_evo, _ = propagate_backward(alpha_initial, h, J, flip_seq, flip1, flip2)
+    bdfe_anc, prop_bdfe_anc, dfe_evo = propagate_forward(alpha_initial, h, J, flip_seq, flip1, flip2)
+    bdfe_evo, prop_bdfe_evo, dfe_anc = propagate_backward(alpha_initial, h, J, flip_seq, flip1, flip2)
 
     # --- Helper: scale x from reference range [-0.1, 0.1] to our fixed x–limits.
     def scale_x(x_ref, X_min, X_max, ref_min=-0.1, ref_max=0.1):
@@ -328,21 +328,34 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
         facecolor=EVO_FILL,
         edgecolor="black",
         lw=1.1,
-        label=f'Evolved(${flip_evo_percent}\\%$)'
+        label=f'Evolved(${flip_evo_percent}\\%$)',
+        zorder=0
     )
-    ax_left.figure.canvas.draw()
     y_bottom_left = -0.01
-
-    eps_height = 0.001
+    eps_height = 0.005
     eps_width = 0.1
     rect_left = Rectangle((left_X_min - eps_width, y_bottom_left - eps_height),
                           (left_X_max - left_X_min) + 2 * eps_width,
                           (z - y_bottom_left) + 2 * eps_height,
-                          facecolor="white", edgecolor="none")
+                          facecolor="white", edgecolor="none", zorder=2)
     ax_left.add_patch(rect_left)
 
     anc_counts, anc_bin_edges = np.histogram(bdfe_anc, bins=10, density=True)
     anc_bin_edges += 0.5
+
+    dfe_evo_counts, dfe_evo_bin_edges = np.histogram(prop_bdfe_anc, bins=20, density=True)
+    ax_left.stairs(
+        values=dfe_evo_counts + z - 0.01,
+        edges=dfe_evo_bin_edges + 0.2,
+        baseline=0,
+        fill=False,
+        facecolor=None,
+        edgecolor=color[2],
+        lw=1.1,
+        label=f'Full DFE(${flip_evo_percent}\\%$)',
+        zorder=1
+    )
+
     ax_left.stairs(
         values=anc_counts,
         edges=anc_bin_edges,
@@ -351,10 +364,13 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
         facecolor=ANC_FILL,
         edgecolor="black",
         lw=1.1,
-        label=f'Ancestor(${flip_anc_percent}\\%$)'
+        label=f'Ancestor(${flip_anc_percent}\\%$)',
+        zorder=3
     )
+    ax_left.figure.canvas.draw()
     ax_left.legend(frameon=False, loc='upper left')
     draw_custom_segments(ax_left, left_X_min, left_X_max, y_bottom_left, z, lw_main)
+
 
     # ========================
     # RIGHT PANEL
@@ -402,6 +418,18 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
         lw=1.1,
         label=f'Ancestor(${flip_anc_percent}\\%$)'
     )
+    dfe_anc2_counts, dfe_anc2_bin_edges = np.histogram(dfe_anc, bins=18, density=True)
+    ax_right.stairs(
+        values=dfe_anc2_counts,
+        edges=dfe_anc2_bin_edges,
+        baseline=0,
+        fill=False,
+        facecolor=None,
+        edgecolor=color[2],
+        lw=1.1,
+        label=f'Full DFE(${flip_anc_percent}\\%$)'
+    )
+
     ax_right.legend(frameon=False, loc='upper left')
     ax_right.set_ylim(0, None)
 
