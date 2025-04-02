@@ -1,15 +1,18 @@
-import os, io
+import os
 import numpy as np
-import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 import pandas as pd
 import seaborn as sns
-import matplotlib.cm as cm
+from matplotlib.patches import FancyArrowPatch, Rectangle
 
 # set font
 plt.rcParams['font.family'] = 'sans-serif'
-
+label_fontsize = 16
+tick_fontsize = 14
+color = sns.color_palette('CMRmap', 5)
+EVO_FILL = (color[1][0], color[1][1], color[1][2], 0.75)
+ANC_FILL = (0.5, 0.5, 0.5, 0.4)
 
 def create_dfe_comparison_ridgeplot(ax_container):
     """
@@ -62,10 +65,8 @@ def create_dfe_comparison_ridgeplot(ax_container):
         ordered=True
     )
 
-    # --- Define Colors using 'CMRmap' ---
-    cmap = cm.get_cmap("CMRmap")
-    color_anc = cmap(0.45)  # use a redder hue for Anc, Anc*
-    color_other = cmap(0.1)  # use a bluer hue for others
+    color_anc = ANC_FILL
+    color_other = color[0]
 
     # --- Create Nested Grid with Negative Vertical Spacing ---
     fig = ax_container.figure
@@ -129,7 +130,7 @@ def create_dfe_comparison_ridgeplot(ax_container):
             ax_facet.set_xlim(-0.1, 0.05)
             ax_facet.set_xticks([-0.1, -0.05, 0, 0.05])
             ax_facet.tick_params(axis='x', which='both', length=0, labelbottom=True)
-            ax_facet.set_xlabel("Fitness effect", fontsize=16)
+            ax_facet.set_xlabel(r'Fitness effect $(\Delta)$', fontsize=16)
             for tick in ax_facet.get_xticklabels():
                 tick.set_fontsize(16)
 
@@ -138,32 +139,314 @@ def create_dfe_comparison_ridgeplot(ax_container):
                       ha="left", va="center", transform=ax_facet.transAxes)
 
 
-def create_overlapping_dfes(ax):
-    """
-    Minimal steps to produce the overlapping DFEs figure.
-    Based on the code from alex_code/overlapping_dfes.py with modified data path.
-    """
-    data_path = os.path.join('data', 'alex_code', 'overlapping_dfes_data.csv')
-    data = pd.read_csv(data_path)
-    ax.plot(data['x'], data['y1'], label='DFE1', color='blue', lw=1.5)
-    ax.plot(data['x'], data['y2'], label='DFE2', color='red', lw=1.5)
-    ax.legend(frameon=False, fontsize=10)
-    ax.set_title("B", loc="left", fontsize=16, fontweight="heavy")
-    ax.set_xlabel("X-axis", fontsize=12)
-    ax.set_ylabel("Y-axis", fontsize=12)
+def create_overlapping_dfes(ax_left, ax_right):
+    # Vertical shift for the "evolved" histograms
+    z = 30
+    lw_main = 1.0
+
+    def draw_custom_segments(ax):
+        ax.plot([-0.09, 0.09], [z * 1.1, z * 1.1],
+                linestyle="--", color="grey", lw=lw_main)
+        segs = [
+            ((-0.05, -0.75), (-0.05 * 0.9, z * 1.1)),
+            ((0.05, -0.75), (0.05 * 0.9, z * 1.1)),
+            ((-0.1, -0.75), (-0.09, z * 1.1)),
+            ((0.1, -0.75), (0.09, z * 1.1)),
+            ((0, -0.75), (0, z * 1.1))
+        ]
+        for (x0, y0), (x1, y1) in segs:
+            ax.plot([x0, x1], [y0, y1], linestyle="--", color="grey", lw=lw_main)
+
+    # Set file path using the datadir variable
+    datadir = os.path.join('..', 'alex_code')
+    Rtable = pd.read_csv(os.path.join(datadir, "Rfitted_fil.txt"), sep="\t")
+    Ttable = pd.read_csv(os.path.join(datadir, "2Kfitted_fil.txt"), sep="\t")
+    Ftable = pd.read_csv(os.path.join(datadir, "15Kfitted_fil.txt"), sep="\t")
+
+    # Remove rows with NA in 'fitted1'
+    Rtable = Rtable.dropna(subset=["fitted1"])
+    Ttable = Ttable.dropna(subset=["fitted1"])
+    Ftable = Ftable.dropna(subset=["fitted1"])
+
+    # Filter beneficial alleles: fitted1 in (0.015, 0.3] and abn > 1
+    Rben = Rtable[(Rtable["fitted1"] <= 0.3) & (Rtable["fitted1"] > 0.015) & (Rtable["abn"] > 1)].copy()
+    Tben = Ttable[(Ttable["fitted1"] <= 0.3) & (Ttable["fitted1"] > 0.015) & (Ttable["abn"] > 1)].copy()
+    Fben = Ftable[(Ftable["fitted1"] <= 0.3) & (Ftable["fitted1"] > 0.015) & (Ftable["abn"] > 1)].copy()
+
+    # Remove duplicate sites
+    Rben = Rben.drop_duplicates(subset=["site"])
+    Tben = Tben.drop_duplicates(subset=["site"])
+    Fben = Fben.drop_duplicates(subset=["site"])
+
+    # Build data frames for allele comparisons
+    Rnames = Rben["alle"].values
+    Repi = pd.DataFrame(np.nan, index=range(len(Rnames)), columns=["R", "M", "K"])
+    for i, allele in enumerate(Rnames):
+        r_val = Rtable.loc[Rtable["alle"] == allele, "fitted1"]
+        if not r_val.empty:
+            Repi.at[i, "R"] = r_val.iloc[0]
+        t_val = Ttable.loc[Ttable["alle"] == allele, "fitted1"]
+        if not t_val.empty:
+            Repi.at[i, "M"] = t_val.iloc[0]
+        f_val = Ftable.loc[Ftable["alle"] == allele, "fitted1"]
+        if not f_val.empty:
+            Repi.at[i, "K"] = f_val.iloc[0]
+
+    Tnames = Tben["alle"].values
+    Tepi = pd.DataFrame(np.nan, index=range(len(Tnames)), columns=["R", "M", "K"])
+    for i, allele in enumerate(Tnames):
+        t_val = Ttable.loc[Ttable["alle"] == allele, "fitted1"]
+        if not t_val.empty:
+            Tepi.at[i, "M"] = t_val.iloc[0]
+        r_val = Rtable.loc[Rtable["alle"] == allele, "fitted1"]
+        if not r_val.empty:
+            Tepi.at[i, "R"] = r_val.iloc[0]
+        f_val = Ftable.loc[Ftable["alle"] == allele, "fitted1"]
+        if not f_val.empty:
+            Tepi.at[i, "K"] = f_val.iloc[0]
+
+    Fnames = Fben["alle"].values
+    Fepi = pd.DataFrame(np.nan, index=range(len(Tnames)), columns=["R", "M", "K"])
+    for i, allele in enumerate(Fnames):
+        f_val = Ftable.loc[Ftable["alle"] == allele, "fitted1"]
+        if not f_val.empty:
+            Fepi.at[i, "K"] = f_val.iloc[0]
+        r_val = Rtable.loc[Rtable["alle"] == allele, "fitted1"]
+        if not r_val.empty:
+            Fepi.at[i, "R"] = r_val.iloc[0]
+        t_val = Ttable.loc[Ttable["alle"] == allele, "fitted1"]
+        if not t_val.empty:
+            Fepi.at[i, "M"] = t_val.iloc[0]
+
+    # Combine data sets and keep rows with at least 2 non-NA values
+    Repi["back"] = 1
+    Tepi["back"] = 2
+    Fepi["back"] = 3
+    data = pd.concat([Repi, Tepi, Fepi], ignore_index=True)
+    data["nas"] = data[["R", "M", "K"]].notna().sum(axis=1)
+    x = data[data["nas"] >= 2].copy()
+
+    # Left Panel
+    vals_after = np.concatenate([
+        x.loc[x["back"] == 1, "M"].dropna().values,
+        x.loc[x["back"] == 1, "K"].dropna().values
+    ])
+    counts, bin_edges = np.histogram(vals_after, bins=30)
+    bin_edges = bin_edges * 0.9
+    counts_shifted = counts + z
+
+    ax_left.set_xlim(-0.1, 0.1)
+    ax_left.set_ylim(0, 500)
+    ax_left.set_xlabel(r'Fitness effect $(\Delta)$', fontsize=16)
+    ax_left.tick_params(labelsize=14)
+
+    draw_custom_segments(ax_left)
+    ax_left.stairs(
+        values=counts_shifted,
+        edges=bin_edges,
+        baseline=0,
+        fill=True,
+        facecolor=EVO_FILL,
+        edgecolor="black",
+        lw=1.1,
+        label="Evolved"
+    )
+    rect = Rectangle((-0.11, 0), 0.21, z, facecolor="white", edgecolor="none")
+    ax_left.add_patch(rect)
+    draw_custom_segments(ax_left)
+    vals_anc = x.loc[x["back"] == 1, "R"].dropna().values
+    anc_counts, anc_bin_edges = np.histogram(vals_anc, bins=24)
+    ax_left.stairs(
+        values=anc_counts,
+        edges=anc_bin_edges,
+        baseline=0,
+        fill=True,
+        facecolor=ANC_FILL,
+        edgecolor="black",
+        lw=1.1,
+        label="Ancestor"
+    )
+    ax_left.legend(frameon=False)
+
+    # Right Panel
+    vals_after2 = np.concatenate([
+        x.loc[x["back"] == 2, "M"].dropna().values,
+        x.loc[x["back"] == 3, "K"].dropna().values
+    ])
+    counts2, bin_edges2 = np.histogram(vals_after2, bins=10)
+    bin_edges2 = bin_edges2 * 0.9
+    counts2_shifted = counts2 + z
+
+    ax_right.set_xlim(-0.1, 0.1)
+    ax_right.set_ylim(0, 500)
+    ax_right.set_xlabel(r'Fitness effect $(\Delta)$', fontsize=16)
+    ax_right.tick_params(labelsize=14)
+
+    draw_custom_segments(ax_right)
+    ax_right.stairs(
+        values=counts2_shifted,
+        edges=bin_edges2,
+        baseline=0,
+        fill=True,
+        facecolor=EVO_FILL,
+        edgecolor="black",
+        lw=1.1,
+        label="Evolved"
+    )
+    rect2 = Rectangle((-0.11, 0), 0.21, z, facecolor="white", edgecolor="none")
+    ax_right.add_patch(rect2)
+    draw_custom_segments(ax_right)
+    vals_anc2 = np.unique(np.concatenate([
+        x.loc[x["back"].isin([2, 3]), "R"].dropna().values
+    ]))
+    anc2_counts, anc2_bin_edges = np.histogram(vals_anc2, bins=30)
+    ax_right.stairs(
+        values=anc2_counts,
+        edges=anc2_bin_edges,
+        baseline=0,
+        fill=True,
+        facecolor=ANC_FILL,
+        edgecolor="black",
+        lw=1.1,
+        label="Ancestor"
+    )
+    ax_right.legend(frameon=False)
+
+    # Adjust spines and tick positions for a cleaner look
+    for ax in [ax_left, ax_right]:
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['bottom'].set_position(('outward', 10))
+        ax.spines['left'].set_position(('outward', 10))
+        ax.xaxis.set_ticks_position('bottom')
+        ax.yaxis.set_ticks_position('left')
 
 
-def create_segben(ax):
-    """
-    Minimal steps to produce the segben figure.
-    Based on the code in alex_code/segben.py with modified data path.
-    """
-    data_path = os.path.join('data', 'alex_code', 'segben_data.csv')
-    data = pd.read_csv(data_path)
-    ax.scatter(data['x'], data['y'], color='green', s=25)
-    ax.set_title("C", loc="left", fontsize=16, fontweight="heavy")
-    ax.set_xlabel("X-axis", fontsize=12)
-    ax.set_ylabel("Y-axis", fontsize=12)
+def create_segben(ax_B, ax_C):
+    # Read tables from datadir
+    datadir = os.path.join('..', 'alex_code')
+    Rtable = pd.read_csv(os.path.join(datadir, "Rfitted_fil.txt"), sep="\t")
+    Ttable = pd.read_csv(os.path.join(datadir, "2Kfitted_fil.txt"), sep="\t")
+    Ftable = pd.read_csv(os.path.join(datadir, "15Kfitted_fil.txt"), sep="\t")
+
+    # Remove rows with NA in 'fitted1'
+    Rtable = Rtable.dropna(subset=["fitted1"])
+    Ttable = Ttable.dropna(subset=["fitted1"])
+    Ftable = Ftable.dropna(subset=["fitted1"])
+
+    # Filter beneficial alleles and remove duplicate sites
+    Rben = Rtable[(Rtable["fitted1"] <= 0.3) & (Rtable["fitted1"] > 0.015) & (Rtable["abn"] > 1)].drop_duplicates(subset=["site"]).copy()
+    Tben = Ttable[(Ttable["fitted1"] <= 0.3) & (Ttable["fitted1"] > 0.015) & (Ttable["abn"] > 1)].drop_duplicates(subset=["site"]).copy()
+    Fben = Ftable[(Ftable["fitted1"] <= 0.3) & (Ftable["fitted1"] > 0.015) & (Ftable["abn"] > 1)].drop_duplicates(subset=["site"]).copy()
+
+    # Create data frame for allele comparisons: Repi for the ancestor
+    Rnames = Rben["alle"].values
+    Repi = pd.DataFrame(np.nan, index=range(len(Rnames)), columns=["R", "M", "K"])
+    for i, allele in enumerate(Rnames):
+        r_val = Rtable.loc[Rtable["alle"] == allele, "fitted1"]
+        if not r_val.empty:
+            Repi.at[i, "R"] = r_val.iloc[0]
+        t_val = Ttable.loc[Ttable["alle"] == allele, "fitted1"]
+        if not t_val.empty:
+            Repi.at[i, "M"] = t_val.iloc[0]
+        f_val = Ftable.loc[Ftable["alle"] == allele, "fitted1"]
+        if not f_val.empty:
+            Repi.at[i, "K"] = f_val.iloc[0]
+
+    # Tepi: top alleles in 2K
+    Tnames = Tben["alle"].values
+    Tepi = pd.DataFrame(np.nan, index=range(len(Tnames)), columns=["R", "M", "K"])
+    for i, allele in enumerate(Tnames):
+        t_val = Ttable.loc[Ttable["alle"] == allele, "fitted1"]
+        if not t_val.empty:
+            Tepi.at[i, "M"] = t_val.iloc[0]
+        r_val = Rtable.loc[Rtable["alle"] == allele, "fitted1"]
+        if not r_val.empty:
+            Tepi.at[i, "R"] = r_val.iloc[0]
+        f_val = Ftable.loc[Ftable["alle"] == allele, "fitted1"]
+        if not f_val.empty:
+            Tepi.at[i, "K"] = f_val.iloc[0]
+
+    # Fepi: top alleles in 15K (using same number of rows as Tepi)
+    Fnames = Fben["alle"].values
+    Fepi = pd.DataFrame(np.nan, index=range(len(Tnames)), columns=["R", "M", "K"])
+    for i, allele in enumerate(Fnames):
+        f_val = Ftable.loc[Ftable["alle"] == allele, "fitted1"]
+        if not f_val.empty:
+            Fepi.at[i, "K"] = f_val.iloc[0]
+        r_val = Rtable.loc[Rtable["alle"] == allele, "fitted1"]
+        if not r_val.empty:
+            Fepi.at[i, "R"] = r_val.iloc[0]
+        t_val = Ttable.loc[Ttable["alle"] == allele, "fitted1"]
+        if not t_val.empty:
+            Fepi.at[i, "M"] = t_val.iloc[0]
+
+    color_0k = (color[0][0], color[0][1], color[0][2], 0.5)
+    color_2k = (color[1][0], color[1][1], color[1][2], 0.5)
+    color_15k = (color[2][0], color[2][1], color[2][2], 0.5)
+    # Panel B: ancestral to 2K
+    ax_B.set_xlim(0.8, 2.2)
+    ax_B.set_ylim(-0.15, 0.1)
+    ax_B.set_ylabel(r'Fitness effect $(\Delta)$', fontsize=16)
+    ax_B.tick_params(labelsize=14)
+    # Plot ancestral fitness values (Repi) at x = 1
+    ax_B.plot(np.repeat(1, len(Repi)), Repi["R"], 'o', markersize=5,
+              color=color_0k, markeredgewidth=0.5)
+    ax_B.axhline(0, linestyle="--", color="black")
+    # Draw arrows from ancestral (x = 1) to 2K fitness (x = 2)
+    for i, row in Repi.iterrows():
+        if pd.notna(row["R"]) and pd.notna(row["M"]):
+            start = (1, row["R"])
+            end = (2, row["M"])
+            arrow = FancyArrowPatch(start, end, arrowstyle='-|>', mutation_scale=10,
+                                    color=color_0k, lw=0.75)
+            ax_B.add_patch(arrow)
+    # Plot 2K fitness values (Tepi) at x = 2
+    ax_B.plot(np.repeat(2, len(Tepi)), Tepi["M"], 'o', markersize=5,
+              color=color_2k, markeredgewidth=0.5)
+    # Draw arrows from 2K (x = 2) back to ancestral (x = 1)
+    for i, row in Tepi.iterrows():
+        if pd.notna(row["M"]) and pd.notna(row["R"]):
+            start = (2, row["M"])
+            end = (1, row["R"])
+            arrow = FancyArrowPatch(start, end, arrowstyle='-|>', mutation_scale=10,
+                                    color=color_2k, lw=0.75)
+            ax_B.add_patch(arrow)
+    # Set ticks and custom labels for panel B
+    ax_B.set_xticks([1.0, 2.0])
+    ax_B.set_xticklabels(["0K", "2K"], fontsize=14)
+
+    # Panel C: 2K to 15K
+    ax_C.set_xlim(0.8, 2.2)
+    ax_C.set_ylim(-0.15, 0.1)
+    ax_C.set_ylabel(r'Fitness effect $(\Delta)$', fontsize=16)
+    ax_C.tick_params(labelsize=14)
+    # Plot 2K fitness values (Tepi) at x = 1
+    ax_C.plot(np.repeat(1, len(Tepi)), Tepi["M"], 'o', markersize=5,
+              color=color_2k, markeredgewidth=0.5)
+    ax_C.axhline(0, linestyle="--", color="black")
+    # Draw arrows from 2K (x = 1) to 15K (x = 2)
+    for i, row in Tepi.iterrows():
+        if pd.notna(row["M"]) and pd.notna(row["K"]):
+            start = (1, row["M"])
+            end = (2, row["K"])
+            arrow = FancyArrowPatch(start, end, arrowstyle='-|>', mutation_scale=10,
+                                    color=color_2k, lw=0.75)
+            ax_C.add_patch(arrow)
+    # Plot 15K fitness values (Fepi) at x = 2
+    ax_C.plot(np.repeat(2, len(Fepi)), Fepi["K"], 'o', markersize=5,
+              color=color_15k, markeredgewidth=0.5)
+    # Draw arrows from 15K (x = 2) back to 2K (x = 1)
+    for i, row in Fepi.iterrows():
+        if pd.notna(row["K"]) and pd.notna(row["M"]):
+            start = (2, row["K"])
+            end = (1, row["M"])
+            arrow = FancyArrowPatch(start, end, arrowstyle='-|>', mutation_scale=10,
+                                    color=color_15k, lw=0.75)
+            ax_C.add_patch(arrow)
+    # Set ticks and custom labels for panel C
+    ax_C.set_xticks([1.0, 2.0])
+    ax_C.set_xticklabels(["2K", "15K"], fontsize=14)
 
 
 def main():
@@ -183,13 +466,13 @@ def main():
     # Plot the ridgeline (subfigure A)
     create_dfe_comparison_ridgeplot(ax_ridge)
 
-    # Plot other subfigures with their titles (panel labels "B" and "C" will be added here)
-    # create_overlapping_dfes(ax_top_middle)
-    # create_segben(ax_top_right)
-    # create_overlapping_dfes(ax_bottom_middle)
-    # create_segben(ax_bottom_right)
+    # Plot segben subfigures on axes B and C.
+    create_segben(ax_top_middle, ax_top_right)
 
-    # Panel labels are added here as before.
+    # Pass the two axes to the plotting function.
+    create_overlapping_dfes(ax_bottom_middle, ax_bottom_right)
+
+    # Panel labels
     labels = {
         ax_ridge: "A",
         ax_top_middle: "B",
@@ -200,8 +483,13 @@ def main():
     for ax, label in labels.items():
         ax.text(-0.01, 1.1, label, transform=ax.transAxes,
                 fontsize=16, fontweight='heavy', va='top', ha='left')
-    ax_top_middle.text(-1.4, 1.1, "A", transform=ax_top_middle.transAxes,
-                fontsize=16, fontweight='heavy', va='top', ha='left')
+        for spine in ax.spines.values():
+            spine.set_linewidth(1.5)
+        ax.tick_params(axis='both', width=1.5)
+        ax.tick_params(axis='both', which='major', length=10, width=1.5, labelsize=14)
+        ax.tick_params(axis='both', which='minor', length=5, width=1.6, labelsize=14)
+    # Title A is special
+    ax_top_middle.text(-1.1, 0.125, "A", fontsize=16, fontweight='heavy', va='top', ha='left')
 
     # Save the figure.
     output_dir = os.path.join('..', 'figs_paper')
