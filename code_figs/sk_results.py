@@ -7,35 +7,22 @@ from code_sim.cmn.uncmn_dfe import gen_final_dfe, propagate_forward, propagate_b
 import matplotlib.ticker as ticker
 from code_sim.cmn import cmn, cmn_sk
 from matplotlib.gridspec import GridSpec
-from scipy.special import airy
 import statsmodels.api as sm
 from matplotlib.patches import FancyArrowPatch, Rectangle
+import matplotlib as mpl
 
+# Define a consistent style
+# plt.style.use('science')
+plt.rcParams['font.family'] = 'sans-serif'
+file_path = '../code_sim/data/SK/N4000_rho100_beta100_repeats50.pkl'
+color = sns.color_palette('CMRmap', 5)
+# Global font settings for labels, ticks, and legends
+mpl.rcParams['axes.labelsize'] = 16
+mpl.rcParams['xtick.labelsize'] = 14
+mpl.rcParams['ytick.labelsize'] = 14
+mpl.rcParams['legend.fontsize'] = 12
 
 def reflect_kde_neg(data, bw='scott', kernel='gau', gridsize=200):
-    """
-    Perform a boundary-corrected KDE for nonnegative data by reflecting
-    about x=0 and fitting a standard (unbounded) KDE to the combined sample.
-
-    Parameters
-    ----------
-    data : array-like
-        1D array of nonnegative data points (Delta >= 0).
-    bw : str or float
-        Bandwidth specification passed to statsmodels KDEUnivariate.
-        Common choices: 'scott', 'silverman', or a numeric value.
-    kernel : str
-        Kernel name passed to statsmodels (e.g. 'gau' for Gaussian).
-    gridsize : int
-        Number of grid points for the estimated density.
-
-    Returns
-    -------
-    x : ndarray
-        The support (grid) restricted to x >= 0.
-    y : ndarray
-        The estimated density on x >= 0.
-    """
     # Keep only nonpositive data
     data_pos = np.asarray(data)
     data_pos = data_pos[data_pos <= 0]
@@ -55,12 +42,6 @@ def reflect_kde_neg(data, bw='scott', kernel='gau', gridsize=200):
     # Multiply the density by 2 on x <= 0 because we doubled the sample
     y = 2.0 * kde.density[mask]
     return x, y
-
-# Define a consistent style
-# plt.style.use('science')
-plt.rcParams['font.family'] = 'sans-serif'
-file_path = '../code_sim/data/SK/N4000_rho100_beta100_repeats50.pkl'
-color = sns.color_palette('CMRmap', 5)
 
 with open(file_path, 'rb') as f:
     data = pickle.load(f)
@@ -108,11 +89,11 @@ def create_fig_dfe_evol(ax, num_points, repeat):
                 label=f'$t={percents[i]}\\%$'
                )
 
-    ax.set_xlabel('Fitness($\\Delta$)', fontsize=14)
-    ax.set_ylabel('$P(\\Delta, t)$', fontsize=14)
+    ax.set_xlabel(r'Fitness effect $(\Delta)$')
+    ax.set_ylabel(r'$P(\Delta, t)$')
     ax.set_ylim(0, 0.35)
     ax.axvline(x=0, color='black', linestyle=':', lw=1.5)
-    ax.legend(fontsize=12, title_fontsize=12, loc='upper left', frameon=False, markerscale=3)
+    ax.legend(loc='upper left', frameon=False, markerscale=3)
 
 def create_fig_dfe_fin(ax, N, beta_arr, rho, num_repeats):
     # same as before
@@ -120,10 +101,10 @@ def create_fig_dfe_fin(ax, N, beta_arr, rho, num_repeats):
         dfe = gen_final_dfe(N, beta, rho, num_repeats)
         x_kde, y_kde = reflect_kde_neg(dfe, bw='scott', kernel='gau', gridsize=200)
         ax.plot(x_kde, y_kde, label=f'$\\beta={beta_arr[i]:.1f}$', color=color[i % len(color)], lw=2.0)
-    ax.set_xlabel('Fitness($\\Delta$)', fontsize=14)
-    ax.set_ylabel('$P(\\Delta, t=100\\%)$', fontsize=14)
+    ax.set_xlabel(r'Fitness effect $(\Delta)$')
+    ax.set_ylabel(r'$P(\Delta, t=100\%)$')
     ax.set_xlim(None, 0)
-    ax.legend(fontsize=12, title_fontsize=12, loc='upper left', frameon=False, markerscale=3)
+    ax.legend(loc='upper left', frameon=False, markerscale=3)
 
     # Make tick lines
     ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True, prune='both', nbins=5))
@@ -186,8 +167,8 @@ def create_fig_bdfe_hists(ax, points_lst, num_bins, num_flips):
             # If there aren't at least 3 bins, just draw a horizontal line at the first value.
             ax.axhline(y=hist_log[0], linestyle='--', color=color[i % len(color)])
 
-    ax.set_xlabel('Fitness($\\Delta$)', fontsize=14)
-    ax.set_ylabel('$\\ln(P_+(\\Delta, t))$', fontsize=14)
+    ax.set_xlabel(r'Fitness effect $(\Delta)$')
+    ax.set_ylabel(r'$ln(P_+(\Delta, t))$')
     # Set the x-axis limits based on the collected range.
     ax.set_xlim(x_min_all, x_max_all)
 
@@ -204,7 +185,7 @@ def create_fig_bdfe_hists(ax, points_lst, num_bins, num_flips):
     ax.set_xticklabels([f'{xlim[0]:.1f}'] + [f'{tick:.1f}' for tick in current_xticks])
 
     # Adjust legend
-    ax.legend(title='$\\%$ of walk \ncompleted', fontsize=12, title_fontsize=12, loc='upper right', frameon=False)
+    ax.legend(loc='upper right', frameon=False)
 
 def create_fig_crossings(ax, flip1, flip2, repeat):
     data_entry = data[repeat]
@@ -225,7 +206,7 @@ def create_fig_crossings(ax, flip1, flip2, repeat):
 
     x_left = flip_anc_percent
     x_right = flip_evo_percent
-    alpha = 0.175
+    alpha = 0.3
 
     # Draw arrows for forward propagation: from left (ancestral) to right (proposed)
     for j in range(len(bdfe1)):
@@ -256,9 +237,9 @@ def create_fig_crossings(ax, flip1, flip2, repeat):
     # Set x-axis to show the flip percentages
     ax.set_xticks([x_left, x_right])
     ax.axhline(0, color="black", linestyle="--", linewidth=1.5)
-    ax.set_xlabel('$\\%$ of walk completed', fontsize=14)
-    ax.set_ylabel('Fitness ($\\Delta$)', fontsize=14)
-    ax.legend(fontsize=12, frameon=False, loc='upper right')
+    ax.set_xlabel('$\\%$ of walk completed')
+    ax.set_ylabel(r'Fitness effect $(\Delta)$')
+    ax.legend(frameon=False, loc='upper right')
 
 def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
     # Get simulation data parameters from the global data variable.
@@ -275,8 +256,6 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
 
     fraction_z = 0.08  # change as needed
     lw_main = 1.0
-    label_fontsize = 16
-    tick_fontsize = 14
 
     # Propagate forward/backward.
     bdfe_anc, prop_bdfe_anc, dfe_evo = propagate_forward(alpha_initial, h, J, flip_seq, flip1, flip2)
@@ -305,7 +284,7 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
             ax.plot([x0, x1], [pt0[1], pt1[1]], linestyle="--", color="grey", lw=lw_main)
 
     # Define fill colors.
-    EVO_FILL = (color[0][0], color[0][1], color[0][2], 0.75)
+    EVO_FILL = (color[1][0], color[1][1], color[1][2], 0.75)
     ANC_FILL = (0.5, 0.5, 0.5, 0.4)
 
     # ========================
@@ -314,8 +293,8 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
     ax_left.set_ylim(0, 1.2)
     left_X_min, left_X_max = -10, 10
     ax_left.set_xlim(left_X_min, left_X_max)
-    ax_left.set_xlabel('Fitness $(\\Delta)$', fontsize=label_fontsize)
-    ax_left.tick_params(labelsize=tick_fontsize)
+    ax_left.set_xlabel(r'Fitness effect $(\Delta)$')
+    ax_left.tick_params()
 
     counts, bin_edges = np.histogram(prop_bdfe_anc, bins=20, density=True)
     y_max_unshifted = ax_left.get_ylim()[1]
@@ -368,7 +347,7 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
         zorder=3
     )
     ax_left.figure.canvas.draw()
-    ax_left.legend(frameon=False, loc='upper left')
+    ax_left.legend(frameon=False, loc='upper left', fontsize=10)
     draw_custom_segments(ax_left, left_X_min, left_X_max, y_bottom_left, z, lw_main)
 
 
@@ -377,8 +356,8 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
     # ========================
     right_X_min, right_X_max = -10, 10
     ax_right.set_xlim(right_X_min, right_X_max)
-    ax_right.set_xlabel("Fitness $(\\Delta)$", fontsize=label_fontsize)
-    ax_right.tick_params(labelsize=tick_fontsize)
+    ax_right.set_xlabel(r'Fitness effect $(\Delta)$')
+    ax_right.tick_params()
 
     counts2, bin_edges2 = np.histogram(bdfe_evo, bins=8, density=True)
     bin_edges2 += 0.5
@@ -386,8 +365,8 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
     z_right = fraction_z * y_max_unshifted_right
     ax_right.cla()
     ax_right.set_xlim(right_X_min, right_X_max)
-    ax_right.set_xlabel("Fitness $(\\Delta)$", fontsize=label_fontsize)
-    ax_right.tick_params(labelsize=tick_fontsize)
+    ax_right.set_xlabel(r'Fitness effect $(\Delta)$')
+    ax_right.tick_params()
     ax_right.stairs(
         values=counts2 + z_right,
         edges=bin_edges2,
@@ -430,7 +409,7 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
         label=f'Full DFE(${flip_anc_percent}\\%$)'
     )
 
-    ax_right.legend(frameon=False, loc='upper left')
+    ax_right.legend(frameon=False, loc='upper left', fontsize=10)
     ax_right.set_ylim(0, None)
 
     for ax in [ax_left, ax_right]:
@@ -493,8 +472,7 @@ if __name__ == "__main__":
     panel_labels = ['A', 'B', 'C', 'D', 'E', 'F']
     ax_list = [axA, axB, axC, axD, axE, axF]
     for i, ax in enumerate(ax_list):
-        ax.text(-0.1, 1.1, panel_labels[i], transform=ax.transAxes,
-                fontsize=16, fontweight='heavy', va='top', ha='left')
+        ax.text(-0.1, 1.1, panel_labels[i], transform=ax.transAxes, fontweight='heavy', va='top', ha='left')
 
     big_fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 

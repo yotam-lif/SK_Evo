@@ -5,11 +5,15 @@ from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 import pandas as pd
 import seaborn as sns
 from matplotlib.patches import FancyArrowPatch, Rectangle
+import matplotlib as mpl
 
 # set font
 plt.rcParams['font.family'] = 'sans-serif'
-label_fontsize = 16
-tick_fontsize = 14
+plt.rcParams['font.size'] = 16
+mpl.rcParams['axes.labelsize'] = 16
+mpl.rcParams['xtick.labelsize'] = 14
+mpl.rcParams['ytick.labelsize'] = 14
+mpl.rcParams['legend.fontsize'] = 12
 color = sns.color_palette('CMRmap', 5)
 EVO_FILL = (color[1][0], color[1][1], color[1][2], 0.75)
 ANC_FILL = (0.5, 0.5, 0.5, 0.4)
@@ -130,9 +134,7 @@ def create_dfe_comparison_ridgeplot(ax_container):
             ax_facet.set_xlim(-0.1, 0.05)
             ax_facet.set_xticks([-0.1, -0.05, 0, 0.05])
             ax_facet.tick_params(axis='x', which='both', length=0, labelbottom=True)
-            ax_facet.set_xlabel(r'Fitness effect $(\Delta)$', fontsize=16)
-            for tick in ax_facet.get_xticklabels():
-                tick.set_fontsize(16)
+            ax_facet.set_xlabel(r'Fitness effect $(\Delta)$')
 
         # Add the population label inside each facet.
         ax_facet.text(0.03, 0.2, pop, color='black', size=18,
@@ -237,7 +239,7 @@ def create_overlapping_dfes(ax_left, ax_right):
 
     ax_left.set_xlim(-0.1, 0.1)
     ax_left.set_ylim(0, 500)
-    ax_left.set_xlabel(r'Fitness effect $(\Delta)$', fontsize=16)
+    ax_left.set_xlabel(r'Fitness effect $(\Delta)$')
     ax_left.tick_params(labelsize=14)
 
     draw_custom_segments(ax_left)
@@ -279,7 +281,7 @@ def create_overlapping_dfes(ax_left, ax_right):
 
     ax_right.set_xlim(-0.1, 0.1)
     ax_right.set_ylim(0, 500)
-    ax_right.set_xlabel(r'Fitness effect $(\Delta)$', fontsize=16)
+    ax_right.set_xlabel(r'Fitness effect $(\Delta)$')
     ax_right.tick_params(labelsize=14)
 
     draw_custom_segments(ax_right)
@@ -387,7 +389,7 @@ def create_segben(ax_B, ax_C):
     # Panel B: ancestral to 2K
     ax_B.set_xlim(0.8, 2.2)
     ax_B.set_ylim(-0.15, 0.1)
-    ax_B.set_ylabel(r'Fitness effect $(\Delta)$', fontsize=16)
+    ax_B.set_ylabel(r'Fitness effect $(\Delta)$')
     ax_B.tick_params(labelsize=14)
     # Plot ancestral fitness values (Repi) at x = 1
     ax_B.plot(np.repeat(1, len(Repi)), Repi["R"], 'o', markersize=5,
@@ -414,12 +416,12 @@ def create_segben(ax_B, ax_C):
             ax_B.add_patch(arrow)
     # Set ticks and custom labels for panel B
     ax_B.set_xticks([1.0, 2.0])
-    ax_B.set_xticklabels(["0K", "2K"], fontsize=14)
+    ax_B.set_xticklabels(["0K", "2K"])
 
     # Panel C: 2K to 15K
     ax_C.set_xlim(0.8, 2.2)
     ax_C.set_ylim(-0.15, 0.1)
-    ax_C.set_ylabel(r'Fitness effect $(\Delta)$', fontsize=16)
+    ax_C.set_ylabel(r'Fitness effect $(\Delta)$')
     ax_C.tick_params(labelsize=14)
     # Plot 2K fitness values (Tepi) at x = 1
     ax_C.plot(np.repeat(1, len(Tepi)), Tepi["M"], 'o', markersize=5,
@@ -446,7 +448,7 @@ def create_segben(ax_B, ax_C):
             ax_C.add_patch(arrow)
     # Set ticks and custom labels for panel C
     ax_C.set_xticks([1.0, 2.0])
-    ax_C.set_xticklabels(["2K", "15K"], fontsize=14)
+    ax_C.set_xticklabels(["2K", "15K"])
 
 
 def main():
@@ -481,15 +483,14 @@ def main():
         ax_bottom_right: "E"
     }
     for ax, label in labels.items():
-        ax.text(-0.01, 1.1, label, transform=ax.transAxes,
-                fontsize=16, fontweight='heavy', va='top', ha='left')
+        ax.text(-0.01, 1.1, label, transform=ax.transAxes, fontweight='heavy', va='top', ha='left')
         for spine in ax.spines.values():
             spine.set_linewidth(1.5)
         ax.tick_params(axis='both', width=1.5)
-        ax.tick_params(axis='both', which='major', length=10, width=1.5, labelsize=14)
-        ax.tick_params(axis='both', which='minor', length=5, width=1.6, labelsize=14)
+        ax.tick_params(axis='both', which='major', length=10, width=1.5)
+        ax.tick_params(axis='both', which='minor', length=5, width=1.6)
     # Title A is special
-    ax_top_middle.text(-1.1, 0.125, "A", fontsize=16, fontweight='heavy', va='top', ha='left')
+    ax_top_middle.text(-1.1, 0.125, "A", fontweight='heavy', va='top', ha='left')
 
     # Save the figure.
     output_dir = os.path.join('..', 'figs_paper')
