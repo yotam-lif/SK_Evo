@@ -22,6 +22,7 @@ mpl.rcParams['xtick.labelsize'] = 14
 mpl.rcParams['ytick.labelsize'] = 14
 mpl.rcParams['legend.fontsize'] = 12
 
+
 def reflect_kde_neg(data, bw='scott', kernel='gau', gridsize=200):
     # Keep only nonpositive data
     data_pos = np.asarray(data)
@@ -43,8 +44,10 @@ def reflect_kde_neg(data, bw='scott', kernel='gau', gridsize=200):
     y = 2.0 * kde.density[mask]
     return x, y
 
+
 with open(file_path, 'rb') as f:
     data = pickle.load(f)
+
 
 def create_fig_dfe_evol(ax, num_points, repeat):
     # Pull out the relevant data
@@ -87,13 +90,14 @@ def create_fig_dfe_evol(ax, num_points, repeat):
                 lw=2,
                 color=color[i % len(color)],
                 label=f'$t={percents[i]}\\%$'
-               )
+                )
 
     ax.set_xlabel(r'Fitness effect $(\Delta)$')
     ax.set_ylabel(r'$P(\Delta, t)$')
     ax.set_ylim(0, 0.35)
     ax.axvline(x=0, color='black', linestyle=':', lw=1.5)
     ax.legend(loc='upper left', frameon=False, markerscale=3)
+
 
 def create_fig_dfe_fin(ax, N, beta_arr, rho, num_repeats):
     # same as before
@@ -115,6 +119,7 @@ def create_fig_dfe_fin(ax, N, beta_arr, rho, num_repeats):
     new_ticks = np.concatenate(([0.0], current_ticks))
     ax.set_xticks(new_ticks)
     ax.set_xticklabels(['0.0'] + [f'{tick:.1f}' for tick in current_ticks])
+
 
 def create_fig_bdfe_hists(ax, points_lst, num_bins, num_flips):
     """
@@ -147,7 +152,7 @@ def create_fig_bdfe_hists(ax, points_lst, num_bins, num_flips):
         x_min_all = min(x_min_all, bin_centers[0])
         x_max_all = max(x_max_all, bin_centers[-1])
         # Compute the natural logarithm of the histogram values (shifted to avoid log(0))
-        hist_log = np.log(hist + 10**-2)
+        hist_log = np.log(hist + 10 ** -2)
         # Plot the log-histogram as a step plot.
         ax.step(bin_centers, hist_log, where='mid',
                 label=label, color=color[i % len(color)])
@@ -186,6 +191,7 @@ def create_fig_bdfe_hists(ax, points_lst, num_bins, num_flips):
 
     # Adjust legend
     ax.legend(loc='upper right', frameon=False)
+
 
 def create_fig_crossings(ax, flip1, flip2, repeat):
     data_entry = data[repeat]
@@ -240,6 +246,7 @@ def create_fig_crossings(ax, flip1, flip2, repeat):
     ax.set_xlabel('$\\%$ of walk completed')
     ax.set_ylabel(r'Fitness effect $(\Delta)$')
     ax.legend(frameon=False, loc='upper right')
+
 
 def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
     # Get simulation data parameters from the global data variable.
@@ -350,7 +357,6 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
     ax_left.legend(frameon=False, loc='upper left', fontsize=10)
     draw_custom_segments(ax_left, left_X_min, left_X_max, y_bottom_left, z, lw_main)
 
-
     # ========================
     # RIGHT PANEL
     # ========================
@@ -460,7 +466,8 @@ if __name__ == "__main__":
     create_fig_dfe_fin(axB, N=2000, beta_arr=[0.0, 0.5, 1.0], rho=1.0, num_repeats=3)
     create_fig_bdfe_hists(axC, points_lst=flip_list, num_bins=10, num_flips=num_flips)
     create_fig_crossings(axD, crossings_flip_anc, crossings_flip_evo, crossings_repeat)
-    create_fig_dfes_overlap(axE, axF, flip1=crossings_flip_anc, flip2=crossings_flip_evo, repeat=crossings_repeat, color=color)
+    create_fig_dfes_overlap(axE, axF, flip1=crossings_flip_anc, flip2=crossings_flip_evo, repeat=crossings_repeat,
+                            color=color)
 
     # Remove the x=0 label from subplots B, C, D as before
     for ax in [axB, axC, axD]:

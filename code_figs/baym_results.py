@@ -337,9 +337,13 @@ def create_segben(ax_B, ax_C):
     Ftable = Ftable.dropna(subset=["fitted1"])
 
     # Filter beneficial alleles and remove duplicate sites
-    Rben = Rtable[(Rtable["fitted1"] <= 0.3) & (Rtable["fitted1"] > 0.015) & (Rtable["abn"] > 1)].drop_duplicates(subset=["site"]).copy()
-    Tben = Ttable[(Ttable["fitted1"] <= 0.3) & (Ttable["fitted1"] > 0.015) & (Ttable["abn"] > 1)].drop_duplicates(subset=["site"]).copy()
-    Fben = Ftable[(Ftable["fitted1"] <= 0.3) & (Ftable["fitted1"] > 0.015) & (Ftable["abn"] > 1)].drop_duplicates(subset=["site"]).copy()
+    # Rben = Rtable[(Rtable["fitted1"] <= 0.3) & (Rtable["fitted1"] > 0.015) & (Rtable["abn"] > 1)].drop_duplicates(subset=["site"]).copy()
+    # Tben = Ttable[(Ttable["fitted1"] <= 0.3) & (Ttable["fitted1"] > 0.015) & (Ttable["abn"] > 1)].drop_duplicates(subset=["site"]).copy()
+    # Fben = Ftable[(Ftable["fitted1"] <= 0.3) & (Ftable["fitted1"] > 0.015) & (Ftable["abn"] > 1)].drop_duplicates(subset=["site"]).copy()
+
+    Rben = Rtable[(Rtable["fitted1"] <= 0.5) & (Rtable["fitted1"] > 0.005) & (Rtable["abn"] > 1)].drop_duplicates(subset=["site"]).copy()
+    Tben = Ttable[(Ttable["fitted1"] <= 0.5) & (Ttable["fitted1"] > 0.005) & (Ttable["abn"] > 1)].drop_duplicates(subset=["site"]).copy()
+    Fben = Ftable[(Ftable["fitted1"] <= 0.5) & (Ftable["fitted1"] > 0.005) & (Ftable["abn"] > 1)].drop_duplicates(subset=["site"]).copy()
 
     # Create data frame for allele comparisons: Repi for the ancestor
     Rnames = Rben["alle"].values
@@ -388,7 +392,8 @@ def create_segben(ax_B, ax_C):
     color_15k = (color[2][0], color[2][1], color[2][2], 0.5)
     # Panel B: ancestral to 2K
     ax_B.set_xlim(0.8, 2.2)
-    ax_B.set_ylim(-0.15, 0.1)
+    # ax_B.set_ylim(-0.15, 0.1)
+    ax_B.set_ylim(-0.2, 0.12)
     ax_B.set_ylabel(r'Fitness effect $(\Delta)$')
     ax_B.tick_params(labelsize=14)
     # Plot ancestral fitness values (Repi) at x = 1
@@ -420,7 +425,8 @@ def create_segben(ax_B, ax_C):
 
     # Panel C: 2K to 15K
     ax_C.set_xlim(0.8, 2.2)
-    ax_C.set_ylim(-0.15, 0.1)
+    # ax_C.set_ylim(-0.15, 0.1)
+    ax_C.set_ylim(-0.2, 0.12)
     ax_C.set_ylabel(r'Fitness effect $(\Delta)$')
     ax_C.tick_params(labelsize=14)
     # Plot 2K fitness values (Tepi) at x = 1
@@ -466,13 +472,13 @@ def main():
     ax_bottom_right = fig.add_subplot(gs[1, 2])
 
     # Plot the ridgeline (subfigure A)
-    create_dfe_comparison_ridgeplot(ax_ridge)
+    # create_dfe_comparison_ridgeplot(ax_ridge)
 
     # Plot segben subfigures on axes B and C.
     create_segben(ax_top_middle, ax_top_right)
 
     # Pass the two axes to the plotting function.
-    create_overlapping_dfes(ax_bottom_middle, ax_bottom_right)
+    # create_overlapping_dfes(ax_bottom_middle, ax_bottom_right)
 
     # Panel labels
     labels = {

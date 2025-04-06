@@ -217,3 +217,15 @@ def relax_nk(sigma_init, nk, f_off=0.0):
         dfes.append(dfe)
         rank = compute_rank(dfe)
     return flip_hist, dfes
+
+def propagate_forward(dfe1, dfe2):
+    # Find out the bdfe and it's indexes
+    bdfe_anc, b_ind_anc = compute_bdfe(dfe1)
+    prop_bdfe = dfe2[b_ind_anc]
+    return bdfe_anc, prop_bdfe
+
+def propagate_backward(dfe1, dfe2):
+    # Find out the bdfe and it's indexes
+    bdfe_evo, b_ind_evo = compute_bdfe(dfe2)
+    prop_bdfe = dfe1[b_ind_evo]
+    return bdfe_evo, prop_bdfe
