@@ -105,7 +105,7 @@ def create_fig_final_dfe(ax):
         x_kde, y_kde = reflect_kde_neg(combined_dfe)
         ax.plot(x_kde, y_kde, label=f'K={int(K_values[i])}', color=color[i], lw=2.0)
     ax.set_xlabel(r'Fitness effect ($\Delta$)')
-    ax.set_ylabel(r'$P(\Delta, t=\infty)$')
+    ax.set_ylabel(r'$P(\Delta, t=100\%)$')
     ax.legend(frameon=False, loc='upper left')
     ax.set_xlim(None, 0)
 
@@ -122,7 +122,7 @@ def create_fig_bdfe_80_percent(ax):
             bdfe_80.extend(list(bdfe))
         bins = 15 + 3 * i
         counts, bins = np.histogram(bdfe_80, bins=bins, density=True)
-        log_counts = np.log(counts)
+        log_counts = np.log(counts + 0.0001)
         bin_centers = 0.5 * (bins[1:] + bins[:-1])
         good = np.where(log_counts > 1)
         ax.step(bin_centers[good], log_counts[good], where='mid',
@@ -238,71 +238,8 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat):
     # Define fill colors.
     EVO_FILL = (color[1][0], color[1][1], color[1][2], 0.75)
     ANC_FILL = (0.5, 0.5, 0.5, 0.4)
-
-    # ========================
-    # LEFT PANEL
-    # ========================
-    left_X_min, left_X_max = -0.02, 0.02
-    ax_left.set_xlim(left_X_min, left_X_max)
-    ax_left.set_xlabel(r'Fitness effect $(\Delta)$')
-    ax_left.tick_params()
-
-    # Compute histogram for evolved propagated BD-FE
-    counts, bin_edges = np.histogram(prop_bdfe_anc, bins=12, density=True)
-    max_count = np.max(counts)
-    z = fraction_z * max_count  # z is now a fraction of the max histogram count
-
-    ax_left.stairs(
-        values=counts + z,
-        edges=bin_edges,
-        baseline=0,
-        fill=True,
-        facecolor=EVO_FILL,
-        edgecolor="black",
-        lw=1.1,
-        label=f'Evolved ({flip_evo_percent}%)',
-        zorder=0
-    )
-    y_bottom_left = -0.01
     eps_height = 0.005
     eps_width = 0.1
-    from matplotlib.patches import Rectangle
-    rect_left = Rectangle((left_X_min - eps_width, y_bottom_left - eps_height),
-                          (left_X_max - left_X_min) + 2 * eps_width,
-                          (z - y_bottom_left) + 2 * eps_height,
-                          facecolor="white", edgecolor="none", zorder=2)
-    ax_left.add_patch(rect_left)
-
-    anc_counts, anc_bin_edges = np.histogram(bdfe_anc, bins=8, density=True)
-    anc_bin_edges += 0.001
-
-    dfe_evo_counts, dfe_evo_bin_edges = np.histogram(prop_bdfe_anc, bins=12, density=True)
-    ax_left.stairs(
-        values=dfe_evo_counts + z - 2,
-        edges=dfe_evo_bin_edges + 0.0003,
-        baseline=0,
-        fill=False,
-        edgecolor=color[2],
-        lw=1.1,
-        label=f'Full DFE ({flip_evo_percent}%)',
-        zorder=1
-    )
-
-    ax_left.stairs(
-        values=anc_counts,
-        edges=anc_bin_edges,
-        baseline=0,
-        fill=True,
-        facecolor=ANC_FILL,
-        edgecolor="black",
-        lw=1.1,
-        label=f'Ancestor ({flip_anc_percent}%)',
-        zorder=3
-    )
-
-    ax_left.figure.canvas.draw()
-    ax_left.legend(frameon=False, loc='upper left', fontsize=10)
-    draw_custom_segments(ax_left, left_X_min, left_X_max, y_bottom_left, z, lw_main)
 
     # ========================
     # RIGHT PANEL
@@ -312,10 +249,10 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat):
     ax_right.set_xlabel(r'Fitness effect $(\Delta)$')
     ax_right.tick_params()
 
-    counts2, bin_edges2 = np.histogram(bdfe_evo, bins=8, density=True)
-    bin_edges2 += 0.5
+    counts2, bin_edges2 = np.histogram(bdfe_evo, bins=7, density=True)
+    bin_edges2 += 0.001
     max_count2 = np.max(counts2)
-    z_right = fraction_z * max_count2
+    z_right = fraction_z * max_count2 * 0.4
     ax_right.cla()
     ax_right.set_xlim(right_X_min, right_X_max)
     ax_right.set_xlabel(r'Fitness effect $(\Delta)$')
@@ -376,6 +313,71 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat):
         ax.yaxis.set_ticks_position('left')
 
 
+    # ========================
+    # LEFT PANEL
+    # ========================
+    left_X_min, left_X_max = -0.02, 0.02
+    ax_left.set_xlim(left_X_min, left_X_max)
+    ax_left.set_xlabel(r'Fitness effect $(\Delta)$')
+    ax_left.tick_params()
+
+    # Compute histogram for evolved propagated BD-FE
+    counts, bin_edges = np.histogram(prop_bdfe_anc, bins=16, density=True)
+    max_count = np.max(counts)
+    z = z_right  # z is now a fraction of the max histogram count
+
+    ax_left.stairs(
+        values=counts + z,
+        edges=bin_edges,
+        baseline=0,
+        fill=True,
+        facecolor=EVO_FILL,
+        edgecolor="black",
+        lw=1.1,
+        label=f'Evolved ({flip_evo_percent}%)',
+        zorder=0
+    )
+    y_bottom_left = -0.01
+    rect_left = Rectangle((left_X_min - eps_width, y_bottom_left - eps_height),
+                          (left_X_max - left_X_min) + 2 * eps_width,
+                          (z - y_bottom_left) + 2 * eps_height,
+                          facecolor="white", edgecolor="none", zorder=2)
+    ax_left.add_patch(rect_left)
+
+    anc_counts, anc_bin_edges = np.histogram(bdfe_anc, bins=9, density=True)
+    anc_bin_edges += 0.001
+
+    dfe_evo_counts, dfe_evo_bin_edges = np.histogram(prop_bdfe_anc, bins=16, density=True)
+    ax_left.stairs(
+        values=dfe_evo_counts + z - 2,
+        edges=dfe_evo_bin_edges + 0.0003,
+        baseline=0,
+        fill=False,
+        edgecolor=color[2],
+        lw=1.1,
+        label=f'Full DFE ({flip_evo_percent}%)',
+        zorder=1
+    )
+
+    ax_left.stairs(
+        values=anc_counts,
+        edges=anc_bin_edges,
+        baseline=0,
+        fill=True,
+        facecolor=ANC_FILL,
+        edgecolor="black",
+        lw=1.1,
+        label=f'Ancestor ({flip_anc_percent}%)',
+        zorder=3
+    )
+
+    ax_left.figure.canvas.draw()
+    ax_left.legend(frameon=False, loc='upper left', fontsize=10)
+    draw_custom_segments(ax_left, left_X_min, left_X_max, y_bottom_left, z, lw_main)
+    # Make ax_left share y axis with ax_right
+    ax_left.sharey(ax_right)
+
+
 
 # ----------------------------------------------------------------
 # MAIN: Create subfigures and save the figure
@@ -396,14 +398,14 @@ def main():
                 fontsize=16, fontweight='heavy', va='top', ha='left')
 
     # Top row:
-    # create_fig_evolution_dfe(axs[0, 0])   # Panel A: Evolution of DFE (K=32, no reflection)
-    # create_fig_final_dfe(axs[0, 1])         # Panel B: Final DFEs for different K values
-    # create_fig_bdfe_80_percent(axs[0, 2])     # Panel C: BD-FEs for different K values at 80%
+    create_fig_evolution_dfe(axs[0, 0])   # Panel A: Evolution of DFE (K=32, no reflection)
+    create_fig_final_dfe(axs[0, 1])         # Panel B: Final DFEs for different K values
+    create_fig_bdfe_80_percent(axs[0, 2])     # Panel C: BD-FEs for different K values at 80%
 
     # Bottom row:
     flip1 = int(0.15 * len(nk_data[0]['flip_seq']))
     flip2 = int(0.45 * len(nk_data[0]['flip_seq']))
-    # create_fig_crossings_single(axs[1, 0], flip1, flip2, repeat=0)  # Panel D: Crossings
+    create_fig_crossings_single(axs[1, 0], flip1, flip2, repeat=0)  # Panel D: Crossings
     create_fig_dfes_overlap(axs[1, 1], axs[1, 2], flip1, flip2, repeat=0)  # Panels E and F: Overlapping DFEs
 
     output_dir = os.path.join('..', 'figs_paper')
