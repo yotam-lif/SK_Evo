@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
 import os
-from code.cmn.uncmn_eqs import theta, rhs, normalize
+from code_sim.cmn.uncmn_eqs import theta, rhs, normalize
 
 # Parameters
 s_max = 100.0  # Maximum s value
