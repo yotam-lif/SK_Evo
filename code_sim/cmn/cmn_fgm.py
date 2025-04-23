@@ -9,7 +9,7 @@ class Fisher:
     n : int
         Dimensionality of phenotype space.
     S : numpy.ndarray
-        Symmetric selection matrix (n x n), isotropic (alpha * I).
+        Symmetric selection matrix (n x n), isotropic (lmbd * I).
     delta : float
         Standard deviation for Gaussian mutation steps.
     dzs : numpy.ndarray
@@ -18,7 +18,7 @@ class Fisher:
         Random number generator for reproducibility.
     """
 
-    def __init__(self, n, isotropic=True, alpha=1.0, delta=1.0, sigma_G=0.1, m=10**4, random_state=None):
+    def __init__(self, n, isotropic=True, lmbd=1.0, delta=1.0, sigma_G=1.0, m=10**4, random_state=None):
         """
         Initialize model and pre-sample Gaussian mutation steps.
 
@@ -27,9 +27,9 @@ class Fisher:
         n : int
             Number of phenotypic traits (dimensions).
         isotropic : bool
-            Always True for isotropic S = alpha * I.
-        alpha : float
-            Selection strength (for isotropic S).
+            Always True for isotropic S = lmbd * I.
+        lmbd : float
+            Eigenvalue for isotropic S.
         delta : float
             Std dev for Gaussian mutation steps.
         sigma_G : float
@@ -49,9 +49,9 @@ class Fisher:
             self.rng = random_state
         else:
             self.rng = np.random.default_rng()
-        # Build isotropic selection matrix S = alpha * I
+        # Build isotropic selection matrix S = lmbd * I
         if isotropic:
-            self.S = float(alpha) * np.eye(self.n)
+            self.S = float(lmbd) * np.eye(self.n)
         else:
             # anisotropic: draw upper-triangular G ~ N(0, sigma_G)
             G = self.rng.normal(loc=0.0, scale=float(sigma_G), size=(self.n, self.n))

@@ -298,8 +298,8 @@ if __name__ == "__main__":
         reps.append({"dfes": [model.compute_dfe(z) for z in traj]})
 
     steps = len(reps[0]["dfes"])
-    anc_idx = int(0.25 * (steps - 1))
-    evo_idx = int(0.65 * (steps - 1))
+    anc_idx = int(0.35 * (steps - 1))
+    evo_idx = int(0.70 * (steps - 1))
 
     n_list = [4, 8, 16, 32]
     final = {}
