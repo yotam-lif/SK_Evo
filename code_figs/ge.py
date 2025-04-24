@@ -9,7 +9,7 @@ import os
 from matplotlib.ticker import ScalarFormatter
 
 # PARAMETERS
-repeats = 10
+repeats = 1
 m_points = 100
 seed = 42
 

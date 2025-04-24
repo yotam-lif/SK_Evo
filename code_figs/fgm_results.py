@@ -152,19 +152,19 @@ def panel_D(ax, rep, anc_idx, evo_idx):
     fwd, prop_fwd = propagate_forward(d1, d2)
     bwd, prop_bwd = propagate_backward(d1, d2)
     anc_pct, evo_pct = [int(x * 100 / (len(rep["dfes"]) - 1)) for x in (anc_idx, evo_idx)]
-
+    alpha = 0.4
     # arrows + scatter
     for b, p in zip(fwd, prop_fwd):
         ax.add_patch(FancyArrowPatch((anc_pct, b), (evo_pct, p), arrowstyle="-|>", mutation_scale=10,
                                      color=COLOR[0], alpha=0.4, lw=0.75))
-    sc_fwd = ax.scatter([anc_pct] * len(fwd), fwd, facecolors="none", edgecolor=COLOR[0], s=20)
-    ax.scatter([evo_pct] * len(prop_fwd), prop_fwd, facecolors="none", edgecolor=COLOR[0], s=20)
+    sc_fwd = ax.scatter([anc_pct] * len(fwd), fwd, facecolors="none", edgecolor=COLOR[0], s=20, alpha=alpha)
+    ax.scatter([evo_pct] * len(prop_fwd), prop_fwd, facecolors="none", edgecolor=COLOR[0], s=20, alpha=alpha)
 
     for b, p in zip(bwd, prop_bwd):
         ax.add_patch(FancyArrowPatch((evo_pct, b), (anc_pct, p), arrowstyle="-|>", mutation_scale=10,
                                      color=COLOR[1], alpha=0.4, lw=0.75))
-    sc_bwd = ax.scatter([evo_pct] * len(bwd), bwd, facecolors="none", edgecolor=COLOR[1], s=20)
-    ax.scatter([anc_pct] * len(prop_bwd), prop_bwd, facecolors="none", edgecolor=COLOR[1], s=20)
+    sc_bwd = ax.scatter([evo_pct] * len(bwd), bwd, facecolors="none", edgecolor=COLOR[1], s=20, alpha=alpha)
+    ax.scatter([anc_pct] * len(prop_bwd), prop_bwd, facecolors="none", edgecolor=COLOR[1], s=20, alpha=alpha)
 
     ax.axhline(0, ls="--", lw=1.5, color="black")
     ax.set_xticks([anc_pct, evo_pct])
@@ -187,6 +187,7 @@ def panel_EF(axL, axR, rep, anc_idx, evo_idx):
     frac_z = 0.2
     EVO_FILL = (*COLOR[1][:3], 0.75)
     ANC_FILL = (0.5, 0.5, 0.5, 0.4)
+    anc_pct, evo_pct = [int(x * 100 / (len(rep["dfes"]) - 1)) for x in (anc_idx, evo_idx)]
 
     # ─── RIGHT PANEL (Evolved focal) ─────────────────────────────────
     # 1) evolved BD‑FE
@@ -195,7 +196,7 @@ def panel_EF(axL, axR, rep, anc_idx, evo_idx):
     axR.stairs(
         counts_evolved + z_r, bins_evolved, baseline=0,
         fill=True, facecolor=EVO_FILL, edgecolor="black", lw=1.1,
-        label="Evo", zorder=0
+        label=f"Evo(${evo_pct}\\%$)", zorder=0
     )
 
     # 2) ancestor-to-evolved propagated BD‑FE
@@ -203,7 +204,7 @@ def panel_EF(axL, axR, rep, anc_idx, evo_idx):
     axR.stairs(
         counts_ancprop, bins_ancprop, baseline=0,
         fill=True, facecolor=ANC_FILL, edgecolor="black", lw=1.1,
-        label="Anc", zorder=3
+        label=f"Anc(${anc_pct}\\%$)", zorder=3
     )
 
     # 3) full ancestral DFE outline
@@ -211,7 +212,7 @@ def panel_EF(axL, axR, rep, anc_idx, evo_idx):
     axR.stairs(
         counts_full_anc, bins_full_anc, baseline=0,
         fill=False, edgecolor=COLOR[2], lw=1.1,
-        label="DFE", zorder=4
+        label=f"DFE(${anc_pct}\\%$)", zorder=4
     )
 
     axR.set_xlabel(r"Fitness effect $(\Delta)$")
@@ -228,9 +229,6 @@ def panel_EF(axL, axR, rep, anc_idx, evo_idx):
     axR.add_patch(mask)
     draw_custom_segments(axR, x_min, x_max, -0.01, z_r, zorder=2, lw_main=1.1)
     axR.set_ylim(0, None)
-
-    axR.text(-0.1, 1.05, "E", transform=axR.transAxes,
-             fontsize=18, fontweight="bold")
     axR.legend(frameon=False, loc="upper left")
 
 
@@ -241,7 +239,7 @@ def panel_EF(axL, axR, rep, anc_idx, evo_idx):
     axL.stairs(
         counts_anc + z_l, bins_anc, baseline=0,
         fill=True, facecolor=EVO_FILL, edgecolor="black", lw=1.1,
-        label="Evo", zorder=0
+        label=f"Evo(${evo_pct}\\%$)", zorder=0
     )
 
     # 2) full ancestor BD‑FE
@@ -249,7 +247,7 @@ def panel_EF(axL, axR, rep, anc_idx, evo_idx):
     axL.stairs(
         counts_benef, bins_benef, baseline=0,
         fill=True, facecolor=ANC_FILL, edgecolor="black", lw=1.1,
-        label="Anc", zorder=4
+        label=f"Anc(${anc_pct}\\%$)", zorder=4
     )
 
     # 3) full evolved DFE outline
@@ -257,7 +255,7 @@ def panel_EF(axL, axR, rep, anc_idx, evo_idx):
     axL.stairs(
         counts_full_evo + z_l, bins_full_evo, baseline=0,
         fill=False, edgecolor=COLOR[2], lw=1.1,
-        label="DFE", zorder=1
+        label=f"DFE(${evo_pct}\\%$)", zorder=1
     )
 
     axL.set_xlabel(r"Fitness effect $(\Delta)$")
@@ -273,9 +271,6 @@ def panel_EF(axL, axR, rep, anc_idx, evo_idx):
     axL.add_patch(maskL)
     draw_custom_segments(axL, x_min_L, x_max_L, -0.01, z_l, zorder=3, lw_main=1.1)
     axL.set_ylim(0, None)
-
-    axL.text(-0.1, 1.05, "F", transform=axL.transAxes,
-             fontsize=18, fontweight="bold")
     axL.legend(frameon=False, loc="upper left")
 
 
@@ -283,22 +278,22 @@ def panel_EF(axL, axR, rep, anc_idx, evo_idx):
 
 # ───────────────────────────────────────────────────── main routine ─────────────────────────────────
 if __name__ == "__main__":
-    delta = 0.1
-    repeats = 10
-    max_steps = 200
-    m = 10**4
+    delta = 5 * 10 ** -2
+    repeats = 1
+    max_steps = 3000
+    m = 5*10**3
 
     # Data for Panels A, B, C, and D
     reps = []
     for s in range(repeats):
-        n=6
-        model = Fisher(n=n, delta=delta, m=m, random_state=s)
-        z0 = np.random.normal(size=n)
+        n=2
+        model = Fisher(n=n, delta=delta, m=m, random_state=s, isotropic=True)
+        z0 = np.random.normal(size=n, loc=0, scale=0.5)
         _, traj = model.relax(z0, max_steps=max_steps)
         reps.append({"dfes": [model.compute_dfe(z) for z in traj]})
 
     steps = len(reps[0]["dfes"])
-    anc_idx = int(0.35 * (steps - 1))
+    anc_idx = int(0.30 * (steps - 1))
     evo_idx = int(0.70 * (steps - 1))
 
     n_list = [4, 8, 16, 32]
@@ -352,4 +347,6 @@ if __name__ == "__main__":
 
     output_dir = "../figs_paper"
     os.makedirs(output_dir, exist_ok=True)
-    fig.savefig(os.path.join(output_dir, "fgm_results.svg"), format="svg", bbox_inches="tight")
+    # fig.savefig(os.path.join(output_dir, "fgm_results.svg"), format="svg", bbox_inches="tight")
+    fig.show()
+    print(len(reps[0]['dfes']))
