@@ -35,7 +35,7 @@ def f_delta_prime(x, r0, sigma, n):
     return sigma**2 * f_F(f_val, r0, sigma, n)
 
 # === Parameters ===
-r0 = 0.05       # background distance from optimum
+r0 = 1.0       # background distance from optimum
 n  = 6         # dimension of phenotype space
 sigmas = [0.05, 0.1, 0.2]
 
