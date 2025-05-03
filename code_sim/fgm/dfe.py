@@ -45,7 +45,7 @@ for r0, label in zip(r_list, labels):
 
 plt.xlabel(r'$\delta$')
 plt.ylabel(r'$P(\delta)$')
-plt.title('$n=4$, $\\sigma=0.05$')
+plt.title('$n=4$,$\\sigma=0.05$')
 plt.xlim(x_min, -x_min)
 plt.legend(frameon=False)
 plt.tight_layout()
