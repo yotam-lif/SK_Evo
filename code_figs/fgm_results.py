@@ -51,6 +51,30 @@ def propagate_backward(dfe_anc, dfe_evo):
     idx = np.where(dfe_evo > 0)[0]
     return dfe_evo[idx], dfe_anc[idx]
 
+def _scale_x(x_ref, X_min, X_max, ref_min=-0.1, ref_max=0.1):
+    return X_min + ((x_ref - ref_min) / (ref_max - ref_min)) * (X_max - X_min)
+
+
+def draw_custom_segments(ax, X_min, X_max, y_bottom, z_val, zorder, lw_main=1.0):
+    axis_x_min, axis_x_max = ax.get_xlim()
+
+    xL = _scale_x(-0.09, axis_x_min, axis_x_max)
+    xR = _scale_x(0.09, axis_x_min, axis_x_max)
+    ax.plot([xL, xR], [z_val, z_val], ls="--", color="grey", lw=lw_main, zorder=zorder)
+
+    for x0 in (-0.10, -0.05, 0.00, 0.05, 0.10):
+        ax.plot(
+            [
+                _scale_x(x0, axis_x_min, axis_x_max),
+                _scale_x(0.9 * x0, axis_x_min, axis_x_max),
+            ],
+            [y_bottom, z_val],
+            ls="--",
+            color="grey",
+            lw=lw_main,
+            zorder=zorder,
+        )
+
 # ───────────────────────────────────────────────────── panels A–C ─────────────────────────────────────
 
 def panel_A(ax, reps, perc=(25, 50, 75, 100), grid_points=300):
@@ -129,7 +153,7 @@ def panel_D(ax, rep, anc_idx, evo_idx):
     ax.axhline(0, ls="--", lw=1.5, color="black")
     ax.set_xticks([anc_pct, evo_pct])
     ax.set_xlabel("% of walk completed")
-    ax.set_ylabel(r"Fitness effect $(\\Delta)$")
+    ax.set_ylabel(r"Fitness effect $(\Delta)$")
     ax.legend([sc_fwd, sc_bwd], ["Forwards", "Backwards"], frameon=False, loc="upper right")
 
 # ───────────────────────────────────────────────────── panels E & F ─────────────────────────────────
@@ -154,7 +178,7 @@ def panel_EF(axL, axR, rep, anc_idx, evo_idx):
     axR.stairs(counts_ancprop, bins_ancprop, baseline=0, fill=True, facecolor=ANC_FILL, edgecolor="black", lw=1.1, label=f"Anc(${anc_pct}\\%$)", zorder=3)
     counts_full_anc, bins_full_anc = np.histogram(anc_dfe, bins=16, density=True)
     axR.stairs(counts_full_anc, bins_full_anc, baseline=0, fill=False, edgecolor=COLOR[2], lw=1.1, label=f"DFE(${anc_pct}\\%$)", zorder=4)
-    axR.set_xlabel(r"Fitness effect $(\\Delta)$")
+    axR.set_xlabel(r"Fitness effect $(\Delta)$")
     axR.set_ylabel("Density")
     draw_custom_segments(axR, *axR.get_xlim(), -0.01, z_r, zorder=2)
     axR.legend(frameon=False, loc="upper left")
@@ -167,7 +191,7 @@ def panel_EF(axL, axR, rep, anc_idx, evo_idx):
     axL.stairs(counts_benef, bins_benef, baseline=0, fill=True, facecolor=ANC_FILL, edgecolor="black", lw=1.1, label=f"Anc(${anc_pct}\\%$)", zorder=4)
     counts_full_evo, bins_full_evo = np.histogram(evo_dfe, bins=16, density=True)
     axL.stairs(counts_full_evo + z_l, bins_full_evo, baseline=0, fill=False, edgecolor=COLOR[2], lw=1.1, label=f"DFE(${evo_pct}\\%$)", zorder=1)
-    axL.set_xlabel(r"Fitness effect $(\\Delta)$")
+    axL.set_xlabel(r"Fitness effect $(\Delta)$")
     axL.set_ylabel("Density")
     draw_custom_segments(axL, *axL.get_xlim(), -0.01, z_l, zorder=2)
     axL.legend(frameon=False, loc="upper left")
