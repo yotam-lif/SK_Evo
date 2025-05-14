@@ -7,32 +7,7 @@ from code_sim.cmn import cmn_nk, cmn
 import matplotlib as mpl
 import statsmodels.api as sm
 from matplotlib.patches import FancyArrowPatch, Rectangle
-
-
-# ----------------------------------------------------------------
-# Utility: Reflect KDE on negative data (for final DFEs, BD-FEs, etc.)
-# ----------------------------------------------------------------
-def reflect_kde_neg(data, bw='scott', kernel='gau', gridsize=200):
-    data_arr = np.asarray(data)
-    data_arr = data_arr[data_arr <= 0]
-    data_reflected = -data_arr
-    data_combined = np.concatenate([data_arr, data_reflected])
-    kde = sm.nonparametric.KDEUnivariate(data_combined)
-    kde.fit(kernel=kernel, bw=bw, fft=False, gridsize=gridsize, cut=0, clip=(-np.inf, np.inf))
-    mask = (kde.support <= 0)
-    x = kde.support[mask]
-    y = 2.0 * kde.density[mask]
-    return x, y
-
-# ----------------------------------------------------------------
-# Utility: Compute KDE for original data (without reflecting)
-# ----------------------------------------------------------------
-def compute_kde_original(data, bw='scott', kernel='gau', gridsize=200):
-    data_arr = np.asarray(data)
-    kde = sm.nonparametric.KDEUnivariate(data_arr)
-    # Use cut=3 to pad the domain a bit (as in sk_results)
-    kde.fit(kernel=kernel, bw=bw, fft=False, gridsize=gridsize, cut=3)
-    return kde.support, kde.density
+from scipy.stats import gaussian_kde
 
 # ----------------------------------------------------------------
 # Global plot style settings
@@ -86,9 +61,12 @@ def create_fig_evolution_dfe(ax):
             combined_dfes[i].extend(dfe_t)
         # Compute KDE on the original data (without reflecting)
     for i, combined_dfe in enumerate(combined_dfes):
-        x_kde, y_kde = compute_kde_original(combined_dfe)
+        combined_dfe = np.asarray(combined_dfe)
+        kde = gaussian_kde(combined_dfe, bw_method=0.5)
+        x_grid = np.linspace(combined_dfe.min(), combined_dfe.max(), 500)
+        y_kde = kde.evaluate(x_grid)
         # Add a slight vertical offset (here 0.003) as in sk_results
-        ax.plot(x_kde, y_kde, color=color[i % len(color)], lw=2.0, label=f'$t={percents[i]}\\%$')
+        ax.plot(x_grid, y_kde, color=color[i % len(color)], lw=2.0, label=f'$t={percents[i]}\\%$')
     ax.set_xlabel(r'Fitness effect ($\Delta$)')
     ax.set_ylabel(r'$P(\Delta, t)$')
     ax.legend(frameon=False)
@@ -98,49 +76,72 @@ def create_fig_evolution_dfe(ax):
 # Panel B: Final DFEs for different K values (aggregated over all repeats)
 # ----------------------------------------------------------------
 def create_fig_final_dfe(ax):
-    for i in range(len(data_arr)):
-        combined_dfe = []
+    for i, K in enumerate(K_values):
+        # gather final DFE across repeats
+        combined = []
         for entry in data_arr[i]:
-            combined_dfe.extend(entry['dfes'][-1])
-        x_kde, y_kde = reflect_kde_neg(combined_dfe)
-        ax.plot(x_kde, y_kde, label=f'K={int(K_values[i])}', color=color[i], lw=2.0)
+            combined.extend(entry['dfes'][-1])
+        dfe_arr = np.asarray(combined, dtype=float)
+
+        # SK‐style KDE with fixed bandwidth
+        kde = gaussian_kde(dfe_arr, bw_method=0.25)
+        x_grid = np.linspace(dfe_arr.min(), 0.0, 400)
+        y_kde = kde.evaluate(x_grid)
+
+        ax.plot(x_grid, y_kde,
+                label=f'K={int(K)}',
+                color=color[i],
+                lw=2.0)
     ax.set_xlabel(r'Fitness effect ($\Delta$)')
     ax.set_ylabel(r'$P(\Delta, t=100\%)$')
     ax.legend(frameon=False, loc='upper left')
     ax.set_xlim(None, 0)
 
+
 # ----------------------------------------------------------------
-# Panel C: BD-FEs for different K values at 80% index
+# Panel C: BD-FEs for K=16, at multiple time-percentages
 # ----------------------------------------------------------------
-def create_fig_bdfe_80_percent(ax):
-    for i in range(len(data_arr)):
-        bdfe_80 = []
-        for entry in data_arr[i]:
-            idx80 = int(0.8 * len(entry['flip_seq']))
-            dfe_80 = entry['dfes'][idx80]
-            bdfe, _ = cmn_nk.compute_bdfe(dfe_80)
-            bdfe_80.extend(list(bdfe))
-        bins = 15 + 3 * i
-        counts, bins = np.histogram(bdfe_80, bins=bins, density=True)
-        log_counts = np.log(counts + 0.0001)
-        bin_centers = 0.5 * (bins[1:] + bins[:-1])
-        good = np.where(log_counts > 1)
-        ax.step(bin_centers[good], log_counts[good], where='mid',
-                color=color[i], label=f'K={int(K_values[i])}')
-        if len(bin_centers[good]) >= 3:
-            x0 = bin_centers[good][0]
-            y0 = log_counts[good][0]
-            x1 = bin_centers[good][2]
-            y1 = log_counts[good][2]
+def create_fig_bdfe_times(ax, percents):
+    # pick out the K=32 dataset
+    idx_K = K_values.index(32)
+    data_K = data_arr[idx_K]
+
+    for i, p in enumerate(percents):
+        bdfe_p = []
+        for entry in data_K:
+            num_flips = len(entry['flip_seq'])
+            t_idx = int(p * num_flips / 100)
+            dfe_t = entry['dfes'][t_idx]
+            bdfe, _ = cmn_nk.compute_bdfe(dfe_t)
+            bdfe_p.extend(bdfe)
+
+        # histogram + log
+        bins = 18
+        counts, bin_edges = np.histogram(bdfe_p, bins=bins, density=True)
+        log_counts = np.log(counts + 1)
+        bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+
+        # plot step
+        ax.step(bin_centers, log_counts, where='mid',
+                color=color[i], lw=2.0, label=f'$t={p}\\%$')
+
+        # dashed guideline through first & third points
+        if len(bin_centers) >= 3:
+            x0, y0 = bin_centers[0], log_counts[0]
+            x1, y1 = bin_centers[2], log_counts[2]
             m = (y1 - y0) / (x1 - x0)
-            line_vals = m * bin_centers[good] + (y0 - m * x0)
-            ax.plot(bin_centers[good], line_vals, linestyle='--', color=color[i])
+            ax.plot(bin_centers, m * bin_centers + (y0 - m * x0),
+                    linestyle='--', lw=2.0, color=color[i])
         else:
-            ax.axhline(y=log_counts[good][0], linestyle='--', color=color[i])
+            ax.axhline(y=log_counts[0], linestyle='--',
+                       lw=2.0, color=color[i])
+
     ax.set_xlabel(r'Fitness effect ($\Delta$)')
-    ax.set_ylabel(r'$ln(P_+ (\Delta, t=80\%))$')
+    ax.set_ylabel(r'$\,\ln(P_+(\Delta, t))$')
     ax.legend(frameon=False, loc='upper right')
     ax.set_xlim(0, 0.0062)
+    ax.set_ylim(0, None)
+
 
 # ----------------------------------------------------------------
 # Panel D: Crossings between two time points (using repeat 0 from K=32)
@@ -154,7 +155,7 @@ def create_fig_crossings_single(ax, flip1, flip2, repeat):
     bdfe1, prop_bdfe1 = cmn_nk.propagate_forward(dfe_anc, dfe_evo)
     bdfe2, prop_bdfe2 = cmn_nk.propagate_backward(dfe_anc, dfe_evo)
     color1 = color[0]
-    color2  = color[1]
+    color2  = color[2]
     flip_anc_percent = int(flip1 * 100 / num_flips)
     flip_evo_percent = int(flip2 * 100 / num_flips)
     x_left = flip_anc_percent
@@ -400,7 +401,7 @@ def main():
     # Top row:
     create_fig_evolution_dfe(axs[0, 0])   # Panel A: Evolution of DFE (K=32, no reflection)
     create_fig_final_dfe(axs[0, 1])         # Panel B: Final DFEs for different K values
-    create_fig_bdfe_80_percent(axs[0, 2])     # Panel C: BD-FEs for different K values at 80%
+    create_fig_bdfe_times(axs[0, 2], percents=(60, 65, 70, 75))     # Panel C: BD-FEs for different K values at 80%
 
     # Bottom row:
     flip1 = int(0.15 * len(nk_data[0]['flip_seq']))

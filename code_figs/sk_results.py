@@ -10,6 +10,7 @@ from matplotlib.gridspec import GridSpec
 import statsmodels.api as sm
 from matplotlib.patches import FancyArrowPatch, Rectangle
 import matplotlib as mpl
+from scipy.stats import gaussian_kde, norm
 
 # Define a consistent style
 # plt.style.use('science')
@@ -21,29 +22,6 @@ mpl.rcParams['axes.labelsize'] = 16
 mpl.rcParams['xtick.labelsize'] = 14
 mpl.rcParams['ytick.labelsize'] = 14
 mpl.rcParams['legend.fontsize'] = 12
-
-
-def reflect_kde_neg(data, bw='scott', kernel='gau', gridsize=200):
-    # Keep only nonpositive data
-    data_pos = np.asarray(data)
-    data_pos = data_pos[data_pos <= 0]
-
-    # Reflect about zero
-    data_reflected = -data_pos
-    data_combined = np.concatenate([data_pos, data_reflected])
-
-    # Fit KDE on the combined sample (which is now symmetric about 0)
-    kde = sm.nonparametric.KDEUnivariate(data_combined)
-    kde.fit(kernel=kernel, bw=bw, fft=False, gridsize=gridsize, cut=0, clip=(-np.inf, np.inf))
-    # (cut=0 ensures we don't pad the domain too far beyond data range)
-
-    # Restrict the support to x <= 0
-    mask = (kde.support <= 0)
-    x = kde.support[mask]
-    # Multiply the density by 2 on x <= 0 because we doubled the sample
-    y = 2.0 * kde.density[mask]
-    return x, y
-
 
 with open(file_path, 'rb') as f:
     data = pickle.load(f)
@@ -78,7 +56,7 @@ def create_fig_dfe_evol(ax, num_points, repeat):
 
         # Now, do a KDE on the same data. By default, the KDE integrates to 1.
         kde = sm.nonparametric.KDEUnivariate(dfe)
-        kde.fit(kernel='gau', bw='scott', fft=False, gridsize=200, cut=3)
+        kde.fit(kernel='gau', bw='scott', fft=False, gridsize=400, cut=3)
         # The integral of kde.density over kde.support is 1.
         # We want to scale it so that the *total area* becomes area_i/area_ref.
         scale_factor = (area_i / area_ref)  # ensures we replicate the same ratio
@@ -95,30 +73,39 @@ def create_fig_dfe_evol(ax, num_points, repeat):
     ax.set_xlabel(r'Fitness effect $(\Delta)$')
     ax.set_ylabel(r'$P(\Delta, t)$')
     ax.set_ylim(0, 0.35)
-    ax.axvline(x=0, color='black', linestyle=':', lw=1.5)
+    # ax.axvline(x=0, color='black', linestyle=':', lw=1.5)
     ax.legend(loc='upper left', frameon=False, markerscale=3)
 
 
 def create_fig_dfe_fin(ax, N, beta_arr, rho, num_repeats):
-    # same as before
+    """
+    Panel B: SK-model DFE at t=100%.
+    Plots:
+      - original boundary‐corrected KDE (solid)
+      - plain KDE with very small bandwidth (dotted)
+    """
     for i, beta in enumerate(beta_arr):
         dfe = gen_final_dfe(N, beta, rho, num_repeats)
-        x_kde, y_kde = reflect_kde_neg(dfe, bw='scott', kernel='gau', gridsize=200)
-        ax.plot(x_kde, y_kde, label=f'$\\beta={beta_arr[i]:.1f}$', color=color[i % len(color)], lw=2.0)
+        if beta == 0.0:
+            dfe = np.concatenate([dfe, -dfe])
+            kde = gaussian_kde(dfe, bw_method=0.5)
+        else:
+            kde = gaussian_kde(dfe, bw_method=0.2)
+        x_grid   = np.linspace(dfe.min(), 0.0, 400)
+        y_small  = kde.evaluate(x_grid)
+        if beta == 0.0:
+            y_small *= 2
+        ax.plot(
+            x_grid, y_small,
+            label=f'β={beta:.1f}',
+            color=color[i % len(color)],
+            lw=2.0
+        )
+
     ax.set_xlabel(r'Fitness effect $(\Delta)$')
     ax.set_ylabel(r'$P(\Delta, t=100\%)$')
     ax.set_xlim(None, 0)
-    ax.legend(loc='upper left', frameon=False, markerscale=3)
-
-    # Make tick lines
-    ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True, prune='both', nbins=5))
-    ax.xaxis.set_minor_locator(ticker.AutoMinorLocator())
-    ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=False, prune='both', nbins=4))
-    ax.yaxis.set_minor_locator(ticker.AutoMinorLocator())
-    current_ticks = ax.get_xticks()
-    new_ticks = np.concatenate(([0.0], current_ticks))
-    ax.set_xticks(new_ticks)
-    ax.set_xticklabels(['0.0'] + [f'{tick:.1f}' for tick in current_ticks])
+    ax.legend(loc='upper left', frameon=False, markerscale=2)
 
 
 def create_fig_bdfe_hists(ax, points_lst, num_bins, num_flips):
@@ -463,7 +450,7 @@ if __name__ == "__main__":
             spine.set_linewidth(1.5)
 
     create_fig_dfe_evol(axA, num_points=5, repeat=crossings_repeat)
-    create_fig_dfe_fin(axB, N=2000, beta_arr=[0.0, 0.5, 1.0], rho=1.0, num_repeats=3)
+    create_fig_dfe_fin(axB, N=1200, beta_arr=[0.0, 0.5, 1.0], rho=1.0, num_repeats=100)
     create_fig_bdfe_hists(axC, points_lst=flip_list, num_bins=10, num_flips=num_flips)
     create_fig_crossings(axD, crossings_flip_anc, crossings_flip_evo, crossings_repeat)
     create_fig_dfes_overlap(axE, axF, flip1=crossings_flip_anc, flip2=crossings_flip_evo, repeat=crossings_repeat,

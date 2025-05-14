@@ -29,7 +29,7 @@ fig, axes = plt.subplots(3, 5, figsize=(20, 12), sharex='col')
 stats_names = ['Mean DFE', 'Var DFE', 'Rank', 'Mean BDFE', 'Var BDFE']
 
 # Row 1 — SK Model
-N = 1000
+N = 500
 betas = [0.0, 0.5, 1.0]
 rho = 1.0
 palette = sns.color_palette('CMRmap', n_colors=len(betas))
@@ -53,7 +53,7 @@ for i, beta in enumerate(betas):
             BDFE, _ = sk_mod.compute_bdfe(sigma_t, h, J)
             stats_vals['Mean DFE'][t_idx] += np.mean(dfe)
             stats_vals['Var DFE'][t_idx] += np.var(dfe)
-            stats_vals['Rank'][t_idx] += np.sum(dfe > 0)
+            stats_vals['Rank'][t_idx] += np.sum(dfe > 0) / N
             stats_vals['Mean BDFE'][t_idx] += np.mean(BDFE) if BDFE.size > 0 else 0
             stats_vals['Var BDFE'][t_idx] += np.var(BDFE) if BDFE.size > 0 else 0
 
@@ -71,7 +71,7 @@ for i, beta in enumerate(betas):
         ax.legend(frameon=False)
 
 # Row 2 — NK Model
-N = 600
+N = 400
 K_values = [4, 8, 16]
 palette = sns.color_palette('CMRmap', n_colors=len(K_values))
 
@@ -90,7 +90,7 @@ for i, K in enumerate(K_values):
         for t_idx, t in enumerate(samples):
             dfe = dfes[t]
             BDFE = dfe[dfe > 0]
-            stats_vals['Mean DFE'][t_idx] += np.mean(dfe)
+            stats_vals['Mean DFE'][t_idx] += np.mean(dfe) / N
             stats_vals['Var DFE'][t_idx] += np.var(dfe)
             stats_vals['Rank'][t_idx] += np.sum(dfe > 0)
             stats_vals['Mean BDFE'][t_idx] += np.mean(BDFE) if BDFE.size > 0 else 0
@@ -109,17 +109,19 @@ for i, K in enumerate(K_values):
 
 # Row 3 — FGM Model
 n_list = [4, 8, 16]
-delta = 5 * 10 ** -2
-m_mut = 1000
-max_steps = 1000
+delta = 5 * 10 ** -3
+m_mut = 10 ** 3
+max_steps = 10 ** 4
 palette = sns.color_palette('CMRmap', n_colors=len(n_list))
 
 for i, n in enumerate(n_list):
     stats_vals = {name: np.zeros(m_points) for name in stats_names}
 
     for r in range(repeats):
-        model = fgm_mod.Fisher(n=n, delta=delta, m=m_mut, random_state=seed + r)
-        z0 = np.random.default_rng(seed + r).normal(size=n)
+        model = fgm_mod.Fisher(n=n, delta=delta, m=n*m_mut, random_state=seed + r)
+        rng = np.random.default_rng(seed + r)
+        sig = 1
+        z0 = sig * rng.standard_normal(size=n)
         _, traj = model.relax(z0, max_steps=max_steps)
         samples = np.linspace(0, len(traj) - 1, m_points, dtype=int)
         fitness = [model.compute_fitness(traj[t]) for t in samples]
@@ -130,7 +132,7 @@ for i, n in enumerate(n_list):
             BDFE, _ = model.compute_bdfe(dfe)
             stats_vals['Mean DFE'][t_idx] += np.mean(dfe)
             stats_vals['Var DFE'][t_idx] += np.var(dfe)
-            stats_vals['Rank'][t_idx] += np.sum(dfe > 0)
+            stats_vals['Rank'][t_idx] += np.sum(dfe > 0) / m_mut
             stats_vals['Mean BDFE'][t_idx] += np.mean(BDFE) if BDFE.size > 0 else 0
             stats_vals['Var BDFE'][t_idx] += np.var(BDFE) if BDFE.size > 0 else 0
 
