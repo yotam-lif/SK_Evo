@@ -10,7 +10,7 @@ from matplotlib.gridspec import GridSpec
 import statsmodels.api as sm
 from matplotlib.patches import FancyArrowPatch, Rectangle
 import matplotlib as mpl
-from scipy.stats import gaussian_kde, norm
+from scipy.stats import gaussian_kde
 
 # Define a consistent style
 # plt.style.use('science')
