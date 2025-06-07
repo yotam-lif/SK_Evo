@@ -22,7 +22,7 @@ class Fisher:
         Random number generator for reproducibility.
     """
 
-    def __init__(self, n, delta, isotropic=True, sigma=1.0, m=10**4, random_state=None):
+    def __init__(self, n, delta, sig_0, isotropic=True, sigma=1.0, m=10**4, random_state=None):
         """
         Initialize the model in the diagonal basis.
 
@@ -61,7 +61,8 @@ class Fisher:
             self.eigenvalues = self._sample_semicircle(self.n, sigma)
 
         # Pre-sample Gaussian mutation steps dz ~ N(0, delta^2 I)
-        self.dzs = self.rng.normal(loc=0.0, scale=self.delta, size=(self.m, self.n))
+        self.deltas = self.rng.normal(loc=0.0, scale=self.delta, size=(self.m, self.n))
+        self.z0 = self.rng.normal(loc=0.0, scale=sig_0, size=self.n)
 
     def _sample_semicircle(self, n, sigma):
         """
@@ -98,7 +99,7 @@ class Fisher:
         """
         z = np.asarray(z, dtype=float)
         w0 = self.compute_fitness(z)
-        return np.array([self.compute_fitness(z + dz) - w0 for dz in self.dzs])
+        return np.array([self.compute_fitness(z + delta) - w0 for delta in self.deltas])
 
     def compute_bdfe(self, dfe):
         """
@@ -135,7 +136,7 @@ class Fisher:
                 break
             choice = self.sswm_choice(bdfe, b_ind)
             flips.append(choice)
-            z += self.dzs[choice]
-            self.dzs[choice] = -1 * self.dzs[choice]
+            z += self.deltas[choice]
+            self.deltas[choice] = -1 * self.deltas[choice]
             traj.append(z.copy())
         return flips, traj

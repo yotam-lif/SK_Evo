@@ -123,14 +123,14 @@ def panel_C(ax, reps, perc=(70, 75, 80, 85)):
         bins = 14 - 2 * i
         cnt, bins = np.histogram(bd_all, bins=bins, density=True)
         ctr = 0.5 * (bins[:-1] + bins[1:])
-        ax.step(ctr, np.log(cnt + 1), where="mid", lw=2, color=COLOR[i], label=f"{p}%")
+        ax.step(ctr, np.log(cnt + 1), where="mid", lw=2, color=COLOR[i], label=f"$t={p}\\%$")
         if len(ctr) >= 3:  # dashed guideline through first & third points
             x0, y0 = ctr[0], np.log(cnt[0] + 1)
             x1, y1 = ctr[2], np.log(cnt[2] + 1)
             m = (y1 - y0) / (x1 - x0)
             ax.plot(ctr, m * ctr + (y0 - m * x0), ls="--", lw=2, color=COLOR[i])
     ax.set_xlabel(r"Fitness effect $(\Delta)$")
-    ax.set_ylabel(r"$\ln(P_+(\Delta,t))$")
+    ax.set_ylabel(r"$\ln(P(\Delta > 0,t))$")
     ax.legend(frameon=False, loc="upper right")
 
 
@@ -185,7 +185,7 @@ def panel_EF(axL, axR, rep, anc_idx, evo_idx):
     axR.stairs(
         counts_evolved + z_r, bins_evolved, baseline=0,
         fill=True, facecolor=EVO_FILL, edgecolor="black", lw=1.1,
-        label=f"Evo(${evo_pct}\\%$)", zorder=0
+        label=r'$\mathcal{D}_{t_2} (t_2)$', zorder=0
     )
 
     # 2) ancestor-to-evolved propagated BD‑FE
@@ -193,7 +193,7 @@ def panel_EF(axL, axR, rep, anc_idx, evo_idx):
     axR.stairs(
         counts_ancprop, bins_ancprop, baseline=0,
         fill=True, facecolor=ANC_FILL, edgecolor="black", lw=1.1,
-        label=f"Anc(${anc_pct}\\%$)", zorder=3
+        label=r'$\mathcal{D}_{t_2} (t_1)$', zorder=3
     )
 
     # 3) full ancestral DFE outline
@@ -201,7 +201,7 @@ def panel_EF(axL, axR, rep, anc_idx, evo_idx):
     axR.stairs(
         counts_full_anc, bins_full_anc, baseline=0,
         fill=False, edgecolor=COLOR[2], lw=1.1,
-        label=f"DFE(${anc_pct}\\%$)", zorder=4
+        label=r"$DFE(t_1)$", zorder=4
     )
 
     axR.set_xlabel(r"Fitness effect $(\Delta)$")
@@ -228,7 +228,7 @@ def panel_EF(axL, axR, rep, anc_idx, evo_idx):
     axL.stairs(
         counts_anc + z_l, bins_anc, baseline=0,
         fill=True, facecolor=EVO_FILL, edgecolor="black", lw=1.1,
-        label=f"Evo(${evo_pct}\\%$)", zorder=0
+        label=r'$\mathcal{D}_{t_1} (t_2)$', zorder=0
     )
 
     # 2) full ancestor BD‑FE
@@ -236,7 +236,7 @@ def panel_EF(axL, axR, rep, anc_idx, evo_idx):
     axL.stairs(
         counts_benef, bins_benef, baseline=0,
         fill=True, facecolor=ANC_FILL, edgecolor="black", lw=1.1,
-        label=f"Anc(${anc_pct}\\%$)", zorder=4
+        label=r'$\mathcal{D}_{t_1} (t_1)$', zorder=4
     )
 
     # 3) full evolved DFE outline
@@ -244,7 +244,7 @@ def panel_EF(axL, axR, rep, anc_idx, evo_idx):
     axL.stairs(
         counts_full_evo + z_l, bins_full_evo, baseline=0,
         fill=False, edgecolor=COLOR[2], lw=1.1,
-        label=f"DFE(${evo_pct}\\%$)", zorder=1
+        label=r'$DFE(t_2)$', zorder=1
     )
 
     axL.set_xlabel(r"Fitness effect $(\Delta)$")
@@ -270,12 +270,13 @@ if __name__ == "__main__":
     delta = 5 * 10 ** -2
     repeats = 20
     max_steps = 3000
-    m = 5 * 10 ** 3
+    m = 1 * 10 ** 3
+    sig_0 = 0.5
 
     reps = []
     for s in range(repeats):
         n=6
-        model = Fisher(n=n, delta=delta, m=m, random_state=s, isotropic=True)
+        model = Fisher(n=n, delta=delta, m=m, sig_0=sig_0, random_state=s, isotropic=True)
         z0 = np.random.normal(size=n, loc=0, scale=0.5)
         _, traj = model.relax(z0, max_steps=max_steps)
         reps.append({"dfes": [model.compute_dfe(z) for z in traj]})
@@ -289,7 +290,7 @@ if __name__ == "__main__":
     for n in n_list:
         final[n] = []
         for s in range(repeats):
-            model = Fisher(n=n, delta=delta, m=m, random_state=s)
+            model = Fisher(n=n, delta=delta, m=m, sig_0=sig_0, random_state=s)
             z0 = np.random.normal(size=n)
             _, traj = model.relax(z0, max_steps=max_steps)
             final[n].extend(model.compute_dfe(traj[-1]))
