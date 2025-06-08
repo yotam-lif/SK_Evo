@@ -11,6 +11,7 @@ import statsmodels.api as sm
 from matplotlib.patches import FancyArrowPatch, Rectangle
 import matplotlib as mpl
 from scipy.stats import gaussian_kde
+from code_sim.cmn import cmn_pspin
 
 # Define a consistent style
 # plt.style.use('science')
@@ -77,35 +78,23 @@ def create_fig_dfe_evol(ax, num_points, repeat):
     ax.legend(loc='upper left', frameon=False, markerscale=3)
 
 
-def create_fig_dfe_fin(ax, N, beta_arr, rho, num_repeats):
+def create_fig_dfe_fin(ax, N: int, p_arr: list, num_repeats: int):
     """
     Panel B: SK-model DFE at t=100%.
     Plots:
       - original boundary‐corrected KDE (solid)
       - plain KDE with very small bandwidth (dotted)
     """
-    for i, beta in enumerate(beta_arr):
-        dfe = gen_final_dfe(N, beta, rho, num_repeats)
-        if beta == 0.0:
-            dfe = np.concatenate([dfe, -dfe])
-            kde = gaussian_kde(dfe, bw_method=0.5)
-        else:
-            kde = gaussian_kde(dfe, bw_method=0.2)
-        x_grid   = np.linspace(dfe.min(), 0.0, 400)
-        y_small  = kde.evaluate(x_grid)
-        if beta == 0.0:
-            y_small *= 2
-        ax.plot(
-            x_grid, y_small,
-            label=f'β={beta:.1f}',
-            color=color[i % len(color)],
-            lw=2.0
-        )
-
-    ax.set_xlabel(r'Fitness effect $(\Delta)$')
+    for i, p in enumerate(p_arr):
+        dfe = cmn_pspin.gen_final_dfe_p_spin(
+            N, p, num_repeats=num_repeats)
+        kde = gaussian_kde(dfe, bw_method=0.25)
+        x = np.linspace(dfe.min(), 0.0, 400)
+        ax.plot(x, kde(x), lw=2.0, color=color[i % len(color)], label=f'$p={p}$')
+    ax.set_xlabel(r'Fitness effect $\Delta$')
     ax.set_ylabel(r'$P(\Delta, t=100\%)$')
     ax.set_xlim(None, 0)
-    ax.legend(loc='upper left', frameon=False, markerscale=2)
+    ax.legend(frameon=False)
 
 
 def create_fig_bdfe_hists(ax, points_lst, num_bins, num_flips):
@@ -450,7 +439,7 @@ if __name__ == "__main__":
             spine.set_linewidth(1.5)
 
     create_fig_dfe_evol(axA, num_points=5, repeat=crossings_repeat)
-    create_fig_dfe_fin(axB, N=1200, beta_arr=[0.0, 0.5, 1.0], rho=1.0, num_repeats=100)
+    create_fig_dfe_fin(axB, N=200, p_arr=[2, 3, 4], num_repeats=3)
     create_fig_bdfe_hists(axC, points_lst=flip_list, num_bins=10, num_flips=num_flips)
     create_fig_crossings(axD, crossings_flip_anc, crossings_flip_evo, crossings_repeat)
     create_fig_dfes_overlap(axE, axF, flip1=crossings_flip_anc, flip2=crossings_flip_evo, repeat=crossings_repeat,

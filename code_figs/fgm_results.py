@@ -157,6 +157,7 @@ def panel_D(ax, rep, anc_idx, evo_idx):
 
     ax.axhline(0, ls="--", lw=1.5, color="black")
     ax.set_xticks([anc_pct, evo_pct])
+    ax.set_xticklabels([r'$t_1$', r'$t_2$'])
     ax.set_xlabel("% of walk completed")
     ax.set_ylabel(r"Fitness effect $(\Delta)$")
     ax.legend([sc_fwd, sc_bwd], ["Forwards", "Backwards"], frameon=False, loc="upper right")
@@ -268,21 +269,21 @@ def panel_EF(axL, axR, rep, anc_idx, evo_idx):
 # ───────────────────────────────────────────────────── main routine ─────────────────────────────────
 if __name__ == "__main__":
     delta = 5 * 10 ** -2
-    repeats = 20
+    repeats = 25
     max_steps = 3000
-    m = 1 * 10 ** 3
+    m = 2 * 10 ** 3
     sig_0 = 0.5
+    scramb_ind = 0
 
     reps = []
     for s in range(repeats):
-        n=6
+        n=4
         model = Fisher(n=n, delta=delta, m=m, sig_0=sig_0, random_state=s, isotropic=True)
-        z0 = np.random.normal(size=n, loc=0, scale=0.5)
-        _, traj = model.relax(z0, max_steps=max_steps)
-        reps.append({"dfes": [model.compute_dfe(z) for z in traj]})
+        _, _, dfes = model.relax(max_steps=max_steps)
+        reps.append({"dfes": dfes})
 
     steps = len(reps[0]["dfes"])
-    anc_idx = int(0.40 * (steps - 1))
+    anc_idx = int(0.30 * (steps - 1))
     evo_idx = int(0.70 * (steps - 1))
 
     n_list = [4, 8, 16, 32]
@@ -291,9 +292,8 @@ if __name__ == "__main__":
         final[n] = []
         for s in range(repeats):
             model = Fisher(n=n, delta=delta, m=m, sig_0=sig_0, random_state=s)
-            z0 = np.random.normal(size=n)
-            _, traj = model.relax(z0, max_steps=max_steps)
-            final[n].extend(model.compute_dfe(traj[-1]))
+            _, _, dfes = model.relax(max_steps=max_steps)
+            final[n].extend(dfes[-1])
 
     # Create figure and panels
     fig = plt.figure(figsize=(14, 10), constrained_layout=True)
@@ -312,12 +312,12 @@ if __name__ == "__main__":
     axC.text(-0.1, 1.05, "C", transform=axC.transAxes, fontsize=18, fontweight="bold")
 
     axD = fig.add_subplot(gs[1, 0])
-    panel_D(axD, reps[0], anc_idx, evo_idx)
+    panel_D(axD, reps[scramb_ind % repeats], anc_idx, evo_idx)
     axD.text(-0.1, 1.05, "D", transform=axD.transAxes, fontsize=18, fontweight="bold")
 
     axE = fig.add_subplot(gs[1, 1])
     axF = fig.add_subplot(gs[1, 2])
-    panel_EF(axE, axF, reps[0], anc_idx, evo_idx)
+    panel_EF(axE, axF, reps[scramb_ind % repeats], anc_idx, evo_idx)
     axE.text(-0.1, 1.05, "E", transform=axE.transAxes, fontsize=18, fontweight="bold")
     axF.text(-0.1, 1.05, "F", transform=axF.transAxes, fontsize=18, fontweight="bold")
 

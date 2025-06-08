@@ -75,26 +75,6 @@ def init_J(N, random_state=None, beta=1.0, rho=1.0, delta=1.0):
 
     return Jij
 
-def compute_fis(sigma, h, J):
-    """
-    Calculate the fis for the Sherrington-Kirkpatrick model.
-
-    Parameters
-    ----------
-    sigma : numpy.ndarray
-        The spin configuration.
-    h : numpy.ndarray
-        The external fields.
-    J : numpy.ndarray
-        The coupling matrix.
-
-    Returns
-    -------
-    numpy.ndarray
-        The fis.
-    """
-    return h + 0.5 * np.matmul(J, sigma)
-
 
 def compute_lfs(sigma, h, J):
     """
@@ -115,28 +95,6 @@ def compute_lfs(sigma, h, J):
         The local fields.
     """
     return h + np.matmul(J, sigma)
-
-
-def compute_energies(sigma, h, J):
-    """
-    Calculate the energy delta of the system.
-
-    Parameters
-    ----------
-    sigma : numpy.ndarray
-        The spin configuration.
-    h : numpy.ndarray
-        The external fields.
-    J : numpy.ndarray
-        The coupling matrix.
-
-    Returns
-    -------
-    numpy.ndarray
-        The kis of the system.
-    """
-    return sigma * compute_lfs(sigma, h, J)
-
 
 def compute_dfe(sigma, h, J):
     """
@@ -250,34 +208,6 @@ def sswm_flip(sigma, his, Jijs):
     effects /= np.sum(effects)
     return np.random.choice(indices, p=effects)
 
-
-def glauber_flip(sigma, hi, Jij, beta=10):
-    """
-    Choose a spin to flip using the Glauber probabilities.
-
-    Parameters
-    ----------
-    sigma : numpy.ndarray
-        The spin configuration.
-    hi : numpy.ndarray
-        The local fitness fields.
-    Jij : numpy.ndarray
-        The coupling matrix.
-    beta : float
-        The inverse temperature.
-
-    Returns
-    -------
-    numpy.ndarray
-        The probability of flipping a spin.
-    """
-    eis = compute_energies(sigma, hi, Jij)
-    ps = (1 - np.tanh(eis * beta)) / 2
-    ps /= np.sum(ps)
-    indices = range(len(sigma))
-    return np.random.choice(indices, p=ps)
-
-
 def compute_fit_off(sigma_init, his, Jijs):
     """
     Calculate the fitness offset for the given configuration.
@@ -334,79 +264,7 @@ def compute_fitness_delta_mutant(sigma, his, Jijs, k):
     return -2 * sigma[k] * (his[k] + Jijs[k] @ sigma)
 
 
-def relax_sk_flips(sigma, his, Jijs, flips, sswm=True):
-    """
-    Relax the Sherrington-Kirkpatrick model with given parameters, saving sigma at specified flips.
-    Parameters
-    ----------
-    sigma: numpy.ndarray
-    his: numpy.ndarray
-    Jijs: numpy.ndarray
-    flips: list or array-like
-    sswm: bool, optional
-
-    Returns
-    -------
-    numpy.ndarray
-        The final spin configuration, saved sigmas.
-    """
-    saved_sigmas = []
-    total_flips = 0
-    rank = compute_rank(sigma, his, Jijs)
-
-    while total_flips < flips[-1] and rank > 0:
-
-        if total_flips in flips:
-            saved_sigmas.append(np.copy(sigma))
-
-        flip_idx = sswm_flip(sigma, his, Jijs) if sswm else glauber_flip(sigma, his, Jijs, beta=10)
-        sigma[flip_idx] *= -1
-        total_flips += 1
-        rank = compute_rank(sigma, his, Jijs)
-
-    if rank == 0:
-        saved_sigmas.append(np.copy(sigma))
-        print("Not all flips reached, rank is 0")
-
-    return sigma, saved_sigmas
-
-
-def relax_sk_ranks(sigma, his, Jijs, num_ranks, fin_rank=0, sswm=True):
-    """
-    Relax the Sherrington-Kirkpatrick model with given parameters, saving sigma at specified ranks.
-    Parameters
-    ----------
-    sigma: numpy.ndarray
-    his: numpy.ndarray
-    Jijs: numpy.ndarray
-    fin_rank: int
-    num_ranks: int
-    sswm: bool, optional
-
-    Returns
-    -------
-    numpy.ndarray, list
-        The final spin configuration, saved sigmas.
-    """
-    saved_sigmas = []
-    rank = compute_rank(sigma, his, Jijs)
-    ranks = sorted(np.linspace(rank, fin_rank, num_ranks, dtype=int), reverse=True)
-
-    while rank > fin_rank:
-
-        if rank in ranks:
-            saved_sigmas.append(np.copy(sigma))
-
-        flip_idx = sswm_flip(sigma, his, Jijs) if sswm else glauber_flip(sigma, his, Jijs, beta=10)
-        sigma[flip_idx] *= -1
-        rank = compute_rank(sigma, his, Jijs)
-
-    # Save the final sigma
-    saved_sigmas.append(np.copy(sigma))
-    return sigma, saved_sigmas, ranks
-
-
-def relax_sk(sigma0, his, Jijs, sswm=True):
+def relax_sk(sigma0, his, Jijs):
     """
     Relax the Sherrington-Kirkpatrick model with given parameters.
     Parameters
@@ -426,7 +284,7 @@ def relax_sk(sigma0, his, Jijs, sswm=True):
     sigma = np.copy(sigma0)
 
     while rank > 0:
-        flip_idx = sswm_flip(sigma, his, Jijs) if sswm else glauber_flip(sigma, his, Jijs, beta=10)
+        flip_idx = sswm_flip(sigma, his, Jijs)
         sigma[flip_idx] *= -1
         flip_sequence.append(flip_idx)
         rank = compute_rank(sigma, his, Jijs)

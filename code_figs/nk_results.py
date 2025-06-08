@@ -137,7 +137,7 @@ def create_fig_bdfe_times(ax, percents):
                        lw=2.0, color=color[i])
 
     ax.set_xlabel(r'Fitness effect ($\Delta$)')
-    ax.set_ylabel(r'$\,\ln(P_+(\Delta, t))$')
+    ax.set_ylabel(r'$\,\ln(P(\Delta > 0, t))$')
     ax.legend(frameon=False, loc='upper right')
     ax.set_xlim(0, 0.0062)
     ax.set_ylim(0, None)
@@ -190,6 +190,7 @@ def create_fig_crossings_single(ax, flip1, flip2, repeat):
 
     # Set x-axis to show the flip percentages
     ax.set_xticks([x_left, x_right])
+    ax.set_xticklabels([r'$t_1$', r'$t_2$'])
     ax.axhline(0, color="black", linestyle="--", linewidth=1.5)
     ax.set_xlabel('$\\%$ of walk completed')
     ax.set_ylabel(r'Fitness effect $(\Delta)$')
@@ -266,7 +267,7 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat):
         facecolor=EVO_FILL,
         edgecolor="black",
         lw=1.1,
-        label=f'Evolved ({flip_evo_percent}%)'
+        label=r'$\mathcal{D}_{t_2} (t_2)$'
     )
     ax_right.figure.canvas.draw()
     y_bottom_right = -0.01
@@ -286,7 +287,7 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat):
         facecolor=ANC_FILL,
         edgecolor="black",
         lw=1.1,
-        label=f'Ancestor ({flip_anc_percent}%)'
+        label=r'$\mathcal{D}_{t_2} (t_1)$'
     )
     dfe_anc2_counts, dfe_anc2_bin_edges = np.histogram(dfe_anc, bins=18, density=True)
     ax_right.stairs(
@@ -296,10 +297,10 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat):
         fill=False,
         edgecolor=color[2],
         lw=1.1,
-        label=f'Full DFE ({flip_anc_percent}%)'
+        label=r'$DFE(t_1)$'
     )
 
-    ax_right.legend(frameon=False, loc='upper left', fontsize=10)
+    ax_right.legend(frameon=False, loc='upper left')
     ax_right.set_ylim(0, None)
 
     for ax in [ax_left, ax_right]:
@@ -335,7 +336,7 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat):
         facecolor=EVO_FILL,
         edgecolor="black",
         lw=1.1,
-        label=f'Evolved ({flip_evo_percent}%)',
+        label=r'$\mathcal{D}_{t_1} (t_2)$',
         zorder=0
     )
     y_bottom_left = -0.01
@@ -356,7 +357,7 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat):
         fill=False,
         edgecolor=color[2],
         lw=1.1,
-        label=f'Full DFE ({flip_evo_percent}%)',
+        label=r'$DFE(t_2)$',
         zorder=1
     )
 
@@ -368,12 +369,12 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat):
         facecolor=ANC_FILL,
         edgecolor="black",
         lw=1.1,
-        label=f'Ancestor ({flip_anc_percent}%)',
+        label=r'$\mathcal{D}_{t_1} (t_1)$',
         zorder=3
     )
 
     ax_left.figure.canvas.draw()
-    ax_left.legend(frameon=False, loc='upper left', fontsize=10)
+    ax_left.legend(frameon=False, loc='upper left')
     draw_custom_segments(ax_left, left_X_min, left_X_max, y_bottom_left, z, lw_main)
     # Make ax_left share y axis with ax_right
     ax_left.sharey(ax_right)

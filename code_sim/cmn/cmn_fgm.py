@@ -62,7 +62,8 @@ class Fisher:
 
         # Pre-sample Gaussian mutation steps dz ~ N(0, delta^2 I)
         self.deltas = self.rng.normal(loc=0.0, scale=self.delta, size=(self.m, self.n))
-        self.z0 = self.rng.normal(loc=0.0, scale=sig_0, size=self.n)
+        # Initialize z_0
+        self.z = self.rng.normal(loc=0.0, scale=sig_0, size=self.n)
 
     def _sample_semicircle(self, n, sigma):
         """
@@ -121,22 +122,23 @@ class Fisher:
             probs = bdfe / len(bdfe)
         return int(self.rng.choice(b_ind, p=probs))
 
-    def relax(self, z_init, max_steps=1000):
+    def relax(self, max_steps=1000):
         """
         Perform an adaptive walk using SSWM.
-        Returns list of chosen mutation indices and trajectory of z.
+        Returns list of chosen mutation indices, z history and dfe history.
         """
-        z = np.asarray(z_init, dtype=float).copy()
-        traj = [z.copy()]
+        traj = [self.z.copy()]
         flips = []
+        dfes = []
         for _ in range(max_steps):
-            dfe = self.compute_dfe(z)
+            dfe = self.compute_dfe(self.z)
+            dfes.append(dfe.copy())
             bdfe, b_ind = self.compute_bdfe(dfe)
             if len(b_ind) == 0:
                 break
             choice = self.sswm_choice(bdfe, b_ind)
             flips.append(choice)
-            z += self.deltas[choice]
+            self.z += self.deltas[choice]
             self.deltas[choice] = -1 * self.deltas[choice]
-            traj.append(z.copy())
-        return flips, traj
+            traj.append(self.z.copy())
+        return flips, traj, dfes
