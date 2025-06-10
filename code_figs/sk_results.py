@@ -78,23 +78,35 @@ def create_fig_dfe_evol(ax, num_points, repeat):
     ax.legend(loc='upper left', frameon=False, markerscale=3)
 
 
-def create_fig_dfe_fin(ax, N: int, p_arr: list, num_repeats: int):
+def create_fig_dfe_fin(ax, N, beta_arr, rho, num_repeats):
     """
     Panel B: SK-model DFE at t=100%.
     Plots:
       - original boundary‐corrected KDE (solid)
       - plain KDE with very small bandwidth (dotted)
     """
-    for i, p in enumerate(p_arr):
-        dfe = cmn_pspin.gen_final_dfe_p_spin(
-            N, p, num_repeats=num_repeats)
-        kde = gaussian_kde(dfe, bw_method=0.25)
-        x = np.linspace(dfe.min(), 0.0, 400)
-        ax.plot(x, kde(x), lw=2.0, color=color[i % len(color)], label=f'$p={p}$')
-    ax.set_xlabel(r'Fitness effect $\Delta$')
+    for i, beta in enumerate(beta_arr):
+        dfe = gen_final_dfe(N, beta, rho, num_repeats)
+        if beta == 0.0:
+            dfe = np.concatenate([dfe, -dfe])
+            kde = gaussian_kde(dfe, bw_method=0.5)
+        else:
+            kde = gaussian_kde(dfe, bw_method=0.2)
+        x_grid   = np.linspace(dfe.min(), 0.0, 400)
+        y_small  = kde.evaluate(x_grid)
+        if beta == 0.0:
+            y_small *= 2
+        ax.plot(
+            x_grid, y_small,
+            label=f'β={beta:.1f}',
+            color=color[i % len(color)],
+            lw=2.0
+        )
+
+    ax.set_xlabel(r'Fitness effect $(\Delta)$')
     ax.set_ylabel(r'$P(\Delta, t=100\%)$')
     ax.set_xlim(None, 0)
-    ax.legend(frameon=False)
+    ax.legend(loc='upper left', frameon=False, markerscale=2)
 
 
 def create_fig_bdfe_hists(ax, points_lst, num_bins, num_flips):
@@ -149,7 +161,7 @@ def create_fig_bdfe_hists(ax, points_lst, num_bins, num_flips):
             ax.axhline(y=hist_log[0], linestyle='--', color=color[i % len(color)])
 
     ax.set_xlabel(r'Fitness effect $(\Delta)$')
-    ax.set_ylabel(r'$ln(P_+(\Delta, t))$')
+    ax.set_ylabel(r'$ln(P(\Delta > 0, t))$')
     # Set the x-axis limits based on the collected range.
     ax.set_xlim(x_min_all, x_max_all)
 
@@ -218,6 +230,7 @@ def create_fig_crossings(ax, flip1, flip2, repeat):
 
     # Set x-axis to show the flip percentages
     ax.set_xticks([x_left, x_right])
+    ax.set_xticklabels([r'$t_1$', r'$t_2$'])
     ax.axhline(0, color="black", linestyle="--", linewidth=1.5)
     ax.set_xlabel('$\\%$ of walk completed')
     ax.set_ylabel(r'Fitness effect $(\Delta)$')
@@ -290,7 +303,7 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
         facecolor=EVO_FILL,
         edgecolor="black",
         lw=1.1,
-        label=f'Evolved(${flip_evo_percent}\\%$)',
+        label=r'$\mathcal{D}_{t_1} (t_2)$',
         zorder=0
     )
     y_bottom_left = -0.01
@@ -314,7 +327,7 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
         facecolor=None,
         edgecolor=color[2],
         lw=1.1,
-        label=f'Full DFE(${flip_evo_percent}\\%$)',
+        label=f'$DFE(t_2)$',
         zorder=1
     )
 
@@ -326,11 +339,11 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
         facecolor=ANC_FILL,
         edgecolor="black",
         lw=1.1,
-        label=f'Ancestor(${flip_anc_percent}\\%$)',
+        label=r'$\mathcal{D}_{t_1} (t_1)$',
         zorder=3
     )
     ax_left.figure.canvas.draw()
-    ax_left.legend(frameon=False, loc='upper left', fontsize=10)
+    ax_left.legend(frameon=False, loc='upper left')
     draw_custom_segments(ax_left, left_X_min, left_X_max, y_bottom_left, z, lw_main)
 
     # ========================
@@ -357,7 +370,7 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
         facecolor=EVO_FILL,
         edgecolor="black",
         lw=1.1,
-        label=f'Evolved(${flip_evo_percent}\\%$)'
+        label=r'$\mathcal{D}_{t_2} (t_2)$'
     )
     ax_right.figure.canvas.draw()
     y_bottom_right = -0.01
@@ -377,7 +390,7 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
         facecolor=ANC_FILL,
         edgecolor="black",
         lw=1.1,
-        label=f'Ancestor(${flip_anc_percent}\\%$)'
+        label=r'$\mathcal{D}_{t_2} (t_1)$'
     )
     dfe_anc2_counts, dfe_anc2_bin_edges = np.histogram(dfe_anc, bins=18, density=True)
     ax_right.stairs(
@@ -388,10 +401,10 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
         facecolor=None,
         edgecolor=color[2],
         lw=1.1,
-        label=f'Full DFE(${flip_anc_percent}\\%$)'
+        label=f'$DFE(t_1)$',
     )
 
-    ax_right.legend(frameon=False, loc='upper left', fontsize=10)
+    ax_right.legend(frameon=False, loc='upper left')
     ax_right.set_ylim(0, None)
 
     for ax in [ax_left, ax_right]:
@@ -409,7 +422,7 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
 if __name__ == "__main__":
     N = 4000
     num_flips = int(N * 0.64)
-    high = int(num_flips * 0.9)
+    high = int(num_flips * 0.90)
     low = int(num_flips * 0.75)
     flip_list = np.linspace(low, high, 4, dtype=int)
     crossings_repeat = 10
@@ -439,7 +452,7 @@ if __name__ == "__main__":
             spine.set_linewidth(1.5)
 
     create_fig_dfe_evol(axA, num_points=5, repeat=crossings_repeat)
-    create_fig_dfe_fin(axB, N=200, p_arr=[2, 3, 4], num_repeats=3)
+    create_fig_dfe_fin(axB, N=1200, beta_arr=[0.0, 0.5, 1.0], rho=1.0, num_repeats=25)
     create_fig_bdfe_hists(axC, points_lst=flip_list, num_bins=10, num_flips=num_flips)
     create_fig_crossings(axD, crossings_flip_anc, crossings_flip_evo, crossings_repeat)
     create_fig_dfes_overlap(axE, axF, flip1=crossings_flip_anc, flip2=crossings_flip_evo, repeat=crossings_repeat,
@@ -450,6 +463,7 @@ if __name__ == "__main__":
         xticks = ax.get_xticks()
         new_labels = [f'{t:.1f}' if not np.isclose(t, 0.0) else '' for t in xticks]
         ax.set_xticklabels(new_labels)
+    axD.set_xticklabels([r'$t_1$', r'$t_2$'])
 
     # Label the panels: now we have 6 panels (A, B, C, D, E, F)
     panel_labels = ['A', 'B', 'C', 'D', 'E', 'F']

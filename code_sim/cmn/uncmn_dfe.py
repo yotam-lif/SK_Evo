@@ -26,7 +26,7 @@ def gen_final_dfe(N, beta, rho, num_repeats):
         alpha_initial = cmn.init_sigma(N)
         h = cmn_sk.init_h(N, beta=beta)
         J = cmn_sk.init_J(N, beta=beta, rho=rho)
-        flip_seq = cmn_sk.relax_sk(alpha_initial.copy(), h, J, sswm=True)
+        flip_seq = cmn_sk.relax_sk(alpha_initial.copy(), h, J)
         final_alpha = cmn.compute_sigma_from_hist(alpha_initial, flip_seq)
         dfe = cmn_sk.compute_dfe(final_alpha, h, J)
         final_dfe = np.concatenate((final_dfe, dfe))
