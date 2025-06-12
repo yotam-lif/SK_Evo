@@ -58,6 +58,9 @@ def _scale_x(x_ref, X_min, X_max, ref_min=-0.1, ref_max=0.1):
 
 
 def draw_custom_segments(ax, y_bottom, z_val, zorder, lw_main=1.0):
+    xmin, xmax = ax.get_xlim()
+    limit = max(abs(xmin), abs(xmax))
+    ax.set_xlim(-limit, limit)
     axis_x_min, axis_x_max = ax.get_xlim()
 
     xL = _scale_x(-0.09, axis_x_min, axis_x_max)
@@ -114,7 +117,6 @@ def panel_B(ax, final):
 def panel_C(ax, reps, perc=(70, 75, 80, 85)):
     """Log BD-FE histograms late in the walk, plus trend lines."""
     y_lim = -0.25
-    rec_start = -0.2
     for i, p in enumerate(perc):
         bd_all = []
         for rep in reps:
@@ -135,9 +137,9 @@ def panel_C(ax, reps, perc=(70, 75, 80, 85)):
     left_x = x_min + eps
     right_x = x_max - eps
     rect = Rectangle(
-        (left_x, rec_start),  # Bottom-left corner
+        (left_x, y_lim + 2*eps),  # Bottom-left corner
         right_x - left_x,  # Width
-        rec_start + eps,  # Height (from y_lim to 0)
+        abs(y_lim) - 4*eps,  # Height (from y_lim to 0)
         facecolor="white",
         edgecolor=None,
         zorder=5,
