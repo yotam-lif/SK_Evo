@@ -140,7 +140,7 @@ def create_fig_bdfe_hists(ax, points_lst, num_bins, num_flips):
         x_min_all = min(x_min_all, bin_centers[0])
         x_max_all = max(x_max_all, bin_centers[-1])
         # Compute the natural logarithm of the histogram values (shifted to avoid log(0))
-        hist_log = np.log(hist + 10 ** -2)
+        hist_log = np.log(hist + 1)
         # Plot the log-histogram as a step plot.
         ax.step(bin_centers, hist_log, where='mid',
                 label=label, color=color[i % len(color)])

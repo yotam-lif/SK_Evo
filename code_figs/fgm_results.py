@@ -54,12 +54,10 @@ def propagate_backward(dfe_anc, dfe_evo):
 
 
 def _scale_x(x_ref, X_min, X_max, ref_min=-0.1, ref_max=0.1):
-    """Affine map: [-0.1,0.1] ➔ [X_min,X_max] just like nk_results."""
     return X_min + ((x_ref - ref_min) / (ref_max - ref_min)) * (X_max - X_min)
 
 
-def draw_custom_segments(ax, X_min, X_max, y_bottom, z_val, zorder, lw_main=1.0):
-    """Grey baseline + five dashed ‘legs’ in NK/SK style using axis limits."""
+def draw_custom_segments(ax, y_bottom, z_val, zorder, lw_main=1.0):
     axis_x_min, axis_x_max = ax.get_xlim()
 
     xL = _scale_x(-0.09, axis_x_min, axis_x_max)
@@ -115,6 +113,8 @@ def panel_B(ax, final):
 
 def panel_C(ax, reps, perc=(70, 75, 80, 85)):
     """Log BD-FE histograms late in the walk, plus trend lines."""
+    y_lim = -0.25
+    rec_start = -0.2
     for i, p in enumerate(perc):
         bd_all = []
         for rep in reps:
@@ -129,8 +129,24 @@ def panel_C(ax, reps, perc=(70, 75, 80, 85)):
             x1, y1 = ctr[2], np.log(cnt[2] + 1)
             m = (y1 - y0) / (x1 - x0)
             ax.plot(ctr, m * ctr + (y0 - m * x0), ls="--", lw=2, color=COLOR[i])
+
+    x_min, x_max = ax.get_xlim()
+    eps = 0.01
+    left_x = x_min + eps
+    right_x = x_max - eps
+    rect = Rectangle(
+        (left_x, rec_start),  # Bottom-left corner
+        right_x - left_x,  # Width
+        rec_start + eps,  # Height (from y_lim to 0)
+        facecolor="white",
+        edgecolor=None,
+        zorder=5,
+    )
+    ax.add_patch(rect)
+
     ax.set_xlabel(r"Fitness effect $(\Delta)$")
     ax.set_ylabel(r"$\ln(P(\Delta > 0,t))$")
+    ax.set_ylim(y_lim, None)
     ax.legend(frameon=False, loc="upper right")
 
 
@@ -217,7 +233,7 @@ def panel_EF(axL, axR, rep, anc_idx, evo_idx):
         facecolor="white", edgecolor="none", zorder=1
     )
     axR.add_patch(mask)
-    draw_custom_segments(axR, x_min, x_max, -0.01, z_r, zorder=2, lw_main=1.1)
+    draw_custom_segments(axR, -0.01, z_r, zorder=2, lw_main=1.1)
     axR.set_ylim(0, None)
     axR.legend(frameon=False, loc="upper left")
 
@@ -259,7 +275,7 @@ def panel_EF(axL, axR, rep, anc_idx, evo_idx):
         facecolor="white", edgecolor="none", zorder=2
     )
     axL.add_patch(maskL)
-    draw_custom_segments(axL, x_min_L, x_max_L, -0.01, z_l, zorder=3, lw_main=1.1)
+    draw_custom_segments(axL, -0.01, z_l, zorder=3, lw_main=1.1)
     axL.set_ylim(0, None)
     axL.legend(frameon=False, loc="upper left")
 
@@ -274,6 +290,7 @@ if __name__ == "__main__":
     m = 2 * 10 ** 3
     sig_0 = 0.5
     scramb_ind = 0
+    ind = 0
 
     reps = []
     for s in range(repeats):
@@ -282,9 +299,11 @@ if __name__ == "__main__":
         _, _, dfes = model.relax(max_steps=max_steps)
         reps.append({"dfes": dfes})
 
-    steps = len(reps[0]["dfes"])
-    anc_idx = int(0.30 * (steps - 1))
-    evo_idx = int(0.70 * (steps - 1))
+    steps = len(reps[ind]["dfes"])
+    anc_idx = int(0.70 * (steps - 1))
+    evo_idx = int(0.80 * (steps - 1))
+    num_steps = evo_idx - anc_idx
+    print(num_steps)
 
     n_list = [4, 8, 16, 32]
     final = {}
@@ -333,6 +352,7 @@ if __name__ == "__main__":
             ax.yaxis.set_ticks_position("left")
             ax.spines["top"].set_visible(False)
             ax.spines["right"].set_visible(False)
+
 
     output_dir = "../figs_paper"
     os.makedirs(output_dir, exist_ok=True)
