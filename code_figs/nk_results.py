@@ -42,7 +42,9 @@ for file in data_files:
 color = sns.color_palette('CMRmap', n_colors=5)
 
 # For panels that require K=32 data, use the last dataset.
-nk_data = data_arr[-1]
+k_choice = 8
+idx_K = K_values.index(k_choice)
+nk_data = data_arr[idx_K]
 
 # ----------------------------------------------------------------
 # Panel A: Evolution of the DFE for K=32 (averaged over all repeats)
@@ -70,7 +72,7 @@ def create_fig_evolution_dfe(ax):
     ax.set_xlabel(r'Fitness effect ($\Delta$)')
     ax.set_ylabel(r'$P(\Delta, t)$')
     ax.legend(frameon=False)
-    ax.set_ylim(None, 150)
+    # ax.set_ylim(None, 150)
 
 # ----------------------------------------------------------------
 # Panel B: Final DFEs for different K values (aggregated over all repeats)
@@ -102,13 +104,9 @@ def create_fig_final_dfe(ax):
 # Panel C: BD-FEs for K=16, at multiple time-percentages
 # ----------------------------------------------------------------
 def create_fig_bdfe_times(ax, percents):
-    # pick out the K=32 dataset
-    idx_K = K_values.index(32)
-    data_K = data_arr[idx_K]
-
     for i, p in enumerate(percents):
         bdfe_p = []
-        for entry in data_K:
+        for entry in nk_data:
             num_flips = len(entry['flip_seq'])
             t_idx = int(p * num_flips / 100)
             dfe_t = entry['dfes'][t_idx]
@@ -116,7 +114,7 @@ def create_fig_bdfe_times(ax, percents):
             bdfe_p.extend(bdfe)
 
         # histogram + log
-        bins = 18
+        bins = 15 - 2*i
         counts, bin_edges = np.histogram(bdfe_p, bins=bins, density=True)
         log_counts = np.log(counts + 1)
         bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
@@ -139,8 +137,8 @@ def create_fig_bdfe_times(ax, percents):
     ax.set_xlabel(r'Fitness effect ($\Delta$)')
     ax.set_ylabel(r'$\,\ln(P(\Delta > 0, t))$')
     ax.legend(frameon=False, loc='upper right')
-    ax.set_xlim(0, 0.0062)
-    ax.set_ylim(0, None)
+    ax.set_xlim(0, None)
+    ax.set_ylim(-0.25, None)
 
 
 # ----------------------------------------------------------------
@@ -209,8 +207,6 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat):
     # Propagate forward/backward.
     bdfe_anc, prop_bdfe_anc = cmn_nk.propagate_forward(dfe_anc, dfe_evo)
     bdfe_evo, prop_bdfe_evo = cmn_nk.propagate_backward(dfe_anc, dfe_evo)
-    flip_anc_percent = int(flip1 * 100 / num_flips)
-    flip_evo_percent = int(flip2 * 100 / num_flips)
 
     fraction_z = 0.2  # Adjust as needed
     lw_main = 1.0
@@ -246,7 +242,7 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat):
     # ========================
     # RIGHT PANEL
     # ========================
-    right_X_min, right_X_max = -0.02, 0.02
+    right_X_min, right_X_max = -0.01, 0.01
     ax_right.set_xlim(right_X_min, right_X_max)
     ax_right.set_xlabel(r'Fitness effect $(\Delta)$')
     ax_right.tick_params()
@@ -318,7 +314,7 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat):
     # ========================
     # LEFT PANEL
     # ========================
-    left_X_min, left_X_max = -0.02, 0.02
+    left_X_min, left_X_max = -0.01, 0.01
     ax_left.set_xlim(left_X_min, left_X_max)
     ax_left.set_xlabel(r'Fitness effect $(\Delta)$')
     ax_left.tick_params()
@@ -402,11 +398,11 @@ def main():
     # Top row:
     create_fig_evolution_dfe(axs[0, 0])   # Panel A: Evolution of DFE (K=32, no reflection)
     create_fig_final_dfe(axs[0, 1])         # Panel B: Final DFEs for different K values
-    create_fig_bdfe_times(axs[0, 2], percents=(60, 65, 70, 75))     # Panel C: BD-FEs for different K values at 80%
+    create_fig_bdfe_times(axs[0, 2], percents=(70, 75, 80, 85))     # Panel C: BD-FEs for different K values at 80%
 
     # Bottom row:
-    flip1 = int(0.15 * len(nk_data[0]['flip_seq']))
-    flip2 = int(0.45 * len(nk_data[0]['flip_seq']))
+    flip1 = int(0.60 * len(nk_data[0]['flip_seq']))
+    flip2 = int(0.70 * len(nk_data[0]['flip_seq']))
     create_fig_crossings_single(axs[1, 0], flip1, flip2, repeat=0)  # Panel D: Crossings
     create_fig_dfes_overlap(axs[1, 1], axs[1, 2], flip1, flip2, repeat=0)  # Panels E and F: Overlapping DFEs
 
