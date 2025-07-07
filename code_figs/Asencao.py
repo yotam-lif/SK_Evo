@@ -19,7 +19,7 @@ ANC_FILL = (0.5, 0.5, 0.5, 0.4)
 DFE_FILL = color[2]
 xlim = 0.05
 
-datapath = "../Asencao/dfe_arrays"
+datapath = "../asencao_data/asencao_dfe_arrays"
 
 def create_overlapping_dfes(ax_left, ax_right, dfe_anc, dfe_evo):
     # Vertical shift for the "evolved" histograms
