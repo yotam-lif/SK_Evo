@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from code_sim.cmn.cmn_fgm import Fisher  # import directly from uploaded file
+from cmn.cmn_fgm import Fisher  # import directly from uploaded file
 
 plt.rcParams["font.family"] = "sans-serif"
 

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
 import os
 
-from code_sim.cmn.uncmn_eqs import normalize, rhs
+from cmn.uncmn_eqs import normalize, rhs
 
 # Parameters
 s_max, s_min = 100.0, -100.0

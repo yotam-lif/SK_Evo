@@ -3,9 +3,9 @@ import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
 import seaborn as sns
 import os
-from code_sim.cmn.uncmn_eqs import theta, flip_term, drift_term, diff_term
+from cmn.uncmn_eqs import theta, flip_term, drift_term, diff_term
 import pickle
-from code_sim.cmn import cmn, cmn_sk
+from cmn import cmn, cmn_sk
 from scipy.special import airy
 import matplotlib.ticker as ticker
 from scipy.stats import kstest
@@ -249,8 +249,8 @@ def create_subfig_c(ax):
 def create_subfig_d(ax):
     from scipy.interpolate import interp1d
 
-    # Load data
-    file_path = '../code_sim/data/SK/N4000_rho100_beta100_repeats50.pkl'
+    # Load gen_data
+    file_path = '../gen_data/SK/N4000_rho100_beta100_repeats50.pkl'
     with open(file_path, 'rb') as f:
         data = pickle.load(f)
 
@@ -271,7 +271,7 @@ def create_subfig_d(ax):
     num_bins = 50
     sns.histplot(
         bdfes, ax=ax, bins=num_bins, stat='density', color=color[2],
-        element="step", edgecolor='black', alpha=0.8, label='Simulation data'
+        element="step", edgecolor='black', alpha=0.8, label='Simulation gen_data'
     )
 
     def exp_pdf(x: np.ndarray, D, P0):

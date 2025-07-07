@@ -1,10 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import code_sim.cmn.cmn as cmn_mod
-import code_sim.cmn.cmn_sk as sk_mod
-import code_sim.cmn.cmn_nk as nk_mod
-import code_sim.cmn.cmn_fgm as fgm_mod
+import cmn.cmn as cmn_mod
+import cmn.cmn_sk as sk_mod
+import cmn.cmn_nk as nk_mod
+import cmn.cmn_fgm as fgm_mod
 import os
 from matplotlib.ticker import ScalarFormatter
 

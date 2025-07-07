@@ -32,7 +32,7 @@ def analyze_dfe_power_law(data_files, k_values, lower_thr, upper_thr, num_bins=5
     - num_bins: number of bins for histogram density estimation
     """
     if not data_files:
-        print("No data files found.")
+        print("No gen_data files found.")
         return
 
     num_k = len(k_values)
@@ -41,7 +41,7 @@ def analyze_dfe_power_law(data_files, k_values, lower_thr, upper_thr, num_bins=5
     colors = sns.color_palette('CMRmap', n_colors=num_k)
 
     for idx, (path, K) in enumerate(zip(data_files, k_values)):
-        # Load simulation data
+        # Load simulation gen_data
         with open(path, 'rb') as f:
             data = pickle.load(f)
         # Extract final DFE values
@@ -96,7 +96,7 @@ def analyze_dfe_power_law(data_files, k_values, lower_thr, upper_thr, num_bins=5
     fig2, ax2 = plt.subplots(figsize=glob_figsize)
 
     for idx, (path, K) in enumerate(zip(data_files, k_values)):
-        # Load simulation data
+        # Load simulation gen_data
         with open(path, 'rb') as f:
             data = pickle.load(f)
         # Extract final DFE values
@@ -130,10 +130,10 @@ if __name__ == '__main__':
     NUM_BINS = 10
     K_VALUES = [4, 8, 16, 32]
 
-    # Locate data directory
-    base = os.path.join(os.path.dirname(__file__), 'data', 'NK')
+    # Locate gen_data directory
+    base = os.path.join(os.path.dirname(__file__), 'gen_data', 'NK')
     if not os.path.isdir(base):
-        base = os.path.join(os.path.dirname(__file__), '..', 'code_sim', 'data', 'NK')
+        base = os.path.join(os.path.dirname(__file__), '..', 'code_sim', 'gen_data', 'NK')
     DATA_FILES = [os.path.join(base, f'N_2000_K_{k}_repeats_100.pkl') for k in K_VALUES]
 
     analyze_dfe_power_law(DATA_FILES, K_VALUES, lower_thr=LOWER_THRESHOLD, upper_thr=UPPER_THRESHOLD, num_bins=NUM_BINS)

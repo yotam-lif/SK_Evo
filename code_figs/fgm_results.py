@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.patches import FancyArrowPatch, Rectangle
 from matplotlib.gridspec import GridSpec
-from code_sim.cmn.cmn_fgm import Fisher
+from cmn.cmn_fgm import Fisher
 from scipy.stats import gaussian_kde
 
 """

@@ -6,7 +6,7 @@ import pickle
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import logging
 import multiprocessing
-from code_sim.cmn import cmn_nk, cmn
+from cmn import cmn, cmn_nk
 
 # Configure logging
 logging.basicConfig(
@@ -57,7 +57,7 @@ def main(N, k, num_repeats, num_workers):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Generate NK model data.')
+    parser = argparse.ArgumentParser(description='Generate NK model gen_data.')
     parser.add_argument('--N', type=int, required=True, help='Number of loci')
     parser.add_argument('--K', type=int, required=True, help='Number of neighbors per locus')
     parser.add_argument('--num_repeats', type=int, required=True, help='Number of repeats')

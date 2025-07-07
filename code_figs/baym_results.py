@@ -27,14 +27,14 @@ def create_dfe_comparison_ridgeplot(ax_container):
     while all facets have the population label (e.g., "Anc", "Ara–1", etc.) added inside.
     """
     # --- Data Loading & Processing ---
-    datapath = os.path.join('..', 'data', 'anurag_data', 'Analysis',
+    datapath = os.path.join('..', 'gen_data', 'anurag_data', 'Analysis',
                             'Part_3_TnSeq_analysis', 'Processed_data_for_plotting')
     dfe_data_csv = os.path.join(datapath, "dfe_data_pandas.csv")
     dfe_data = pd.read_csv(dfe_data_csv)
     if "Fitness estimate" in dfe_data.columns:
         dfe_data.rename(columns={'Fitness estimate': 'Fitness effect'}, inplace=True)
 
-    # Combine Ara- and Ara+ data
+    # Combine Ara- and Ara+ gen_data
     dfe_data_minus = dfe_data[dfe_data['Ara Phenotype'] == 'Ara-']
     dfe_data_plus = dfe_data[dfe_data['Ara Phenotype'] == 'Ara+']
     dfe_data = pd.concat([dfe_data_minus, dfe_data_plus])
@@ -180,7 +180,7 @@ def create_overlapping_dfes(ax_left, ax_right):
     Tben = Tben.drop_duplicates(subset=["site"])
     Fben = Fben.drop_duplicates(subset=["site"])
 
-    # Build data frames for allele comparisons
+    # Build gen_data frames for allele comparisons
     Rnames = Rben["alle"].values
     Repi = pd.DataFrame(np.nan, index=range(len(Rnames)), columns=["R", "M", "K"])
     for i, allele in enumerate(Rnames):
@@ -220,7 +220,7 @@ def create_overlapping_dfes(ax_left, ax_right):
         if not t_val.empty:
             Fepi.at[i, "M"] = t_val.iloc[0]
 
-    # Combine data sets and keep rows with at least 2 non-NA values
+    # Combine gen_data sets and keep rows with at least 2 non-NA values
     Repi["back"] = 1
     Tepi["back"] = 2
     Fepi["back"] = 3
@@ -345,7 +345,7 @@ def create_segben(ax_B, ax_C):
     Tben = Ttable[(Ttable["fitted1"] <= 0.5) & (Ttable["fitted1"] > 0.005) & (Ttable["abn"] > 1)].drop_duplicates(subset=["site"]).copy()
     Fben = Ftable[(Ftable["fitted1"] <= 0.5) & (Ftable["fitted1"] > 0.005) & (Ftable["abn"] > 1)].drop_duplicates(subset=["site"]).copy()
 
-    # Create data frame for allele comparisons: Repi for the ancestor
+    # Create gen_data frame for allele comparisons: Repi for the ancestor
     Rnames = Rben["alle"].values
     Repi = pd.DataFrame(np.nan, index=range(len(Rnames)), columns=["R", "M", "K"])
     for i, allele in enumerate(Rnames):

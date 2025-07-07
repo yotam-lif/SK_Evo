@@ -3,9 +3,8 @@ import pickle
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
-from code_sim.cmn import cmn_nk, cmn
+from cmn import cmn_nk
 import matplotlib as mpl
-import statsmodels.api as sm
 from matplotlib.patches import FancyArrowPatch, Rectangle
 from scipy.stats import gaussian_kde
 
@@ -19,9 +18,9 @@ mpl.rcParams['ytick.labelsize'] = 14
 mpl.rcParams['legend.fontsize'] = 12
 
 # ----------------------------------------------------------------
-# Load NK data files
+# Load NK gen_data files
 # ----------------------------------------------------------------
-res_directory = os.path.join(os.path.dirname(__file__), '..', 'code_sim', 'data', 'NK')
+res_directory = os.path.join(os.path.dirname(__file__), '..', 'code_sim', 'gen_data', 'NK')
 data_file_K4 = os.path.join(res_directory, 'N_2000_K_4_repeats_100.pkl')
 data_file_K8 = os.path.join(res_directory, 'N_2000_K_8_repeats_100.pkl')
 data_file_K16 = os.path.join(res_directory, 'N_2000_K_16_repeats_100.pkl')
@@ -41,14 +40,14 @@ for file in data_files:
 # Use a 5-color palette (adjust as needed)
 color = sns.color_palette('CMRmap', n_colors=5)
 
-# For panels that require K=32 data, use the last dataset.
+# For panels that require K=32 gen_data, use the last dataset.
 k_choice = 8
 idx_K = K_values.index(k_choice)
 nk_data = data_arr[idx_K]
 
 # ----------------------------------------------------------------
 # Panel A: Evolution of the DFE for K=32 (averaged over all repeats)
-#         (Compute KDE on the original data; no reflection)
+#         (Compute KDE on the original gen_data; no reflection)
 # ----------------------------------------------------------------
 def create_fig_evolution_dfe(ax):
     data = nk_data
@@ -61,7 +60,7 @@ def create_fig_evolution_dfe(ax):
         for i, t in enumerate(ts):
             dfe_t = repeat['dfes'][t]
             combined_dfes[i].extend(dfe_t)
-        # Compute KDE on the original data (without reflecting)
+        # Compute KDE on the original gen_data (without reflecting)
     for i, combined_dfe in enumerate(combined_dfes):
         combined_dfe = np.asarray(combined_dfe)
         kde = gaussian_kde(combined_dfe, bw_method=0.5)
@@ -198,7 +197,7 @@ def create_fig_crossings_single(ax, flip1, flip2, repeat):
 # Panels E–F: Overlapping DFEs (overlap of BD-FE and full DFE; using repeat 0 from K=32)
 # ----------------------------------------------------------------
 def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat):
-    # Get simulation data parameters from the global nk_data variable.
+    # Get simulation gen_data parameters from the global nk_data variable.
     data_entry = nk_data[repeat]
     dfe_anc = data_entry['dfes'][flip1]
     dfe_evo = data_entry['dfes'][flip2]

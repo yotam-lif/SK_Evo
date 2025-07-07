@@ -3,20 +3,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pickle
-from code_sim.cmn.uncmn_dfe import gen_final_dfe, propagate_forward, propagate_backward
-import matplotlib.ticker as ticker
-from code_sim.cmn import cmn, cmn_sk
+from cmn.uncmn_dfe import gen_final_dfe, propagate_forward, propagate_backward
+from cmn import cmn, cmn_sk
 from matplotlib.gridspec import GridSpec
-import statsmodels.api as sm
 from matplotlib.patches import FancyArrowPatch, Rectangle
 import matplotlib as mpl
 from scipy.stats import gaussian_kde
-from code_sim.cmn import cmn_pspin
 
 # Define a consistent style
 # plt.style.use('science')
 plt.rcParams['font.family'] = 'sans-serif'
-file_path = '../code_sim/data/SK/N4000_rho100_beta100_repeats50.pkl'
+file_path = '../gen_data/SK/N4000_rho100_beta100_repeats50.pkl'
 color = sns.color_palette('CMRmap', 5)
 # Global font settings for labels, ticks, and legends
 mpl.rcParams.update(
@@ -66,7 +63,7 @@ def create_fig_dfe_evol(ax, num_points, num_repeats):
     """
     Panel A: Evolution of DFEs over time.
     """
-    # Pull out the relevant data
+    # Pull out the relevant gen_data
     dfes = np.empty((num_repeats, num_points), dtype=object)
     for repeat in range(num_repeats):
         data_entry = data[repeat]
@@ -237,7 +234,7 @@ def create_fig_crossings(ax, flip1, flip2, repeat):
 
 # ───────────────────────────────────────────────────── panels E & F ─────────────────────────────────
 def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
-    # Get simulation data parameters from the global data variable.
+    # Get simulation gen_data parameters from the global gen_data variable.
     data_entry    = data[repeat]
     alpha_initial = data_entry['init_alpha']
     h             = data_entry['h']

@@ -3,7 +3,7 @@ import os
 import pickle
 from concurrent.futures import ProcessPoolExecutor
 import numpy as np
-from code_sim.cmn import cmn
+from cmn import cmn
 from code_sim.cmn import cmn_pspin
 
 
@@ -81,7 +81,7 @@ def generate_data_pspin(N: int, p: int, n_repeats: int, output_dir: str) -> None
     fname = f"N{N}_p{p}_repeats{n_repeats}.pkl"
     output_file = os.path.join(output_dir, fname)
 
-    # Save all simulation data
+    # Save all simulation gen_data
     with open(output_file, 'wb') as f:
         pickle.dump(data, f)
 
@@ -90,7 +90,7 @@ def generate_data_pspin(N: int, p: int, n_repeats: int, output_dir: str) -> None
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Generate p-spin model simulation data (SSWM adaptive walks)"
+        description="Generate p-spin model simulation gen_data (SSWM adaptive walks)"
     )
     parser.add_argument(
         '--N', type=int, required=True,
