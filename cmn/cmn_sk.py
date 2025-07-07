@@ -75,6 +75,44 @@ def init_J(N, random_state=None, beta=1.0, rho=1.0, delta=1.0):
 
     return Jij
 
+def init_J_wishart(N, random_state=None, n_dim=None):
+        """
+        Initialize the coupling matrix for the Sherrington–Kirkpatrick model
+        (mode='sk') or as a Wishart matrix built from m=N mutation vectors
+        in R^n_dim (mode='wishart').
+
+        Parameters
+        ----------
+        N : int
+            Number of spins (SK) or number of mutation vectors m (Wishart).
+        random_state : int or Generator, optional
+            Seed or RNG.
+        n_dim : int, optional
+            Dimension n of each mutation vector Δᵢ∈ℝⁿ (required if mode='wishart').
+
+        Returns
+        -------
+        Jij : (N×N) ndarray
+            Symmetric coupling matrix.
+        """
+        rng = np.random.default_rng(random_state)
+        if n_dim is None:
+            raise ValueError("n_dim must be set in wishart mode")
+        # ── derive σ_δ so that Var[J_ij]=β/N ──#
+        # Wishart off‐diagonal: Var[J_ij] = n_dim * σ_δ⁴
+        # set n_dim*σ_δ⁴ = β/N  ⇒  σ_δ² = β/√(n_dim·N)
+        sig_delta = (n_dim * N) ** (-1/4)
+
+        # build Δ (shape m=N by n = n_dim)
+        Delta = rng.normal(0.0, sig_delta, size=(N, n_dim))
+
+        # Wishart matrix
+        Jij = Delta @ Delta.T
+
+        # zero self‐coupling if you like
+        np.fill_diagonal(Jij, 0.0)
+        return Jij
+
 
 def compute_lfs(sigma, h, J):
     """
