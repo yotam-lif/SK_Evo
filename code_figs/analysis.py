@@ -250,7 +250,7 @@ def create_subfig_d(ax):
     from scipy.interpolate import interp1d
 
     # Load gen_data
-    file_path = '../gen_data/SK/N4000_rho100_beta100_repeats50.pkl'
+    file_path = '../data/gen_data/SK/N4000_rho100_beta100_repeats50.pkl'
     with open(file_path, 'rb') as f:
         data = pickle.load(f)
 

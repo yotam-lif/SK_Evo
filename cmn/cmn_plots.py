@@ -1,94 +1,14 @@
-import os
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.gridspec import GridSpec
-import pandas as pd
-import seaborn as sns
 from matplotlib.patches import FancyArrowPatch, Rectangle
-import matplotlib as mpl
 from scipy.stats import ks_2samp, cramervonmises_2samp
+import seaborn as sns
 
-# set font
-plt.rcParams['font.family'] = 'sans-serif'
-plt.rcParams['font.size'] = 16
-mpl.rcParams['axes.labelsize'] = 16
-mpl.rcParams['xtick.labelsize'] = 14
-mpl.rcParams['ytick.labelsize'] = 14
-mpl.rcParams['legend.fontsize'] = 12
-color = sns.color_palette('CMRmap', 5)
+color = sns.color_palette("CMRmap", 5)
 EVO_FILL = (color[1][0], color[1][1], color[1][2], 0.5)
 ANC_FILL = (0.5, 0.5, 0.5, 0.15)
 DFE_FILL = color[2]
-xlim = 0.06
-shift_frac = 0.025
 upper_ben_limit = 0.3
 lower_ben_limit = 0.005
-
-# Baym data:
-baym_datadir = os.path.join('..', 'alex_code')
-# 1) load and filter
-Rtable = pd.read_csv(os.path.join(baym_datadir, "Rfitted_fil.txt"), sep="\t") \
-              .dropna(subset=["fitted1"])
-Ttable = pd.read_csv(os.path.join(baym_datadir, "2Kfitted_fil.txt"), sep="\t") \
-              .dropna(subset=["fitted1"])
-Ftable = pd.read_csv(os.path.join(baym_datadir, "15Kfitted_fil.txt"), sep="\t") \
-              .dropna(subset=["fitted1"])
-
-# 2) pick out beneficial alleles exactly as overlapping_dfes does
-Rben = Rtable[(Rtable.fitted1 > 0.015) & (Rtable.fitted1 <= 0.3) & (Rtable.abn > 1)].drop_duplicates("site")
-Tben = Ttable[(Ttable.fitted1 > 0.015) & (Ttable.fitted1 <= 0.3) & (Ttable.abn > 1)].drop_duplicates("site")
-Fben = Ftable[(Ftable.fitted1 > 0.015) & (Ftable.fitted1 <= 0.3) & (Ftable.abn > 1)].drop_duplicates("site")
-
-# 3) make three small DataFrames with vectorized merges
-def epi_df(ben_df, core, name):
-    # ben_df has column 'alle'
-    out = ben_df[["alle"]].copy()
-    out = out.merge(core[["alle","fitted1"]].rename(columns={"fitted1":name}),
-                    on="alle", how="left")
-    return out
-
-R_epi = epi_df(Rben, Rtable, "R")
-R_epi = R_epi.merge(Ttable[["alle","fitted1"]].rename(columns={"fitted1":"M"}),
-                    on="alle", how="left")
-R_epi = R_epi.merge(Ftable[["alle","fitted1"]].rename(columns={"fitted1":"K"}),
-                    on="alle", how="left")
-
-T_epi = epi_df(Tben, Ttable, "M") \
-           .merge(Rtable[["alle","fitted1"]].rename(columns={"fitted1":"R"}), on="alle", how="left") \
-           .merge(Ftable[["alle","fitted1"]].rename(columns={"fitted1":"K"}), on="alle", how="left")
-
-F_epi = epi_df(Fben, Ftable, "K") \
-           .merge(Rtable[["alle","fitted1"]].rename(columns={"fitted1":"R"}), on="alle", how="left") \
-           .merge(Ttable[["alle","fitted1"]].rename(columns={"fitted1":"M"}), on="alle", how="left")
-
-# 4) tag and concatenate
-R_epi["back"], T_epi["back"], F_epi["back"] = 1, 2, 3
-all_epi = pd.concat([R_epi, T_epi, F_epi], ignore_index=True)
-all_epi["nas"] = all_epi[["R","M","K"]].notna().sum(axis=1)
-
-# 5) keep only those seen in ≥2 backgrounds
-x = all_epi[all_epi.nas >= 2].reset_index(drop=True)
-
-# 6) extract your final 1-D arrays
-baym_dfe0K  = x["R"].to_numpy(dtype=float)
-baym_dfe2K  = x["M"].to_numpy(dtype=float)
-baym_dfe15K = x["K"].to_numpy(dtype=float)
-
-#  Asencao data:
-dirnum = 2
-asencao_datapath = "../asencao_dfe_arrays"
-experiment_dirs = sorted([
-    d for d in os.listdir(asencao_datapath)
-    if os.path.isdir(os.path.join(asencao_datapath, d))
-])
-exp_dir = experiment_dirs[dirnum]
-exp_path = os.path.join(asencao_datapath, exp_dir)
-try:
-    asenc_R = np.load(os.path.join(exp_path, "R.npy"))
-    asenc_S = np.load(os.path.join(exp_path, "S.npy"))
-except Exception as e:
-    print(f"Skipping {exp_dir}: {e}")
-
 
 def thresholded_histogram(data, threshold, final_bins):
     # Step 1: Use many initial bins to capture fine structure
@@ -115,11 +35,11 @@ def thresholded_histogram(data, threshold, final_bins):
 
     return final_counts, final_edges, cleaned_data
 
-
-def create_overlapping_dfes(ax_left, ax_right, dfe_anc, dfe_evo):
+def create_overlapping_dfes_exper(ax_left, ax_right, dfe_anc, dfe_evo, xlim = 0.06):
     # Vertical shift for the "evolved" histograms
     z_frac = 0.1
     lw_main = 1.0
+    shift_frac = 0.025
     valid_indices = np.isfinite(dfe_anc) & np.isfinite(dfe_evo)
     dfe_anc = dfe_anc[valid_indices]
     dfe_evo = dfe_evo[valid_indices]
@@ -133,7 +53,7 @@ def create_overlapping_dfes(ax_left, ax_right, dfe_anc, dfe_evo):
             ((_xlim, -0.75), (_xlim * 0.9, z)),
             ((-_xlim / 2, -0.75), (-_xlim / 2 * 0.9, z)),
             ((_xlim / 2, -0.75), (_xlim / 2 * 0.9, z)),
-            ((0, -0.75), (0, z * 1.1))
+            ((0, -0.75), (0, z))
         ]
         for (x0, y0), (x1, y1) in segs:
             ax.plot([x0, x1], [y0, y1], linestyle="--", color="grey", lw=lw_main)
@@ -151,9 +71,9 @@ def create_overlapping_dfes(ax_left, ax_right, dfe_anc, dfe_evo):
     anc_vs_prop_test = ks_2samp(dfe_anc, prop_bdfe_evo)
 
     # Left Panel - Forward propagate
-    counts, bin_edges, _ = thresholded_histogram(data=prop_bdfe_anc, threshold=3, final_bins=20)
-    anc_counts, anc_bin_edges, _ = thresholded_histogram(data=bdfe_anc, threshold=3, final_bins=14)
-    dfe_counts, dfe_bin_edges, _ = thresholded_histogram(data=dfe_evo, threshold=5, final_bins=20)
+    counts, bin_edges, _ = thresholded_histogram(data=prop_bdfe_anc, threshold=3, final_bins=25)
+    anc_counts, anc_bin_edges, _ = thresholded_histogram(data=bdfe_anc, threshold=3, final_bins=20)
+    dfe_counts, dfe_bin_edges, _ = thresholded_histogram(data=dfe_evo, threshold=6, final_bins=30)
     bin_edges = bin_edges - xlim * shift_frac
     dfe_bin_edges = dfe_bin_edges - xlim * shift_frac
     anc_bin_edges = anc_bin_edges + xlim * shift_frac
@@ -167,7 +87,7 @@ def create_overlapping_dfes(ax_left, ax_right, dfe_anc, dfe_evo):
     dfe_counts_shifted = dfe_counts + z
     ax_left.set_xlim(-xlim, xlim)
     ax_left.tick_params(labelsize=14)
-    ax_left.set_ylim(0, ylim + 10)
+    ax_left.set_ylim(0, ylim)
 
     ax_left.stairs(
         values=counts_shifted,
@@ -177,7 +97,7 @@ def create_overlapping_dfes(ax_left, ax_right, dfe_anc, dfe_evo):
         facecolor=EVO_FILL,
         edgecolor="black",
         lw=1.1,
-        label="Evolved"
+        label="Evo."
     )
 
     ax_left.stairs(
@@ -187,12 +107,12 @@ def create_overlapping_dfes(ax_left, ax_right, dfe_anc, dfe_evo):
         fill=False,
         edgecolor=DFE_FILL,
         lw=1.1,
-        label="DFE Evo"
+        label="DFE Evo."
     )
 
     rect = Rectangle((-xlim, 0), 2*xlim, z, facecolor="white", edgecolor="none")
     ax_left.add_patch(rect)
-    draw_custom_segments(ax_left, xlim, ylim)
+    draw_custom_segments(ax_left, xlim, ylim + 10)
 
     ax_left.stairs(
         values=anc_counts,
@@ -202,7 +122,7 @@ def create_overlapping_dfes(ax_left, ax_right, dfe_anc, dfe_evo):
         facecolor=ANC_FILL,
         edgecolor="black",
         lw=1.1,
-        label="Ancestor"
+        label="Anc."
     )
     ax_left.legend(frameon=False)
     ax_left.set_xlabel(r'Fitness effect $(\Delta)$')
@@ -216,8 +136,8 @@ def create_overlapping_dfes(ax_left, ax_right, dfe_anc, dfe_evo):
 
     # Right Panel
     counts2, bin_edges2, _ = thresholded_histogram(data=bdfe_evo, threshold=2, final_bins=12)
-    anc2_counts, anc2_bin_edges, _ = thresholded_histogram(data=prop_bdfe_evo, threshold=3, final_bins=20)
-    dfe2_counts, dfe2_bin_edges, _ = thresholded_histogram(data=dfe_anc, threshold=8, final_bins=20)
+    anc2_counts, anc2_bin_edges, _ = thresholded_histogram(data=prop_bdfe_evo, threshold=3, final_bins=22)
+    dfe2_counts, dfe2_bin_edges, _ = thresholded_histogram(data=dfe_anc, threshold=8, final_bins=24)
     bin_edges2 = bin_edges2 + xlim * shift_frac
     dfe2_bin_edges = dfe2_bin_edges - xlim * shift_frac
     anc2_bin_edges = anc2_bin_edges - xlim * shift_frac
@@ -240,7 +160,7 @@ def create_overlapping_dfes(ax_left, ax_right, dfe_anc, dfe_evo):
         facecolor=EVO_FILL,
         edgecolor="black",
         lw=1.1,
-        label="Evolved"
+        label="Evo."
     )
     rect2 = Rectangle((-xlim, 0), 2*xlim, z, facecolor="white", edgecolor="none")
     ax_right.add_patch(rect2)
@@ -254,7 +174,7 @@ def create_overlapping_dfes(ax_left, ax_right, dfe_anc, dfe_evo):
         facecolor=ANC_FILL,
         edgecolor="black",
         lw=1.1,
-        label="Ancestor"
+        label="Anc."
     )
 
     ax_right.stairs(
@@ -263,7 +183,7 @@ def create_overlapping_dfes(ax_left, ax_right, dfe_anc, dfe_evo):
         baseline=0,
         edgecolor=DFE_FILL,
         lw=1.1,
-        label="Anc DFE"
+        label="DFE Anc."
     )
 
     ax_right.legend(frameon=False)
@@ -285,8 +205,160 @@ def create_overlapping_dfes(ax_left, ax_right, dfe_anc, dfe_evo):
         ax.xaxis.set_ticks_position('bottom')
         ax.yaxis.set_ticks_position('left')
 
+def create_overlapping_dfes_sim(ax_left, ax_right, dfe_anc, dfe_evo, xlim = 0.06):
+    # Vertical shift for the "evolved" histograms
+    z_frac = 0.1
+    lw_main = 1.0
+    shift_frac = 0.025
+    valid_indices = np.isfinite(dfe_anc) & np.isfinite(dfe_evo)
+    dfe_anc = dfe_anc[valid_indices]
+    dfe_evo = dfe_evo[valid_indices]
 
-def create_segben(ax, dfe_anc, dfe_evo, labels=(r'$t_1$', r'$t_2$')):
+    def draw_custom_segments(ax, _xlim, _ylim):
+        z = _ylim * z_frac * 1.1
+        ax.plot([-_xlim * 0.9, _xlim * 0.9], [z, z],
+                linestyle="--", color="grey", lw=lw_main)
+        segs = [
+            ((-_xlim, -0.75), (-_xlim * 0.9, z)),
+            ((_xlim, -0.75), (_xlim * 0.9, z)),
+            ((-_xlim / 2, -0.75), (-_xlim / 2 * 0.9, z)),
+            ((_xlim / 2, -0.75), (_xlim / 2 * 0.9, z)),
+            ((0, -0.75), (0, z))
+        ]
+        for (x0, y0), (x1, y1) in segs:
+            ax.plot([x0, x1], [y0, y1], linestyle="--", color="grey", lw=lw_main)
+
+    bdfe_anc = dfe_anc[dfe_anc > 0]
+    bdfe_evo = dfe_evo[dfe_evo > 0]
+
+    bdfe_anc_inds = np.where(dfe_anc > 0)
+    bdfe_evo_inds = np.where(dfe_evo > 0)
+
+    prop_bdfe_anc = dfe_evo[bdfe_anc_inds]
+    prop_bdfe_evo = dfe_anc[bdfe_evo_inds]
+
+    # Left Panel - Forward propagate
+    counts, bin_edges = np.histogram(prop_bdfe_anc, bins=20, density=True)
+    anc_counts, anc_bin_edges = np.histogram(bdfe_anc, bins=10, density=True)
+    dfe_counts, dfe_bin_edges = np.histogram(dfe_evo, bins=20, density=True)
+    bin_edges = bin_edges - xlim * shift_frac
+    dfe_bin_edges = dfe_bin_edges - xlim * shift_frac
+    anc_bin_edges = anc_bin_edges + xlim * shift_frac
+    max1 = np.max(counts)
+    max2 = np.max(anc_counts)
+    max3 = np.max(dfe_counts)
+    ymax = max(max1, max2, max3)
+    ylim = ymax * (1 + z_frac)
+    z = ylim * z_frac
+    counts_shifted = counts + z
+    dfe_counts_shifted = dfe_counts + z
+    ax_left.set_xlim(-xlim, xlim)
+    ax_left.tick_params(labelsize=14)
+    ax_left.set_ylim(0, ylim)
+
+    ax_left.stairs(
+        values=counts_shifted,
+        edges=bin_edges,
+        baseline=0,
+        fill=True,
+        facecolor=EVO_FILL,
+        edgecolor="black",
+        lw=1.1,
+        label="Evo."
+    )
+
+    ax_left.stairs(
+        values=dfe_counts_shifted,
+        edges=dfe_bin_edges,
+        baseline=0,
+        fill=False,
+        edgecolor=DFE_FILL,
+        lw=1.1,
+        label="Evo. DFE"
+    )
+
+    rect = Rectangle((-xlim, 0), 2*xlim, z, facecolor="white", edgecolor="none")
+    ax_left.add_patch(rect)
+    draw_custom_segments(ax_left, xlim, ylim)
+
+    ax_left.stairs(
+        values=anc_counts,
+        edges=anc_bin_edges,
+        baseline=0,
+        fill=True,
+        facecolor=ANC_FILL,
+        edgecolor="black",
+        lw=1.1,
+        label="Anc."
+    )
+    ax_left.legend(frameon=False)
+    ax_left.set_xlabel(r'Fitness effect $(\Delta)$')
+
+    # Right Panel
+    counts2, bin_edges2 = np.histogram(bdfe_evo, bins=10, density=True)
+    anc2_counts, anc2_bin_edges = np.histogram(prop_bdfe_evo, bins=20, density=True)
+    dfe2_counts, dfe2_bin_edges = np.histogram(dfe_anc, bins=20, density=True)
+    bin_edges2 = bin_edges2 + xlim * shift_frac
+    dfe2_bin_edges = dfe2_bin_edges - xlim * shift_frac
+    anc2_bin_edges = anc2_bin_edges - xlim * shift_frac
+    max1 = np.max(counts2)
+    max2 = np.max(anc2_counts)
+    max3 = np.max(dfe2_counts)
+    ymax = max(max1, max2, max3)
+    ylim = ymax * (1 + z_frac)
+    z = ylim * z_frac
+    counts2_shifted = counts2 + z
+    ax_right.set_xlim(-xlim, xlim)
+    ax_right.tick_params(labelsize=14)
+    ax_right.set_ylim(0, ylim)
+
+    ax_right.stairs(
+        values=counts2_shifted,
+        edges=bin_edges2,
+        baseline=0,
+        fill=True,
+        facecolor=EVO_FILL,
+        edgecolor="black",
+        lw=1.1,
+        label="Evo."
+    )
+    rect2 = Rectangle((-xlim, 0), 2*xlim, z, facecolor="white", edgecolor="none")
+    ax_right.add_patch(rect2)
+    draw_custom_segments(ax_right, xlim, ylim)
+
+    ax_right.stairs(
+        values=anc2_counts,
+        edges=anc2_bin_edges,
+        baseline=0,
+        fill=True,
+        facecolor=ANC_FILL,
+        edgecolor="black",
+        lw=1.1,
+        label="Anc."
+    )
+
+    ax_right.stairs(
+        values=dfe2_counts,
+        edges=dfe2_bin_edges,
+        baseline=0,
+        edgecolor=DFE_FILL,
+        lw=1.1,
+        label="Anc. DFE"
+    )
+
+    ax_right.legend(frameon=False)
+    ax_right.set_xlabel(r'Fitness effect $(\Delta)$')
+
+    # Adjust spines and tick positions for a cleaner look
+    for ax in [ax_left, ax_right]:
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['bottom'].set_position(('outward', 10))
+        ax.spines['left'].set_position(('outward', 10))
+        ax.xaxis.set_ticks_position('bottom')
+        ax.yaxis.set_ticks_position('left')
+
+def create_segben_exper(ax, dfe_anc, dfe_evo, labels=(r'$t_1$', r'$t_2$')):
     # mask out non‐positive if you want
     valid_indices = np.isfinite(dfe_anc) & np.isfinite(dfe_evo)
     dfe_anc = dfe_anc[valid_indices]
@@ -338,49 +410,53 @@ def create_segben(ax, dfe_anc, dfe_evo, labels=(r'$t_1$', r'$t_2$')):
     ax.tick_params(labelsize=14)
     # ax.legend(frameon=False)
 
+def create_segben_sim(ax, dfe_anc, dfe_evo, labels=(r'$t_1$', r'$t_2$')):
+    # mask out non‐positive if you want
+    valid_indices = np.isfinite(dfe_anc) & np.isfinite(dfe_evo)
+    dfe_anc = dfe_anc[valid_indices]
+    dfe_evo = dfe_evo[valid_indices]
 
-def main():
-    # Create a figure with 2 rows and 3 columns.
-    fig = plt.figure(figsize=(18, 12))
-    gs = GridSpec(2, 3, figure=fig, wspace=0.3, hspace=0.3)
+    anc_mask = dfe_anc > 0
+    evo_mask = dfe_evo > 0
+    # positions
+    x0, x1 = 1.0, 2.0
 
-    # Create the remaining four axes.
-    ax_top_left = fig.add_subplot(gs[0, 0])
-    ax_top_middle = fig.add_subplot(gs[0, 1])
-    ax_top_right = fig.add_subplot(gs[0, 2])
-    ax_bottom_left = fig.add_subplot(gs[1, 0])
-    ax_bottom_middle = fig.add_subplot(gs[1, 1])
-    ax_bottom_right = fig.add_subplot(gs[1, 2])
+    # fetch the paired values
+    anc_vals = dfe_anc[anc_mask]
+    evo_from_anc = dfe_evo[anc_mask]
 
-    create_segben(ax_top_left, baym_dfe0K, baym_dfe15K, labels=('0', '2K'))
-    create_segben(ax_bottom_left, asenc_R, asenc_S, labels=('R', 'S'))
-    create_overlapping_dfes(ax_top_middle, ax_top_right, baym_dfe0K, baym_dfe15K)
-    create_overlapping_dfes(ax_bottom_middle, ax_bottom_right, asenc_R, asenc_S)
+    evo_vals = dfe_evo[evo_mask]
+    anc_from_evo = dfe_anc[evo_mask]
 
-    # Panel labels
-    labels = {
-        ax_top_left: "A",
-        ax_top_middle: "B",
-        ax_top_right: "C",
-        ax_bottom_left: "D",
-        ax_bottom_middle: "E",
-        ax_bottom_right: "F"
-    }
-    for ax, label in labels.items():
-        ax.text(-0.01, 1.1, label, transform=ax.transAxes, fontweight='heavy', va='top', ha='left')
-        for spine in ax.spines.values():
-            spine.set_linewidth(1.5)
-        ax.tick_params(axis='both', width=1.5)
-        ax.tick_params(axis='both', which='major', length=10, width=1.5)
-        ax.tick_params(axis='both', which='minor', length=5, width=1.6)
+    # scatter evo→anc (reverse)
+    ax.scatter(np.full_like(evo_vals, x1), evo_vals,
+               color=EVO_FILL, label="Backwards")
+    ax.scatter(np.full_like(evo_vals, x0), anc_from_evo,
+               facecolors='none', edgecolors=EVO_FILL)
 
-    # Save the figure.
-    output_dir = os.path.join('..', 'figs_paper')
-    os.makedirs(output_dir, exist_ok=True)
-    output_path = os.path.join(output_dir, "scrambling_results.svg")
-    fig.savefig(output_path, format="svg", bbox_inches='tight')
-    plt.close(fig)
+    # arrows from evo→anc
+    for y1, y0 in zip(evo_vals, anc_from_evo):
+        ax.add_patch(FancyArrowPatch((x1, y1), (x0, y0),
+                                     arrowstyle='-|>', mutation_scale=8,
+                                     color=EVO_FILL, linewidth=0.7))
 
+    # scatter ancestor→evo
+    ax.scatter(np.full_like(anc_vals, x0), anc_vals,
+               color=ANC_FILL, label="Forward")
+    ax.scatter(np.full_like(anc_vals, x1), evo_from_anc,
+               facecolors='none', edgecolors=ANC_FILL)
 
-if __name__ == "__main__":
-    main()
+    # arrows from anc→evo
+    for y0, y1 in zip(anc_vals, evo_from_anc):
+        ax.add_patch(FancyArrowPatch((x0, y0), (x1, y1),
+                                     arrowstyle='-|>', mutation_scale=8,
+                                     color=ANC_FILL, linewidth=0.7))
+
+    # styling
+    ax.set_xticks([x0, x1])
+    ax.set_xticklabels(labels)
+    ax.set_xlim(x0 - 0.2, x1 + 0.2)
+    ax.set_ylabel(r'Fitness effect $(\Delta)$')
+    ax.axhline(0, linestyle='--', color='black', linewidth=0.8)
+    ax.tick_params(labelsize=14)
+    # ax.legend(frameon=False)

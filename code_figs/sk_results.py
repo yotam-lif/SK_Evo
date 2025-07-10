@@ -13,7 +13,7 @@ from scipy.stats import gaussian_kde
 # Define a consistent style
 # plt.style.use('science')
 plt.rcParams['font.family'] = 'sans-serif'
-file_path = '../gen_data/SK/N4000_rho100_beta100_repeats50.pkl'
+file_path = '../data/gen_data/SK/N4000_rho100_beta100_repeats50.pkl'
 color = sns.color_palette('CMRmap', 5)
 # Global font settings for labels, ticks, and legends
 mpl.rcParams.update(
