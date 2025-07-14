@@ -21,7 +21,7 @@ DFE_FILL = color[2]
 xlim = 0.06
 shift_frac = 0.025
 
-datapath = "../asencao_dfe_arrays"
+datapath = "../data/asencao_dfe_arrays"
 
 
 def thresholded_histogram(data, threshold, final_bins):
@@ -83,8 +83,8 @@ def create_overlapping_dfes(ax_left, ax_right, dfe_anc, dfe_evo):
 
     # Left Panel - Forward propagate
     counts, bin_edges, _ = thresholded_histogram(data=prop_bdfe_anc, threshold=3, final_bins=20)
-    anc_counts, anc_bin_edges, _ = thresholded_histogram(data=bdfe_anc, threshold=3, final_bins=14)
-    dfe_counts, dfe_bin_edges, _ = thresholded_histogram(data=dfe_evo, threshold=5, final_bins=20)
+    anc_counts, anc_bin_edges, _ = thresholded_histogram(data=bdfe_anc, threshold=3, final_bins=20)
+    dfe_counts, dfe_bin_edges, _ = thresholded_histogram(data=dfe_evo, threshold=8, final_bins=30)
     max1 = np.max(counts)
     max2 = np.max(anc_counts)
     max3 = np.max(dfe_counts)
@@ -146,9 +146,9 @@ def create_overlapping_dfes(ax_left, ax_right, dfe_anc, dfe_evo):
     )
 
     # Right Panel
-    counts2, bin_edges2, _ = thresholded_histogram(data=bdfe_evo, threshold=2, final_bins=12)
-    anc2_counts, anc2_bin_edges, _ = thresholded_histogram(data=prop_bdfe_evo, threshold=3, final_bins=20)
-    dfe2_counts, dfe2_bin_edges, _ = thresholded_histogram(data=dfe_anc, threshold=8, final_bins=20)
+    counts2, bin_edges2, _ = thresholded_histogram(data=bdfe_evo, threshold=2, final_bins=20)
+    anc2_counts, anc2_bin_edges, _ = thresholded_histogram(data=prop_bdfe_evo, threshold=2, final_bins=30)
+    dfe2_counts, dfe2_bin_edges, _ = thresholded_histogram(data=dfe_anc, threshold=5, final_bins=30)
     max1 = np.max(counts2)
     max2 = np.max(anc2_counts)
     max3 = np.max(dfe2_counts)

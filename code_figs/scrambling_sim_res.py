@@ -2,7 +2,6 @@ import os
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import ScalarFormatter
-
 from cmn.cmn_fgm import Fisher
 from cmn.cmn import compute_sigma_from_hist
 from cmn.cmn_sk import compute_dfe
