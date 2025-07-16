@@ -5,7 +5,7 @@ from cmn.cmn import curate_sigma_list
 from cmn.cmn_sk import compute_dfe
 import matplotlib as mpl
 import pickle
-from scipy.stats import wasserstein_distance
+from scipy.stats import wasserstein_distance, ks_2samp, cramervonmises_2samp
 import seaborn as sns
 
 def compute_bdfe(dfe):
@@ -26,7 +26,7 @@ mpl.rcParams.update(
         "legend.fontsize": 12,
     }
 )
-num_points = 11
+num_points = 51
 colors = sns.color_palette("CMRmap", 3)
 
 def compute_dfe_convergence(dfes, num_points):
@@ -45,12 +45,12 @@ def compute_dfe_convergence(dfes, num_points):
         dfe_i = dfe_i / dfe_i.sum() if dfe_i.sum() > 0 else dfe_i
         prop_bdfe_i = sampled_prop_bdfe[i]
         prop_bdfe_i = prop_bdfe_i / prop_bdfe_i.sum() if prop_bdfe_i.sum() > 0 else prop_bdfe_i
-        distances[i] = wasserstein_distance(dfe_i, prop_bdfe_i)
+        distances[i] = cramervonmises_2samp(dfe_i, prop_bdfe_i).statistic
     return distances
 
 # FGM Params
 res_directory = os.path.join(os.path.dirname(__file__), '..', 'data', 'FGM')
-data_file_fgm = os.path.join(res_directory, 'fgm_repeats100.pkl')
+data_file_fgm = os.path.join(res_directory, 'fgm_repeats1000_delta0.01.pkl')
 with open(data_file_fgm, 'rb') as f:
     data_fgm = pickle.load(f)
 fgm_dfes = []
@@ -93,10 +93,12 @@ length = min(len_fgm, len_sk, len_nk)
 fgm_distances = []
 sk_distances = []
 nk_distances = []
-for i in range(length):
-    # fgm_distances.append(compute_dfe_convergence(fgm_dfes[i], num_points))
-    sk_distances.append(compute_dfe_convergence(sk_dfes[i], num_points))
-    nk_distances.append(compute_dfe_convergence(nk_dfes[i], num_points))
+for rep in fgm_dfes:
+    fgm_distances.append(compute_dfe_convergence(rep, num_points))
+for rep in sk_dfes:
+    sk_distances.append(compute_dfe_convergence(rep, num_points))
+for rep in nk_dfes:
+    nk_distances.append(compute_dfe_convergence(rep, num_points))
 
 # Convert lists to numpy arrays for easier manipulation
 fgm_distances = np.array(fgm_distances)
@@ -113,15 +115,27 @@ nk_std = nk_distances.std(axis=0)
 
 x = np.linspace(0, 100, num_points, dtype=int)
 
-plt.figure(figsize=(8, 6))
-plt.errorbar(x, fgm_mean, yerr=fgm_std, fmt='o', color=colors[0], label='FGM')
-plt.errorbar(x, sk_mean, yerr=sk_std, fmt='o', color=colors[1], label='SK')
-plt.errorbar(x, nk_mean, yerr=nk_std, fmt='o', color=colors[2], label='NK')
+# plt.errorbar(x, fgm_mean, yerr=fgm_std, fmt='o', color=colors[0], label='FGM')
+plt.plot(x, fgm_mean, 'o', color=colors[0], label='FGM')
 plt.xlabel('Evolutionary time (%)')
 plt.ylabel('Mean Distance')
-plt.legend()
-plt.tight_layout()
+plt.ylim(0, None)
 plt.show()
+
+# plt.errorbar(x, sk_mean, yerr=sk_std, fmt='o', color=colors[1], label='SK')
+plt.plot(x, sk_mean, 'o', color=colors[1], label='SK')
+plt.xlabel('Evolutionary time (%)')
+plt.ylabel('Mean Distance')
+plt.ylim(0, None)
+plt.show()
+
+# plt.errorbar(x, nk_mean, yerr=nk_std, fmt='o', color=colors[2], label='NK')
+plt.plot(x, nk_mean, 'o', color=colors[2], label='NK')
+plt.xlabel('Evolutionary time (%)')
+plt.ylabel('Mean Distance')
+plt.ylim(0, None)
+plt.show()
+
 
 
 

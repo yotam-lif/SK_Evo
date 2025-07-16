@@ -7,7 +7,7 @@ max_steps = 3000
 m = 2 * 10 ** 3
 sig_0 = 0.5
 n=4
-repeats = 100
+repeats = 1000
 results = []
 
 for r in range(repeats):
@@ -19,8 +19,8 @@ for r in range(repeats):
         'dfes': dfes})
 
 # Save the results to a pickle file
-output_file = f'fgm_repeats{repeats}.pkl'
-output_dir = '../data/FGM'
+output_file = f'fgm_repeats{repeats}_delta{delta}.pkl'
+output_dir = '../FGM'
 output_path = os.path.join(output_dir, output_file)
 os.makedirs(output_dir, exist_ok=True)
 with open(output_path, 'wb') as f:
