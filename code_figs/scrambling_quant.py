@@ -5,138 +5,149 @@ from cmn.cmn import curate_sigma_list
 from cmn.cmn_sk import compute_dfe
 import matplotlib as mpl
 import pickle
-from scipy.stats import wasserstein_distance, ks_2samp, cramervonmises_2samp
+from scipy.stats import cramervonmises_2samp
 import seaborn as sns
 
+plt.rcParams["font.family"] = "sans-serif"
+mpl.rcParams.update({
+    "axes.labelsize": 16,
+    "xtick.labelsize": 14,
+    "ytick.labelsize": 14,
+    "legend.fontsize": 12,
+})
+
+num_points = 30
+colors = sns.color_palette("CMRmap", 3)
+
+
 def compute_bdfe(dfe):
-    """
-    Extract beneficial fitness effects and their indices from dfe array.
-    """
     dfe = np.asarray(dfe, dtype=float)
     mask = dfe > 0
     return dfe[mask], np.nonzero(mask)[0]
 
 
-plt.rcParams["font.family"] = "sans-serif"
-mpl.rcParams.update(
-    {
-        "axes.labelsize": 16,
-        "xtick.labelsize": 14,
-        "ytick.labelsize": 14,
-        "legend.fontsize": 12,
-    }
-)
-num_points = 51
-colors = sns.color_palette("CMRmap", 3)
+def compute_deleterious(dfe):
+    dfe = np.asarray(dfe, dtype=float)
+    mask = dfe < 0
+    return dfe[mask], np.nonzero(mask)[0]
 
-def compute_dfe_convergence(dfes, num_points):
-    # Get BDFE for t=0 and the indices of all initially beneficial mutations
-    bdfe, bdfe_ind = compute_bdfe(dfes[0])
-    # Sample num_points evenly spaced dfes
-    indx_list = np.linspace(start=0, stop=len(dfes)-2, num=num_points, dtype=int)
+
+def compute_random(dfe, size):
+    dfe = np.asarray(dfe, dtype=float)
+    indices = np.random.choice(len(dfe), size=size, replace=False)
+    return dfe[indices], indices
+
+
+def compute_dfe_convergence(dfes, num_points, metric_func):
+    initial_dfe, initial_indices = metric_func(dfes[0])
+    indx_list = np.linspace(0, len(dfes) - 2, num_points, dtype=int)
     sampled_dfes = np.asarray(dfes)[indx_list]
-    # For each dfe, get the propagated BDFE
-    sampled_prop_bdfe = [dfe[bdfe_ind] for dfe in sampled_dfes]
     distances = np.zeros(num_points)
-    # Calculate the EMD between the dfes and the propagated BDFE
-    # Normalize both distributions for sake of EMD calculation
     for i in range(num_points):
         dfe_i = np.asarray(sampled_dfes[i], dtype=float)
         dfe_i = dfe_i / dfe_i.sum() if dfe_i.sum() > 0 else dfe_i
-        prop_bdfe_i = sampled_prop_bdfe[i]
-        prop_bdfe_i = prop_bdfe_i / prop_bdfe_i.sum() if prop_bdfe_i.sum() > 0 else prop_bdfe_i
-        distances[i] = cramervonmises_2samp(dfe_i, prop_bdfe_i).statistic
+        metric_dfe_i = dfe_i[initial_indices] if len(initial_indices) > 0 else dfe_i
+        metric_dfe_i = metric_dfe_i / metric_dfe_i.sum() if metric_dfe_i.sum() > 0 else metric_dfe_i
+        distances[i] = cramervonmises_2samp(dfe_i, metric_dfe_i).statistic
+    initial_distance = distances[0] if distances[0] != 0 else 1
+    distances /= initial_distance
     return distances
 
-# FGM Params
+
+# --- Load Data ---
 res_directory = os.path.join(os.path.dirname(__file__), '..', 'data', 'FGM')
-data_file_fgm = os.path.join(res_directory, 'fgm_repeats1000_delta0.01.pkl')
+data_file_fgm = os.path.join(res_directory, 'fgm_repeats1000_delta0.05.pkl')
 with open(data_file_fgm, 'rb') as f:
     data_fgm = pickle.load(f)
-fgm_dfes = []
-for data_entry in data_fgm:
-    fgm_indx_list = np.linspace(start=0, stop=len(data_entry['dfes'])-2, num=num_points, dtype=int)
-    sampled_fgm_dfes = np.asarray(data_entry['dfes'])[fgm_indx_list]
-    fgm_dfes.append(sampled_fgm_dfes)
 
-# SK data
+fgm_dfes = [np.asarray(entry['dfes'])[np.linspace(0, len(entry['dfes']) - 2, num_points, dtype=int)] for entry in
+            data_fgm]
+
 res_directory = os.path.join(os.path.dirname(__file__), '..', 'data', 'SK')
 data_file_sk = os.path.join(res_directory, 'N4000_rho100_beta100_repeats50.pkl')
 with open(data_file_sk, 'rb') as f:
     data_sk = pickle.load(f)
-sk_dfes = []
-for data_entry in data_sk:
-    sigma_initial = data_entry['init_alpha']
-    h = data_entry['h']
-    J = data_entry['J']
-    flip_seq = data_entry['flip_seq']
-    sk_indx_list = np.linspace(start=0, stop=len(flip_seq)-2, num=num_points, dtype=int)
-    sampled_sigma_list = curate_sigma_list(sigma_initial, flip_seq, sk_indx_list)
-    sampled_sk_dfes = [compute_dfe(sigma, h, J) for sigma in sampled_sigma_list]
-    sk_dfes.append(sampled_sk_dfes)
 
-# NK data
+sk_dfes = []
+for entry in data_sk:
+    sampled_sigma_list = curate_sigma_list(entry['init_alpha'], entry['flip_seq'],
+                                           np.linspace(0, len(entry['flip_seq']) - 2, num_points, dtype=int))
+    sk_dfes.append([compute_dfe(sigma, entry['h'], entry['J']) for sigma in sampled_sigma_list])
+
 res_directory = os.path.join(os.path.dirname(__file__), '..', 'data', 'NK')
 data_file_nk = os.path.join(res_directory, 'N_2000_K_4_repeats_100.pkl')
 with open(data_file_nk, 'rb') as f:
     data_nk = pickle.load(f)
-nk_dfes = []
-for data_entry in data_nk:
-    nk_indx_list = np.linspace(start=0, stop=len(data_entry['dfes']) - 2, num=num_points, dtype=int)
-    sampled_nk_dfes = np.asarray(data_entry['dfes'])[nk_indx_list]
-    nk_dfes.append(sampled_nk_dfes)
 
-len_fgm = len(fgm_dfes)
-len_sk = len(sk_dfes)
-len_nk = len(nk_dfes)
-length = min(len_fgm, len_sk, len_nk)
-fgm_distances = []
-sk_distances = []
-nk_distances = []
-for rep in fgm_dfes:
-    fgm_distances.append(compute_dfe_convergence(rep, num_points))
-for rep in sk_dfes:
-    sk_distances.append(compute_dfe_convergence(rep, num_points))
-for rep in nk_dfes:
-    nk_distances.append(compute_dfe_convergence(rep, num_points))
+nk_dfes = [np.asarray(entry['dfes'])[np.linspace(0, len(entry['dfes']) - 2, num_points, dtype=int)] for entry in
+           data_nk]
 
-# Convert lists to numpy arrays for easier manipulation
-fgm_distances = np.array(fgm_distances)
-sk_distances = np.array(sk_distances)
-nk_distances = np.array(nk_distances)
 
-# Compute means and standard deviations
-fgm_mean = fgm_distances.mean(axis=0)
-fgm_std = fgm_distances.std(axis=0)
-sk_mean = sk_distances.mean(axis=0)
-sk_std = sk_distances.std(axis=0)
-nk_mean = nk_distances.mean(axis=0)
-nk_std = nk_distances.std(axis=0)
+# --- Compute Distances ---
+def collect_model_convergence(dfes_list, metric_func):
+    return np.array([compute_dfe_convergence(dfes, num_points, metric_func) for dfes in dfes_list])
+
+
+fgm_ben = collect_model_convergence(fgm_dfes, compute_bdfe)
+fgm_del = collect_model_convergence(fgm_dfes, compute_deleterious)
+fgm_rand = collect_model_convergence(fgm_dfes, lambda dfe: compute_random(dfe, len(dfe) // 2))
+
+sk_ben = collect_model_convergence(sk_dfes, compute_bdfe)
+sk_del = collect_model_convergence(sk_dfes, compute_deleterious)
+sk_rand = collect_model_convergence(sk_dfes, lambda dfe: compute_random(dfe, len(dfe) // 2))
+
+nk_ben = collect_model_convergence(nk_dfes, compute_bdfe)
+nk_del = collect_model_convergence(nk_dfes, compute_deleterious)
+nk_rand = collect_model_convergence(nk_dfes, lambda dfe: compute_random(dfe, len(dfe) // 2))
+
+# --- Plotting ---
 
 x = np.linspace(0, 100, num_points, dtype=int)
+start_frac = 0.0
+start_index = int(start_frac * num_points)
+x = x[start_index:]
 
-# plt.errorbar(x, fgm_mean, yerr=fgm_std, fmt='o', color=colors[0], label='FGM')
-plt.plot(x, fgm_mean, 'o', color=colors[0], label='FGM')
-plt.xlabel('Evolutionary time (%)')
-plt.ylabel('Mean Distance')
-plt.ylim(0, None)
-plt.show()
-
-# plt.errorbar(x, sk_mean, yerr=sk_std, fmt='o', color=colors[1], label='SK')
-plt.plot(x, sk_mean, 'o', color=colors[1], label='SK')
-plt.xlabel('Evolutionary time (%)')
-plt.ylabel('Mean Distance')
-plt.ylim(0, None)
-plt.show()
-
-# plt.errorbar(x, nk_mean, yerr=nk_std, fmt='o', color=colors[2], label='NK')
-plt.plot(x, nk_mean, 'o', color=colors[2], label='NK')
-plt.xlabel('Evolutionary time (%)')
-plt.ylabel('Mean Distance')
-plt.ylim(0, None)
-plt.show()
+def slice_stats(arr):
+    return arr[:, start_index:].mean(axis=0), arr[:, start_index:].std(axis=0)
 
 
+fgm_ben_mean, fgm_ben_std = slice_stats(fgm_ben)
+sk_ben_mean, sk_ben_std = slice_stats(sk_ben)
+nk_ben_mean, nk_ben_std = slice_stats(nk_ben)
 
+fgm_del_mean, fgm_del_std = slice_stats(fgm_del)
+sk_del_mean, sk_del_std = slice_stats(sk_del)
+nk_del_mean, nk_del_std = slice_stats(nk_del)
 
+fgm_rand_mean, fgm_rand_std = slice_stats(fgm_rand)
+sk_rand_mean, sk_rand_std = slice_stats(sk_rand)
+nk_rand_mean, nk_rand_std = slice_stats(nk_rand)
 
+fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+titles = ['Beneficial', 'Deleterious', 'Random']
+
+# Plot beneficial
+axes[0].errorbar(x, fgm_ben_mean, yerr=fgm_ben_std, fmt='-o', label='FGM', color=colors[0])
+axes[0].errorbar(x, sk_ben_mean, yerr=sk_ben_std, fmt='-o', label='SK', color=colors[1])
+axes[0].errorbar(x, nk_ben_mean, yerr=nk_ben_std, fmt='-o', label='NK', color=colors[2])
+axes[0].set_title('Beneficial')
+axes[0].set_xlabel('Evolutionary time (%)')
+axes[0].set_ylabel('Normalized Distance')
+axes[0].legend()
+
+# Plot deleterious
+axes[1].errorbar(x, fgm_del_mean, yerr=fgm_del_std, fmt='-o', label='FGM', color=colors[0])
+axes[1].errorbar(x, sk_del_mean, yerr=sk_del_std, fmt='-o', label='SK', color=colors[1])
+axes[1].errorbar(x, nk_del_mean, yerr=nk_del_std, fmt='-o', label='NK', color=colors[2])
+axes[1].set_title('Deleterious')
+axes[1].set_xlabel('Evolutionary time (%)')
+
+# Plot random
+axes[2].errorbar(x, fgm_rand_mean, yerr=fgm_rand_std, fmt='-o', label='FGM', color=colors[0])
+axes[2].errorbar(x, sk_rand_mean, yerr=sk_rand_std, fmt='-o', label='SK', color=colors[1])
+axes[2].errorbar(x, nk_rand_mean, yerr=nk_rand_std, fmt='-o', label='NK', color=colors[2])
+axes[2].set_title('Random')
+axes[2].set_xlabel('Evolutionary time (%)')
+
+plt.tight_layout()
+plt.show(dpi=500)
