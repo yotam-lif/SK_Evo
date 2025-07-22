@@ -9,11 +9,12 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.patches import FancyArrowPatch, Rectangle
 import matplotlib as mpl
 from scipy.stats import gaussian_kde
+from matplotlib.ticker import ScalarFormatter
 
 # Define a consistent style
 # plt.style.use('science')
 plt.rcParams['font.family'] = 'sans-serif'
-file_path = '../data/gen_data/SK/N4000_rho100_beta100_repeats50.pkl'
+file_path = '../data/SK/N4000_rho100_beta100_repeats50.pkl'
 color = sns.color_palette('CMRmap', 5)
 # Global font settings for labels, ticks, and legends
 mpl.rcParams.update(
@@ -27,6 +28,9 @@ mpl.rcParams.update(
 
 with open(file_path, 'rb') as f:
     data = pickle.load(f)
+
+EVO_FILL = (*color[1][:3], 0.5)
+ANC_FILL = (0.5, 0.5, 0.5, 0.15)
 
 
 # ───────────────────────────────────────────────────── helpers ───────────────────────────────────────
@@ -210,24 +214,24 @@ def create_fig_crossings(ax, flip1, flip2, repeat):
 
     for b, p in zip(bdfe1, prop_bdfe1):
         ax.add_patch(FancyArrowPatch((flip_anc_percent, b), (flip_evo_percent, p), arrowstyle="-|>", mutation_scale=10,
-                                     color=color[0], alpha=0.4, lw=0.75))
-    sc_fwd = ax.scatter([flip_anc_percent] * len(bdfe1), bdfe1, facecolors="none", edgecolor=color[0], s=20,
+                                     color=ANC_FILL, alpha=0.4, lw=0.75))
+    sc_fwd = ax.scatter([flip_anc_percent] * len(bdfe1), bdfe1, facecolors="none", edgecolor=ANC_FILL, s=20,
                         alpha=alpha)
-    ax.scatter([flip_evo_percent] * len(prop_bdfe1), prop_bdfe1, facecolors="none", edgecolor=color[0], s=20,
+    ax.scatter([flip_evo_percent] * len(prop_bdfe1), prop_bdfe1, facecolors="none", edgecolor=ANC_FILL, s=20,
                alpha=alpha)
 
     for b, p in zip(bdfe2, prop_bdfe2):
         ax.add_patch(FancyArrowPatch((flip_evo_percent, b), (flip_anc_percent, p), arrowstyle="-|>", mutation_scale=10,
-                                     color=color[2], alpha=0.3, lw=0.75))
-    sc_bwd = ax.scatter([flip_evo_percent] * len(bdfe2), bdfe2, facecolors="none", edgecolor=color[2], s=20,
+                                     color=EVO_FILL, alpha=0.3, lw=0.75))
+    sc_bwd = ax.scatter([flip_evo_percent] * len(bdfe2), bdfe2, facecolors="none", edgecolor=EVO_FILL, s=20,
                         alpha=alpha)
-    ax.scatter([flip_anc_percent] * len(prop_bdfe2), prop_bdfe2, facecolors="none", edgecolor=color[2], s=20,
+    ax.scatter([flip_anc_percent] * len(prop_bdfe2), prop_bdfe2, facecolors="none", edgecolor=EVO_FILL, s=20,
                alpha=alpha)
 
     ax.axhline(0, ls="--", lw=1.5, color="black")
     ax.set_xticks([flip_anc_percent, flip_evo_percent])
-    ax.set_xticklabels([r'$t_1$', r'$t_2$'])
-    ax.set_xlabel('$\\%$ of walk completed')
+    ax.set_xticklabels(['Anc.', 'Evo.'])
+    ax.set_xlabel('Generations')
     ax.set_ylabel(r'Fitness effect $(\Delta)$')
     ax.legend([sc_fwd, sc_bwd], ["Forwards", "Backwards"], frameon=False, loc="upper right")
 
@@ -303,7 +307,7 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
         facecolor=EVO_FILL,
         edgecolor="black",
         lw=1.1,
-        label=r'$\mathcal{D}_{t_1}(t_2)$',
+        label='Evo.',
         zorder=0
     )
 
@@ -330,7 +334,7 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
         facecolor=ANC_FILL,
         edgecolor="black",
         lw=1.1,
-        label=r'$\mathcal{D}_{t_1}(t_1)$',
+        label='Anc.',
         zorder=3
     )
 
@@ -344,7 +348,7 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
         fill=False,
         edgecolor=color[2],
         lw=1.1,
-        label=r'$DFE(t_2)$',
+        label='DFE Evo.',
         zorder=1
     )
 
@@ -374,7 +378,7 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
         facecolor=EVO_FILL,
         edgecolor="black",
         lw=1.1,
-        label=r'$\mathcal{D}_{t_2}(t_2)$'
+        label='Evo.'
     )
 
     # white-out rectangle
@@ -397,7 +401,7 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
         facecolor=ANC_FILL,
         edgecolor="black",
         lw=1.1,
-        label=r'$\mathcal{D}_{t_2}(t_1)$'
+        label='Anc.'
     )
 
     # 3) full ancestral DFE outline at t1
@@ -409,7 +413,7 @@ def create_fig_dfes_overlap(ax_left, ax_right, flip1, flip2, repeat, color):
         fill=False,
         edgecolor=color[2],
         lw=1.1,
-        label=r'$DFE(t_1)$'
+        label='DFE Anc.'
     )
 
     ax_right.legend(frameon=False, loc='upper left')
@@ -433,7 +437,7 @@ if __name__ == "__main__":
     crossings_repeat = 10
     num_flips = len(data[crossings_repeat]['flip_seq'])
     percentages_C = np.array([70, 75, 80, 85])
-    percentages_D = [70, 80]
+    # percentages_D = [70, 80]
     flip_list = (percentages_C / 100 * (num_flips - 1)).astype(int)
 
     crossings_flip_anc = int(0.25 * (num_flips - 1))
@@ -449,6 +453,11 @@ if __name__ == "__main__":
     axD = fig.add_subplot(gs[1, 0])
     axE = fig.add_subplot(gs[1, 1])
     axF = fig.add_subplot(gs[1, 2])
+
+    formatter = ScalarFormatter(useMathText=True)
+    formatter.set_scientific(True)
+    formatter.set_powerlimits((-1, 1))
+    formatter.format = lambda x, _: f"{x:.1f}"
 
     create_fig_dfe_evol(axA, num_points=5, num_repeats=num_repeats)
     create_fig_dfe_fin(axB, N=1500, beta_arr=[0.0, 0.5, 1.0], rho=1.0, num_repeats=num_repeats)
@@ -474,6 +483,9 @@ if __name__ == "__main__":
             ax.yaxis.set_ticks_position("left")
             ax.spines["top"].set_visible(False)
             ax.spines["right"].set_visible(False)
+        if ax not in [axD]:
+            ax.xaxis.set_major_formatter(formatter)
+        ax.yaxis.set_major_formatter(formatter)
 
     output_dir = '../figs_paper'
     os.makedirs(output_dir, exist_ok=True)
