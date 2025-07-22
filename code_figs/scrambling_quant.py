@@ -56,7 +56,7 @@ def compute_dfe_convergence(dfes, num_points, metric_func):
 
 # --- Load Data ---
 res_directory = os.path.join(os.path.dirname(__file__), '..', 'data', 'FGM')
-data_file_fgm = os.path.join(res_directory, 'fgm_repeats1000_delta0.05.pkl')
+data_file_fgm = os.path.join(res_directory, 'fgm_rps100_del0.001_s00.01.pkl')
 with open(data_file_fgm, 'rb') as f:
     data_fgm = pickle.load(f)
 
@@ -75,7 +75,7 @@ for entry in data_sk:
     sk_dfes.append([compute_dfe(sigma, entry['h'], entry['J']) for sigma in sampled_sigma_list])
 
 res_directory = os.path.join(os.path.dirname(__file__), '..', 'data', 'NK')
-data_file_nk = os.path.join(res_directory, 'N_2000_K_4_repeats_100.pkl')
+data_file_nk = os.path.join(res_directory, 'N_2000_K_32_repeats_100.pkl')
 with open(data_file_nk, 'rb') as f:
     data_nk = pickle.load(f)
 
@@ -90,7 +90,6 @@ def collect_model_convergence(dfes_list, metric_func):
 
 fgm_ben = collect_model_convergence(fgm_dfes, compute_bdfe)
 fgm_del = collect_model_convergence(fgm_dfes, compute_deleterious)
-fgm_rand = collect_model_convergence(fgm_dfes, lambda dfe: compute_random(dfe, len(dfe) // 2))
 
 sk_ben = collect_model_convergence(sk_dfes, compute_bdfe)
 sk_del = collect_model_convergence(sk_dfes, compute_deleterious)
@@ -98,7 +97,6 @@ sk_rand = collect_model_convergence(sk_dfes, lambda dfe: compute_random(dfe, len
 
 nk_ben = collect_model_convergence(nk_dfes, compute_bdfe)
 nk_del = collect_model_convergence(nk_dfes, compute_deleterious)
-nk_rand = collect_model_convergence(nk_dfes, lambda dfe: compute_random(dfe, len(dfe) // 2))
 
 # --- Plotting ---
 
@@ -119,10 +117,6 @@ fgm_del_mean, fgm_del_std = slice_stats(fgm_del)
 sk_del_mean, sk_del_std = slice_stats(sk_del)
 nk_del_mean, nk_del_std = slice_stats(nk_del)
 
-fgm_rand_mean, fgm_rand_std = slice_stats(fgm_rand)
-sk_rand_mean, sk_rand_std = slice_stats(sk_rand)
-nk_rand_mean, nk_rand_std = slice_stats(nk_rand)
-
 fig, axes = plt.subplots(1, 3, figsize=(18, 6))
 titles = ['Beneficial', 'Deleterious', 'Random']
 
@@ -141,13 +135,6 @@ axes[1].errorbar(x, sk_del_mean, yerr=sk_del_std, fmt='-o', label='SK', color=co
 axes[1].errorbar(x, nk_del_mean, yerr=nk_del_std, fmt='-o', label='NK', color=colors[2])
 axes[1].set_title('Deleterious')
 axes[1].set_xlabel('Evolutionary time (%)')
-
-# Plot random
-axes[2].errorbar(x, fgm_rand_mean, yerr=fgm_rand_std, fmt='-o', label='FGM', color=colors[0])
-axes[2].errorbar(x, sk_rand_mean, yerr=sk_rand_std, fmt='-o', label='SK', color=colors[1])
-axes[2].errorbar(x, nk_rand_mean, yerr=nk_rand_std, fmt='-o', label='NK', color=colors[2])
-axes[2].set_title('Random')
-axes[2].set_xlabel('Evolutionary time (%)')
 
 plt.tight_layout()
 plt.show(dpi=500)
