@@ -20,7 +20,7 @@ mpl.rcParams['legend.fontsize'] = 12
 # ----------------------------------------------------------------
 # Load NK gen_data files
 # ----------------------------------------------------------------
-res_directory = os.path.join(os.path.dirname(__file__), '..', 'code_sim', 'gen_data', 'NK')
+res_directory = os.path.join(os.path.dirname(__file__), '..', 'data', 'NK')
 data_file_K4 = os.path.join(res_directory, 'N_2000_K_4_repeats_100.pkl')
 data_file_K8 = os.path.join(res_directory, 'N_2000_K_8_repeats_100.pkl')
 data_file_K16 = os.path.join(res_directory, 'N_2000_K_16_repeats_100.pkl')

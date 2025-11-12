@@ -12,17 +12,15 @@ class Fisher:
     ----------
     n : int
         Dimensionality of phenotype space.
-    eigenvalues : numpy.ndarray
-        Array of length n giving the diagonal entries of S.
-    delta : float
+    sigma : float
         Standard deviation for Gaussian mutation steps.
-    dzs : numpy.ndarray
+    deltas : numpy.ndarray
         Array of pre-sampled mutation steps of shape (m, n).
     rng : numpy.random.Generator
         Random number generator for reproducibility.
     """
 
-    def __init__(self, n, delta, sig_0, isotropic=True, sigma=1.0, m=10**4, random_state=None):
+    def __init__(self, n, sigma=0.05, m=10**3, random_state=None):
         """
         Initialize the model in the diagonal basis.
 
@@ -30,19 +28,15 @@ class Fisher:
         ----------
         n : int
             Number of phenotypic traits (dimensions).
-        isotropic : bool
-            If True, all eigenvalues of S = 1; otherwise drawn from semicircle.
-        delta : float
-            Std dev for Gaussian mutation steps.
         sigma : float
-            Scale parameter (radius/2) for semicircle eigenvalue distribution.
+            Scale parameter for mutations.
         m : int
-            Number of mutation steps to pre-sample.
+            Number of mutation vectors to pre-sample.
         random_state : int or numpy.random.Generator, optional
             Seed or RNG for reproducibility.
         """
         self.n = int(n)
-        self.delta = float(delta)
+        self.sigma = float(sigma)
         self.m = int(m)
         # RNG setup
         if isinstance(random_state, (int, np.integer)):
@@ -52,18 +46,14 @@ class Fisher:
         else:
             self.rng = np.random.default_rng()
 
-        # Set eigenvalues of S
-        if isotropic:
-            # isotropic: all eigenvalues = 1
-            self.eigenvalues = np.ones(self.n)
-        else:
-            # anisotropic: eigenvalues ~ semicircle on [-2*sigma,2*sigma]
-            self.eigenvalues = self._sample_semicircle(self.n, sigma)
-
-        # Pre-sample Gaussian mutation steps dz ~ N(0, delta^2 I)
-        self.deltas = self.rng.normal(loc=0.0, scale=self.delta, size=(self.m, self.n))
-        # Initialize z_0
-        self.z = self.rng.normal(loc=0.0, scale=sig_0, size=self.n)
+        # Pre-sample Gaussian mutation steps
+        self.deltas = self.rng.normal(loc=0.0, scale=self.sigma, size=(self.m, self.n))
+        # Initialize r_0 = (n, 0, ..., 0), isotropic so only initial radius of n matters
+        # Instead of starting at random r and taking iid gaussian entries of sigma_0 so that r_0 ~ n * sigma_0 ^2,
+        # We set scale by sigma_0 = 1 and sigma becomes in units of sigma_0.
+        # initial radius scales with n so that effective initial position doesn't become smaller as n increases (mutation size scales with n as well).
+        self.r = np.zeros(n)
+        self.r[0] = np.sqrt(n)
 
     def _sample_semicircle(self, n, sigma):
         """
@@ -79,28 +69,24 @@ class Fisher:
                 samples.append(x)
         return np.array(samples)
 
-    def compute_log_fitness(self, z):
-        """
-        Compute log-fitness in diagonal basis:
-        log w(z) = - z^T S z = - sum_i eigenvalues[i] * z[i]^2
-        """
-        z = np.asarray(z, dtype=float)
-        return - float(np.sum(self.eigenvalues * z**2))
+    def compute_log_fitness(self, r):
+        r = np.asarray(r, dtype=float)
+        return - float(np.dot(r, r))
 
-    def compute_fitness(self, z):
+    def compute_fitness(self, r):
         """
-        Compute fitness: w(z) = exp(log_fitness(z)).
+        Compute fitness: w(r) = exp(log_fitness(r)).
         """
-        return float(np.exp(self.compute_log_fitness(z)))
+        return float(np.exp(self.compute_log_fitness(r)))
 
-    def compute_dfe(self, z):
+    def compute_dfe(self, r):
         """
-        Compute distribution of fitness effects at phenotype z.
-        Returns array of w(z + dz_i) - w(z) for each pre-sampled dz.
+        Compute distribution of fitness effects at phenotype r.
+        Returns array of w(r + delta_i) - w(r) for each pre-sampled delta.
         """
-        z = np.asarray(z, dtype=float)
-        w0 = self.compute_fitness(z)
-        return np.array([self.compute_fitness(z + delta) - w0 for delta in self.deltas])
+        r = np.asarray(r, dtype=float)
+        w0 = self.compute_fitness(r)
+        return np.array([self.compute_fitness(r + delta) - w0 for delta in self.deltas])
 
     def compute_bdfe(self, dfe):
         """
@@ -125,20 +111,20 @@ class Fisher:
     def relax(self, max_steps=1000):
         """
         Perform an adaptive walk using SSWM.
-        Returns list of chosen mutation indices, z history and dfe history.
+        Returns list of chosen mutation indices, r history and dfe history.
         """
-        traj = [self.z.copy()]
+        traj = [self.r.copy()]
         flips = []
         dfes = []
         for _ in range(max_steps):
-            dfe = self.compute_dfe(self.z)
+            dfe = self.compute_dfe(self.r)
             dfes.append(dfe.copy())
             bdfe, b_ind = self.compute_bdfe(dfe)
             if len(b_ind) == 0:
                 break
             choice = self.sswm_choice(bdfe, b_ind)
             flips.append(choice)
-            self.z += self.deltas[choice]
+            self.r += self.deltas[choice]
             self.deltas[choice] = -1 * self.deltas[choice]
-            traj.append(self.z.copy())
+            traj.append(self.r.copy())
         return flips, traj, dfes
