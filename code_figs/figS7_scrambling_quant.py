@@ -110,7 +110,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # FGM
 res_directory_fgm = os.path.join(SCRIPT_DIR, "..", "data", "FGM")
-data_file_fgm = os.path.join(res_directory_fgm, "fgm_rps100_del0.001_s00.01.pkl")
+data_file_fgm = os.path.join(res_directory_fgm, "fgm_rps1000_n32_sig0.05_m2000.pkl")
 with open(data_file_fgm, "rb") as f:
     data_fgm = pickle.load(f)
 
@@ -237,7 +237,7 @@ def load_fgm_dfes_for_n(n):
         fgm_rps100_n{n}_del0.001_s00.01.pkl
     in ../data/FGM.
     """
-    fname = f"fgm_rps100_n{n}_del0.001_s00.01.pkl"
+    fname = f"fgm_rps1000_n{n}_sig0.05_m2000.pkl"
     path = os.path.join(res_directory_fgm, fname)
     with open(path, "rb") as f:
         data = pickle.load(f)
