@@ -8,7 +8,7 @@ def generate_single_data(N, beta, rho):
     init_sigma = cmn.init_sigma(N)
     h = cmn_sk.init_h(N, beta=beta)
     J = cmn_sk.init_J(N, beta=beta, rho=rho)
-    flip_seq = cmn_sk.relax_sk(init_sigma, h, J, sswm=True)
+    flip_seq = cmn_sk.relax_sk(init_sigma, h, J)
     return {
         'init_sigma': init_sigma,
         'h': h,
